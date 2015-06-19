@@ -33,3 +33,46 @@ If the configuration is correct and the telnet is accessible, you now have acces
 >>> <framework>.console ( "lp" )
 
 And other functions and classes under <framework>. It is recommended to read the code or use ipython and check the online documentation.
+
+How to use mods with the framework
+----------------------------------
+
+To add a mod, these are required:
+
+1 - The mod is a copy of the template_mod.py file contained in the framework, and it resides in a directory that is in your PYTHONPATH.
+
+2 - The python module name for this mod, and the class name for this mod, are the same. (For example, the file "place_protection.py" contains the class "place_protection".
+
+3 - Your preferences file contains an entry for that mod. For example:
+
+place_protection = mod
+place_protection_enabled = True
+place_protection_module = place_protection
+
+(The "place_protection-module" variable must equal the name of the python module / class specified in #2).
+
+How it works
+------------
+
+Each module, and the framework itself, are threads ran by the Python interpreter. When you add the correct configuration for a mod, it will be dynamically loaded by the framework when it is initialized.
+
+At every "loop_wait" interval, the framework will refresh its data, and the mods (unless changed) will re-run themselves.
+
+This means that each mod runs in parallel; so actions taken by them could interefere with one another, it is up to the developers to ensure this is done properly or not at all.
+
+When the mod ends, its thread is closed. Also, when the framework is shutdown, each mod is stopped.
+
+A simple example
+----------------
+
+Make sure you can run the framework as-is. Verify that the log files show that the framework gets information from the server, and that you can give console commands through the Python interpreter.
+
+Copy the template_mod.py file into a new file.
+
+Edit this new file, and rename the "template" class with the same name as the file (and therefore, this name should be a valid Python identifier - no spaces, no special characters).
+
+In the area of this file indicated as being safe for adding the mod code, add some code to be run, as a first draft of your mod.
+
+Edit your configurations file and add your mod information, as specified above.
+
+Save all files, and restart the framework. Your code should now be run as one of the mods within the framework.
