@@ -2,6 +2,7 @@ from .preferences      import preferences
 from .server           import server
 from .telnet_connect   import telnet_connect
 
+import importlib
 import logging
 import sys
 import threading
@@ -38,12 +39,16 @@ class orchestrator ( threading.Thread ):
 
         self.telnet.start ( )
 
-        #####################################################
-        # Template for adding new mods:                     #
-        # Append the mod module as an entry in the list:    #
-        #####################################################
-        
         self.mods = [ ]
+
+        for mod in self.preferences.mods.keys ( ):
+            module_name = self.preferences.mods [ mod ] [ 'module' ]
+            self.log.info ( "Attempting to load module %s." % module_name )
+            mod_module = importlib.import_module ( module_name )
+            self.log.info ( "mod_module = %s" % str ( mod_module ) )
+            mod_class = getattr ( mod_module, module_name )
+            mod_instance = mod_class ( framework = self )
+            self.mods.append ( mod_instance )
         
         for mod in self.mods:
             mod.start ( )

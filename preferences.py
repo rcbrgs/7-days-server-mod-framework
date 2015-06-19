@@ -94,16 +94,20 @@ class preferences ( object ):
             splitted = line.split ( "=" )
             if len ( splitted ) > 1:
                 left_hand = splitted [ 0 ] .strip ( ). lower ( )
-                right_hand = splitted [ 1 ] [ : -1 ].strip ( ).lower ( )
+                right_hand = splitted [ 1 ] [ : -1 ].strip ( )
             else:
                 continue
 
             for key in self.mods.keys ( ):
                 if ( left_hand == key + "_enabled" ):
-                    if ( right_hand == "true" ):
+                    if ( right_hand.lower ( ) == "true" ):
                         self.mods [ key ] [ 'enabled' ] = True
                     else:
                         self.mods [ key ] [ 'enabled' ] = False
+                    break
+                
+                if ( left_hand == key + "_module" ):
+                    self.mods [ key ] [ 'module' ] = right_hand
                     break
 
     def output ( self ):
