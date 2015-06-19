@@ -1,16 +1,8 @@
-#from .communism        import communism
-#from .place_protection import place_protection
 from .preferences      import preferences
-#from .prison           import prison
 from .server           import server
 from .telnet_connect   import telnet_connect
-#from .translator       import translator
-#from .treasure_hunt    import treasure_hunt
-#from .zombie_cleanup   import zombie_cleanup
 
-import atexit
 import logging
-import random
 import sys
 import threading
 import time
@@ -27,7 +19,6 @@ class orchestrator ( threading.Thread ):
         self.shutdown = False
         self.preferences = preferences ( preferences_file_name )
        
-        #self.log_handler = logging.StreamHandler ( )
         self.log_handler = logging.FileHandler ( self.preferences.log_file )
         self.log_handler.setLevel ( logging.DEBUG )
         self.log_formatter = logging.Formatter ( fmt = '%(asctime)s %(name)s %(levelname)s %(message)s',
@@ -47,40 +38,17 @@ class orchestrator ( threading.Thread ):
 
         self.telnet.start ( )
 
-        # mods:
-        #self.communism        = communism        ( framework = self )
-        #self.place_protection = place_protection ( framework = self )
-        #self.prison           = prison           ( framework = self )
-        #self.translator       = translator       ( framework = self )
-        #self.treasure_hunt    = treasure_hunt    ( framework = self )
-        #self.zombie_cleanup   = zombie_cleanup   ( framework = self )
-
-        self.mods = [ #self.communism,
-                      #self.place_protection,
-                      #self.prison,
-                      #self.translator,
-                      #self.treasure_hunt,
-                      #self.zombie_cleanup ]
-        ]
-
         #####################################################
         # Template for adding new mods:                     #
-        # Copy the line below and change the variable name. #       
-        # self.template = template ( framework = self )     #
-        # Then copy the template.py file to a file named    #
-        # as the variable you just created, and edit it.    #
+        # Append the mod module as an entry in the list:    #
         #####################################################
         
-        # self.template = template ( framework = self )
-
+        self.mods = [ ]
+        
         for mod in self.mods:
             mod.start ( )
 
-    def run ( self ):
-        while self.shutdown == False:
-            time.sleep ( 1 )
-        return
-            
+    def run ( self ):            
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
         self.server.offline_players ( )

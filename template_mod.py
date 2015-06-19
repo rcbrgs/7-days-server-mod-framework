@@ -14,9 +14,12 @@ class template ( threading.Thread ):
         self.enabled = self.framework.preferences.mods [ self.__class__.__name__ ].enabled
         self.commands = { }
 
+    def __del__ ( self ):
+        self.stop ( )
+
     def greet ( self ):
         self.framework.server.say ( "%s mod version %s loaded." % ( self.__class__.__name__,
-                                                                    self.version )  
+                                                                    self.version ) )
 
     def run ( self ):
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
@@ -47,3 +50,6 @@ class template ( threading.Thread ):
             time.sleep ( self.framework.preferences.loop_wait )
 
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
+
+    def stop ( self ):
+        self.shutdown = True
