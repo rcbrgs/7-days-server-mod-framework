@@ -22,6 +22,11 @@ class telnet_connect ( threading.Thread ):
         
         self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
+        self.daemon = True
+
+    def __del__ ( self ):
+        self.stop ( )
+
     def close_connection ( self ):
         self.log.info ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
 

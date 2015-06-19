@@ -1,27 +1,32 @@
-from .communism        import communism
-from .place_protection import place_protection
+#from .communism        import communism
+#from .place_protection import place_protection
 from .preferences      import preferences
-from .prison           import prison
+#from .prison           import prison
 from .server           import server
 from .telnet_connect   import telnet_connect
-from .translator       import translator
-from .treasure_hunt    import treasure_hunt
-from .zombie_cleanup   import zombie_cleanup
+#from .translator       import translator
+#from .treasure_hunt    import treasure_hunt
+#from .zombie_cleanup   import zombie_cleanup
 
+import atexit
 import logging
 import random
 import sys
 import threading
 import time
 
-class framework ( threading.Thread ):
-    def __init__ ( self, preferences_file_name = None ):
-        super ( framework, self ).__init__ ( )
-
-        self.preferences = preferences ( preferences_file_name )
-        
+class orchestrator ( threading.Thread ):
+    def __init__ ( self ):
+        super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
+
+        self.daemon = True
+
+    def config ( self, preferences_file_name ):
+        self.shutdown = False
+        self.preferences = preferences ( preferences_file_name )
+       
         #self.log_handler = logging.StreamHandler ( )
         self.log_handler = logging.FileHandler ( self.preferences.log_file )
         self.log_handler.setLevel ( logging.DEBUG )
@@ -29,10 +34,9 @@ class framework ( threading.Thread ):
                                                  datefmt = '%Y-%m-%d %H:%M:%S' )
         self.log_handler.setFormatter ( self.log_formatter )
         self.log.addHandler ( self.log_handler )
+
         self.log.info ( "**************************   Starting framework   ***************************" )
         
-        self.shutdown = False
-
         self.preferences.output ( )
         
         self.telnet = telnet_connect ( framework = self )
@@ -44,19 +48,20 @@ class framework ( threading.Thread ):
         self.telnet.start ( )
 
         # mods:
-        self.communism        = communism        ( framework = self )
-        self.place_protection = place_protection ( framework = self )
-        self.prison           = prison           ( framework = self )
-        self.translator       = translator       ( framework = self )
-        self.treasure_hunt    = treasure_hunt    ( framework = self )
-        self.zombie_cleanup   = zombie_cleanup   ( framework = self )
+        #self.communism        = communism        ( framework = self )
+        #self.place_protection = place_protection ( framework = self )
+        #self.prison           = prison           ( framework = self )
+        #self.translator       = translator       ( framework = self )
+        #self.treasure_hunt    = treasure_hunt    ( framework = self )
+        #self.zombie_cleanup   = zombie_cleanup   ( framework = self )
 
-        self.mods = [ self.communism,
-                      self.place_protection,
-                      self.prison,
-                      self.translator,
-                      self.treasure_hunt,
-                      self.zombie_cleanup ]
+        self.mods = [ #self.communism,
+                      #self.place_protection,
+                      #self.prison,
+                      #self.translator,
+                      #self.treasure_hunt,
+                      #self.zombie_cleanup ]
+        ]
 
         #####################################################
         # Template for adding new mods:                     #
@@ -70,8 +75,12 @@ class framework ( threading.Thread ):
 
         for mod in self.mods:
             mod.start ( )
-        
+
     def run ( self ):
+        while self.shutdown == False:
+            time.sleep ( 1 )
+        return
+            
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
         self.server.offline_players ( )
@@ -114,7 +123,15 @@ class framework ( threading.Thread ):
         self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
     def stop ( self ):
+        self.log.info ( "<framework>.stop" )
         self.shutdown = True
 
     def __del__ ( self ):
+        self.log.info ( "<framework>.__del__" )
         self.stop ( )
+
+maestro = orchestrator ( )
+
+def config ( preferences_file_name ):
+    maestro.config ( preferences_file_name )
+    maestro.start ( )

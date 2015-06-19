@@ -83,14 +83,7 @@ class preferences ( object ):
             if ( left_hand == "zombie_cleanup_threshold" ):
                 self.zombie_cleanup_threshold = float ( splitted [ 1 ].strip ( ) )
                 continue
-            
-            if ( left_hand == "communism_history_file" ):
-                if sys.platform == 'linux':
-                    self.communism_history_file = splitted [ 1 ].strip ( )
-                else:
-                    self.communism_history_file = splitted [ 1 ].strip ( ).encode ( 'unicode-escape' )
-                continue
-            
+           
             if ( right_hand == "mod" ):
                 self.mods [ left_hand ] = { }
                 continue
@@ -115,7 +108,6 @@ class preferences ( object ):
 
     def output ( self ):
         self.log.debug ( "chat_log_file = %s" % ( self.log_file ) )
-        self.log.debug ( "communism_history_file = %s" % ( self.communism_history_file ) )
         self.log.debug ( "forbidden_countries = %s" % ( self.forbidden_countries ) )
         self.log.debug ( "geoip_file = %s" % ( self.geoip_file ) )
         self.log.debug ( "home_radius = %s" % ( self.home_radius ) )
