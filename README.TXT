@@ -24,9 +24,11 @@ The path where the mod framework has been copied must be in yout PYTHONPATH.
 
 Start your favorite Python 3 interpreter.
 
-Import the framework.
+Import the framework. Start the framework by passing the path of configuration file:
 
-You now have access to the console using <framework>.console:
+>>> <framework>.config ( "/home/example/example_path.cfg" )
+
+If the configuration is correct and the telnet is accessible, you now have access to the console using <framework>.console:
 
 >>> <framework>.console ( "lp" )
 
