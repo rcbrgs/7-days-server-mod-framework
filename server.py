@@ -1,3 +1,4 @@
+import framework.player_info as player_info
 import logging
 import math
 import pickle
@@ -6,46 +7,6 @@ import random
 import sys
 import threading
 import time
-
-class player_info ( object ):
-    def __init__ ( self,
-                   deaths = None,
-                   health = None,
-                   home = None,
-                   ip = None,
-                   level = None,
-                   name = None,
-                   online = None,
-                   playerid = None,
-                   pos_x = None,
-                   pos_y = None,
-                   pos_z = None,
-                   zombies = -1,
-                   players = None,
-                   score = None,
-                   steamid = None ):
-        super ( player_info, self ).__init__ ( )
-        self.deaths = deaths
-        self.health = health
-        self.home = home
-        self.home_invasion_beacon = None
-        self.home_invitees = [ ]
-        self.ip = ip
-        self.language_preferred = None
-        self.languages_spoken = [ ]
-        self.level = level
-        self.name = name
-        self.name_sane = None
-        self.online = online
-        self.playerid = playerid
-        self.players = players
-        self.pos_x = pos_x
-        self.pos_y = pos_y
-        self.pos_z = pos_z
-        self.score = score
-        self.steamid = steamid
-        self.map_limit_beacon = None
-        self.zombies = zombies
 
 class server ( threading.Thread ):
     def __init__ ( self, framework ):
@@ -721,33 +682,31 @@ class server ( threading.Thread ):
         for key in self.players_info.keys ( ):
             player = self.get_player ( key )
             if player != None:
-                new_player = player_info ( deaths = player.deaths,
-                                           health = player.health,
-                                           home = player.home,
-                                           ip = player.ip,
-                                           level = player.level,
-                                           name = player.name,
-                                           online = player.online,
-                                           playerid = player.playerid,
-                                           pos_x = player.pos_x,
-                                           pos_y = player.pos_y,
-                                           pos_z = player.pos_z,
-                                           zombies = player.zombies,
-                                           players = player.players,
-                                           score = player.score,
-                                           steamid = player.steamid )
+                new_player = pinfo.player_info ( deaths = player.deaths,
+                                                 health = player.health,
+                                                 home = player.home,
+                                                 ip = player.ip,
+                                                 level = player.level,
+                                                 name = player.name,
+                                                 online = player.online,
+                                                 playerid = player.playerid,
+                                                 players = player.players,
+                                                 pos_x = player.pos_x,
+                                                 pos_y = player.pos_y,
+                                                 pos_z = player.pos_z,
+                                                 score = player.score,
+                                                 steamid = player.steamid,
+                                                 zombies = player.zombies )
                 new_player.home_invasion_beacon = player.home_invasion_beacon
                 new_player.home_invitees = player.home_invitees
-                new_player.map_limit_beacon = player.map_limit_beacon
+                new_player.language_preferred = player.language_preferred
                 new_player.languages_spoken = player.languages_spoken
+                new_player.map_limit_beacon = player.map_limit_beacon
                 new_player.name_sane = self.sanitize ( player.name )
+                new_player.attributes = player.attributes
                 
-                # updates:
-                if isinstance ( player.language_preferred, list ):
-                    new_player.language_preferred = player.language_preferred [ 0 ]
-                else:
-                    new_player.language_preferred = player.language_preferred
-                    
+                # New attribute:
+                                
                 new_players_info [ key ] = new_player
 
         self.log.info ( "Creating new player info file." )
