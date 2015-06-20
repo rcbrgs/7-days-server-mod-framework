@@ -87,8 +87,8 @@ class server ( threading.Thread ):
                            ( point_A [ 1 ] - point_B [ 1 ] ) ** 2 )
 
     def command_about ( self, origin, message ):
-        self.say ( "This mod is open source, initiated by Schabracke and developed by rc." )
-        self.say ( "Source at http://github.com/rcbrgs/7-days-server-mod-framework." )
+        self.say ( "This mod was initiated by Schabracke and is developed by rc." )
+        self.say ( "http://github.com/rcbrgs/7-days-server-mod-framework." )
     
     def command_help ( self, msg_origin, msg_content ):
         if len ( msg_content ) > len ( "/help" ):
