@@ -8,7 +8,7 @@ class telnet_connect ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( telnet_connect, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.log.setLevel ( logging.INFO )
+
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
         
         self.shutdown = False
@@ -33,10 +33,11 @@ class telnet_connect ( threading.Thread ):
 
         self.connected = False
         self.telnet.close ( )
+        self.log.info ( "Telnet connection closed." )
 
     def open_connection ( self ):
-        self.log.info ( "%s %s" % ( sys._getframe ( ).f_code.co_name,
-                                    sys._getframe ( ).f_code.co_varnames ) )
+        self.log.debug ( "%s %s" % ( sys._getframe ( ).f_code.co_name,
+                                     sys._getframe ( ).f_code.co_varnames ) )
         
         try:
             self.telnet.open ( self.telnet_ip, self.telnet_port, timeout = 5 )
@@ -52,12 +53,13 @@ class telnet_connect ( threading.Thread ):
         if b'Logon successful.' in linetest:
             self.log.debug ( linetest.decode('ascii') )
             self.connected = True
+            self.log.info ( "Telnet connected successfully." )
         else:
             self.log.error ("Logon failed.")
 
     def run ( self ):
-        self.log.info ( "%s %s" % ( sys._getframe ( ).f_code.co_name,
-                                    sys._getframe ( ).f_code.co_varnames ) )
+        self.log.debug ( "%s %s" % ( sys._getframe ( ).f_code.co_name,
+                                     sys._getframe ( ).f_code.co_varnames ) )
         
         while ( self.shutdown == False ):
             if ( not self.connected ):

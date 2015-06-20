@@ -5,6 +5,7 @@ import pygeoip
 import random
 import sys
 import threading
+import time
 
 class player_info ( object ):
     def __init__ ( self,
@@ -49,12 +50,11 @@ class player_info ( object ):
 class server ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( server, self ).__init__ ( )
+        self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.log.setLevel ( logging.INFO )
-        
-        self.version = "0.15.1"
-        self.shutdown = False
 
+        self.log.info ( "server module initializing." )
+        self.shutdown = False
         self.framework = framework
         self.preferences = self.framework.preferences
         self.chat = None
@@ -99,9 +99,6 @@ class server ( threading.Thread ):
             self.chat.close ( )
         pickle_file = open ( self.player_info_file, 'wb' )
         pickle.dump ( self.players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
-
-    def bye ( self ):
-        self.say ( "7days framework mod version %s stopped." % self.version )
 
     def calculate_bearings ( self, player_origin, player_helper ):
         origin_x = player_origin.pos_x
@@ -153,6 +150,7 @@ class server ( threading.Thread ):
         self.say ( help_message )
             
     def console ( self, message ):
+        self.log.debug ( message )
         if ( message != "gt" and
              message != "lp" ):
             if message [ : 3 ] == "pm ":
@@ -362,9 +360,6 @@ class server ( threading.Thread ):
         player = self.get_player ( player_input )
         msg = 'give ' + player.name_sane + ' ' + stuff + ' ' + str ( quantity )
         self.console ( msg )
-
-    def greet ( self ):
-        self.say ( "7days framework mod version %s running." % self.version )
 
     def list_players ( self ):
         for key in self.players_info.keys ( ):
@@ -649,7 +644,8 @@ class server ( threading.Thread ):
                 
     def run ( self ):
         while self.shutdown == False:
-            time.sleep ( self.framework.preferences.wait_loop )
+            self.log.debug ( "Tick" )
+            time.sleep ( self.framework.preferences.loop_wait )
                 
     def sanitize ( self, original ):
         result = original.replace ( '"', '_' )

@@ -9,21 +9,14 @@ class orchestrator ( threading.Thread ):
     def __init__ ( self ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.log.setLevel ( logging.INFO )
         self.daemon = True
 
-        self.silence = False
-
     def config ( self, preferences_file_name ):
+        self.silence = False
         self.shutdown = False
         self.preferences = framework.preferences ( preferences_file_name )
-       
-        self.log_handler = logging.FileHandler ( self.preferences.log_file )
-        self.log_handler.setLevel ( logging.DEBUG )
-        self.log_formatter = logging.Formatter ( fmt = '%(asctime)s %(name)s %(levelname)s %(message)s',
-                                                 datefmt = '%Y-%m-%d %H:%M:%S' )
-        self.log_handler.setFormatter ( self.log_formatter )
-        self.log.addHandler ( self.log_handler )
+
+        framework.set_log_file ( self.preferences.log_file )
 
         self.log.info ( "**************************   Starting framework   ***************************" )
         
@@ -34,6 +27,7 @@ class orchestrator ( threading.Thread ):
 
         self.mods = [ ]
         self.server = framework.server ( framework = self )
+        self.server.start ( )
 
         self.telnet.start ( )
 
@@ -41,11 +35,13 @@ class orchestrator ( threading.Thread ):
 
         for mod in self.preferences.mods.keys ( ):
             module_name = self.preferences.mods [ mod ] [ 'module' ]
-            self.log.info ( "Attempting to load module %s." % module_name )
-            mod_module = importlib.import_module ( module_name )
-            self.log.info ( "mod_module = %s" % str ( mod_module ) )
+            full_module_name = module_name + "." + module_name
+            self.log.debug ( "Attempting to load module %s." % full_module_name )
+            mod_module = importlib.import_module ( full_module_name )
+            self.log.debug ( "mod_module = %s" % str ( mod_module ) )
             mod_class = getattr ( mod_module, module_name )
             mod_instance = mod_class ( framework = self )
+            self.log.info ( "Mod %s loaded." % module_name )
             self.mods.append ( mod_instance )
         
         for mod in self.mods:
@@ -59,13 +55,17 @@ class orchestrator ( threading.Thread ):
 
         try:
             while self.shutdown == False:
-
+                self.log.debug ( "Tick" )
+                
                 for mod in self.mods:
                     if mod.is_alive ( ) == False:
                         self.log.warning ( "mod %s is dead, restarting framework." % str ( mod ) )
                         self.shutdown = True
-                    
+
+                self.log.debug ( "Before gt" )
                 self.server.console ( "gt" )
+                self.log.debug ( "After gt" )
+                
                 if count % 10 == 0:
                     self.server.offline_players ( )
                     time.sleep ( self.preferences.loop_wait + 1 )
