@@ -30,17 +30,24 @@ class server ( threading.Thread ):
         self.minute = None
         self.time = None
 
-        self.commands = { 'curse'       : ( self.curse_player,         " /curse player_name prints an unfriendly message." ),
-                          'invite'      : ( self.command_invite,       " /invite <playername> allows other players inside your home." ),
-                          'me'          : ( self.command_print_player_info, " /me will print your info." ),
-                          'help'        : ( self.command_help,         " /help shows the list of commands." ),
-                          'players'     : ( self.print_players_info,   " /players prints players info." ),
-                          'rules'       : ( self.command_rules,        " /rules will print server rules." ),
-                          'sethome'     : ( self.command_sethome,      " /sethome will mark your current spot as your home." ), 
-                          'sos'         : ( self.sos,                  " /sos will ask players to help you." ),
-                          'starterbase' : ( self.output_starter_base,  " /starterbase will output information about starter base." ),
-                          'status'      : ( self.mod_status,           " /status lists running mods." ),
-                          'uninvite'    : ( self.command_uninvite,     " /uninvite <playername> disallows a player to enter your home." ) }
+        self.commands = { 'about'       : ( self.command_about,
+                                            " /about will tell you where to get this mod." ),
+                          'curse'       : ( self.curse_player,
+                                            " /curse player_name prints an unfriendly message." ),
+                          'me'          : ( self.command_print_player_info,
+                                            " /me will print your info." ),
+                          'help'        : ( self.command_help,
+                                            " /help shows the list of commands." ),
+                          'players'     : ( self.print_players_info,
+                                            " /players prints players info." ),
+                          'rules'       : ( self.command_rules,
+                                            " /rules will print server rules." ),
+                          'sos'         : ( self.sos,
+                                            " /sos will ask players to help you." ),
+                          'starterbase' : ( self.output_starter_base,
+                                            " /starterbase will output information about starter base." ),
+                          'status'      : ( self.mod_status,
+                                            " /status lists running mods." ) }
         
         file_found = True
         try:
@@ -78,19 +85,11 @@ class server ( threading.Thread ):
     def calculate_distance ( self, point_A, point_B ):
         return math.sqrt ( ( point_A [ 0 ] - point_B [ 0 ] ) ** 2 +
                            ( point_A [ 1 ] - point_B [ 1 ] ) ** 2 )
-    
-    def command_invite ( self, msg_origin, msg_contents ):
-        player = self.get_player ( msg_origin )
-        invitee = self.get_player ( msg_contents [ 8 : -1 ] )
-        if invitee != None:
-            if player.home_invitees == None:
-                player.home_invitees = [ ]
-            if invitee.playerid not in player.home_invitees:
-                player.home_invitees.append ( invitee.playerid )
-                self.say ( "%s can now enter %s's home." % ( invitee.name_sane, player.name_sane ) )
-            else:
-                self.say ( "%s can already enter %s's home." % ( invitee.name_sane, player.name_sane ) )
 
+    def command_about ( self, origin, message ):
+        self.say ( "This mod is open source, initiated by Schabracke and developed by rc." )
+        self.say ( "Source at http://github.com/rcbrgs/7-days-server-mod-framework." )
+    
     def command_help ( self, msg_origin, msg_content ):
         if len ( msg_content ) > len ( "/help" ):
             for key in self.commands.keys ( ):
@@ -102,13 +101,18 @@ class server ( threading.Thread ):
                     if msg_content [ 6 : -1 ] == key:
                         self.say ( mod.commands [ key ] [ 1 ] )
                         return
-        
-        help_message = "Available commands: "
+
+        command_list = [ ]
         for key in self.commands.keys ( ):
-            help_message += key + " "
+            command_list.append ( key )
         for mod in self.framework.mods:
             for key in mod.commands.keys ( ):
-                help_message += key + " "
+                command_list.append ( key )
+
+        help_message = "Available commands: "
+        for mod_key in sorted ( command_list ):
+            help_message += mod_key + " "
+        
         self.say ( help_message )
             
     def console ( self, message ):
@@ -149,46 +153,6 @@ class server ( threading.Thread ):
         self.say ( "Drop on death: everything. Drop on exit: nothing." )
         self.say ( "Player killers are automatically imprisoned." )
         
-    def command_sethome ( self, msg_origin, msg_contents ):
-        player = self.get_player ( msg_origin )
-        if player == None:
-            return
-        pos = ( player.pos_x, player.pos_y, player.pos_z )
-        for key in self.players_info.keys ( ):
-            if self.players_info [ key ].home != None:
-                if player.playerid != key:
-                    other = self.get_player ( key )
-                    distance = math.sqrt ( ( player.pos_x - other.pos_x ) ** 2 + \
-                                           ( player.pos_y - other.pos_y ) ** 2 )
-                    if distance < self.preferences.home_radius * 2:
-                        self.say ( "%s, you are too close to %s's home. /sethome failed." %
-                                   ( player.name_sane, other.name_sane ) )
-                        return
-                    distance = self.calculate_distance ( ( player.pos_x, player.pos_y ),
-                                                         ( 850, 914 ) )
-                    if distance < self.preferences.home_radius * 2:
-                        self.say ( "%s, you are too close to the starterbase. /sethome failed." %
-                                   ( player.name_sane ) )
-                        return
-
-        player.home = pos
-        self.say ( "%s home is now at %s." % ( player.name_sane, player.home ) )
-
-    def command_uninvite ( self, msg_origin, msg_contents ):
-        player = self.get_player ( msg_origin )
-        invitee = self.get_player ( msg_contents [ 10 : -1 ] )
-        if invitee != None:
-            if player.home_invitees != None:
-                if invitee.playerid in player.home_invitees:
-                    player.home_invitees.remove ( invitee.playerid )
-                    self.say ( "%s cannot enter %s's home anymore." % ( invitee.name_sane, player.name_sane ) )
-                else:
-                    self.say ( "%s not in player's invitees list." % ( msg_contents [ 10 : -1 ] ) )
-            else:
-                self.say ( "Player's invitee list is empty!" )
-        else:
-            self.say ( "Could not find user with that name." )
-
     def curse_player ( self, msg_origin, msg_content ):
         target = self.get_player ( msg_content [ 7 : -1 ] )
         if target != None:

@@ -47,7 +47,7 @@ class telnet_connect ( threading.Thread ):
         except:
             e = sys.exc_info ( ) [ 0 ]
             self.log.error ( "Error while opening connection: %s." % str ( e ) )
-            if self.framework.shutdown = False:
+            if not self.framework.shutdown:
                 time.sleep ( loop_wait )
                 return self.open_connection ( )
         linetest = self.telnet.read_until ( b'Logon successful.' )
