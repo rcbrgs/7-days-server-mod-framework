@@ -13,7 +13,13 @@ class template ( threading.Thread ):
         self.daemon = True
 
         self.enabled = self.framework.preferences.mods [ self.__class__.__name__ ] [ 'enabled' ]
-        self.commands = { }
+
+        # To have a new command for players to use, it must be placed in the dict below.
+        # The commented example adds the command "/suicide" and have the mod run the function "kill_player ( )".
+        # All player chat commands receive two strings as arguments. The first contains the player name (unsanitized) and the second contains the string typed by the player (also unsanitized).
+        self.commands = {
+            # 'suicide' : ( self.kill_player, " /suicide will kill your character." )
+        }
 
     def __del__ ( self ):
         self.stop ( )
