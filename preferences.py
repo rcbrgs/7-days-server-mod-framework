@@ -110,6 +110,10 @@ class preferences ( object ):
                     self.mods [ key ] [ 'module' ] = right_hand
                     break
 
+                if ( key + "_"  == left_hand [ : len ( key ) + 1 ] ):
+                    self.mods [ key ] [ left_hand.split ( key + "_" ) [ 1 ] ] = right_hand.lower ( )
+                    break;
+
     def output ( self ):
         self.log.debug ( "chat_log_file = %s" % ( self.log_file ) )
         self.log.debug ( "forbidden_countries = %s" % ( self.forbidden_countries ) )

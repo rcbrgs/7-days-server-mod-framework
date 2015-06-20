@@ -71,6 +71,10 @@ Make sure you can run the framework as-is. Verify that the log files show that t
 
 Copy the template_mod.py file into a new file.
 
+Create a file named __init__.py where you copied the mod template, and add these lines:
+
+from .<your mod name> import <your mod name>
+
 Edit this new file, and rename the "template" class with the same name as the file (and therefore, this name should be a valid Python identifier - no spaces, no special characters).
 
 In the area of this file indicated as being safe for adding the mod code, add some code to be run, as a first draft of your mod.

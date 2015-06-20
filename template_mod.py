@@ -6,12 +6,13 @@ import time
 # change the class name
 class template ( threading.Thread ):
     def __init__ ( self, framework):
-        super ( self.__class__.__name__, self ).__init__ ( )
+        super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.version = "0.0.0"
+        self.__version__ = "0.1.0"
         self.framework = framework
+        self.daemon = True
 
-        self.enabled = self.framework.preferences.mods [ self.__class__.__name__ ].enabled
+        self.enabled = self.framework.preferences.mods [ self.__class__.__name__ ] [ 'enabled' ]
         self.commands = { }
 
     def __del__ ( self ):
@@ -19,7 +20,7 @@ class template ( threading.Thread ):
 
     def greet ( self ):
         self.framework.server.say ( "%s mod version %s loaded." % ( self.__class__.__name__,
-                                                                    self.version ) )
+                                                                    self.__version__ ) )
 
     def run ( self ):
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )

@@ -36,13 +36,13 @@ class orchestrator ( threading.Thread ):
         for mod in self.preferences.mods.keys ( ):
             module_name = self.preferences.mods [ mod ] [ 'module' ]
             full_module_name = module_name + "." + module_name
-            self.log.info ( "Attempting to load module %s." % full_module_name )
+            self.log.debug ( "Attempting to load module %s." % full_module_name )
             try:
                 mod_module = importlib.import_module ( full_module_name )
             except Exception as e:
                 self.log.error ( e )
                 continue
-            self.log.info ( "mod_module = %s" % str ( mod_module ) )
+            self.log.debug ( "mod_module = %s" % str ( mod_module ) )
             mod_class = getattr ( mod_module, module_name )
             mod_instance = mod_class ( framework = self )
             self.log.info ( "Mod %s loaded." % module_name )

@@ -52,6 +52,7 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
+        self.__version__ = '0.1.0'
 
         self.log.info ( "server module initializing." )
         self.shutdown = False
@@ -191,7 +192,7 @@ class server ( threading.Thread ):
         player = self.get_player ( msg_origin )
         if player == None:
             return
-        pos = ( player.pos_x, player.pos_y )
+        pos = ( player.pos_x, player.pos_y, player.pos_z )
         for key in self.players_info.keys ( ):
             if self.players_info [ key ].home != None:
                 if player.playerid != key:
@@ -361,6 +362,10 @@ class server ( threading.Thread ):
         msg = 'give ' + player.name_sane + ' ' + stuff + ' ' + str ( quantity )
         self.console ( msg )
 
+    def greet ( self ):
+        self.say ( "%s module %s loaded." % ( self.__class__.__name__,
+                                              self.__version__ ) )
+        
     def list_players ( self ):
         for key in self.players_info.keys ( ):
             print ( self.players_info [ key ].name )
@@ -601,10 +606,10 @@ class server ( threading.Thread ):
             self.players_info [ playerid ] = new_player_info
             self.players_info [ playerid ].name_sane = self.sanitize ( name )
             country = self.geoip.country_code_by_addr ( ip )
-            if country in self.framework.preferences.forbidden_countries:
-                self.say ( "%s is a new [FF0000]prisoner[FFFFFF], and now has an entry in the Gulag database." % self.sanitize ( name ) )
-            else:
-                self.say ( "%s is a new player, and now has an entry in player database." % self.sanitize ( name ) )
+            #if country in self.framework.preferences.forbidden_countries:
+            #    self.say ( "%s is a new [FF0000]prisoner[FFFFFF], and now has an entry in the Gulag database." % self.sanitize ( name ) )
+            #else:
+            #    self.say ( "%s is a new player, and now has an entry in player database." % self.sanitize ( name ) )
 
     def command_print_player_info ( self, player_identifier, message ):
         player = self.get_player ( player_identifier )
