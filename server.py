@@ -94,6 +94,7 @@ class server ( threading.Thread ):
             self.players_info = { }
 
     def __del__ ( self ):
+        self.log.warning ( "__del__" )
         if self.chat != None:
             self.chat.close ( )
         pickle_file = open ( self.player_info_file, 'wb' )
@@ -668,7 +669,10 @@ class server ( threading.Thread ):
             inputmsg = 'say "' + inputmsg.replace ( '"', ' ' ) + '"' + "\n"
             outputmsg = inputmsg.encode ( 'utf-8' )
         self.log.debug ( outputmsg )
-        self.telnet_connection.write ( outputmsg )
+        if not self.framework.silence:
+            self.telnet_connection.write ( outputmsg )
+        else:    
+            self.log.info ( "(silenced) %s" % outputmsg )
 
     def sos ( self, msg_origin, msg_contents ):
         origin = self.get_player ( msg_origin )

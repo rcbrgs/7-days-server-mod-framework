@@ -12,6 +12,7 @@ class telnet_connect ( threading.Thread ):
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
         
         self.shutdown = False
+        self.connected = False
         self.framework = framework
                 
         self.telnet_ip = self.framework.preferences.telnet_ip
@@ -30,6 +31,7 @@ class telnet_connect ( threading.Thread ):
     def close_connection ( self ):
         self.log.info ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
+        self.connected = False
         self.telnet.close ( )
 
     def open_connection ( self ):
@@ -49,6 +51,7 @@ class telnet_connect ( threading.Thread ):
         linetest = self.telnet.read_until ( b'Logon successful.' )
         if b'Logon successful.' in linetest:
             self.log.debug ( linetest.decode('ascii') )
+            self.connected = True
         else:
             self.log.error ("Logon failed.")
 
@@ -57,6 +60,8 @@ class telnet_connect ( threading.Thread ):
                                     sys._getframe ( ).f_code.co_varnames ) )
         
         while ( self.shutdown == False ):
+            if ( not self.connected ):
+                continue
             try:
                 line = self.telnet.read_until ( b'\n', 5 )
             except:

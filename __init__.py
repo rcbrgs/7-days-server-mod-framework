@@ -13,8 +13,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-
         self.daemon = True
+
+        self.silence = False
 
     def config ( self, preferences_file_name ):
         self.shutdown = False
@@ -108,3 +109,6 @@ maestro = orchestrator ( )
 def config ( preferences_file_name ):
     maestro.config ( preferences_file_name )
     maestro.start ( )
+
+def console ( input_string ):
+    maestro.server.console ( input_string )

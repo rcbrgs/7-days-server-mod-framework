@@ -34,6 +34,8 @@ If the configuration is correct and the telnet is accessible, you now have acces
 
 And other functions and classes under <framework>. It is recommended to read the code or use ipython and check the online documentation.
 
+Please notice that the output from the game server will not be display directly on your session; for instance, the return from "lp" won't echo on the interpreter. All output from the server is parsed through a parser module, and events are generated accordingly. Therefore, the result from the "lp" command being sent is that the players database will be updated with the latest info.
+
 How to use mods with the framework
 ----------------------------------
 
