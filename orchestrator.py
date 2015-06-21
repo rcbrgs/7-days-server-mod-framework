@@ -70,9 +70,9 @@ class orchestrator ( threading.Thread ):
                 self.server.console ( "gt" )
                 self.log.debug ( "After gt" )
                 
-                if count % 10 == 0:
-                    self.server.offline_players ( )
-                    time.sleep ( self.preferences.loop_wait + 1 )
+                #if count % 10 == 0:
+                    #self.server.offline_players ( )
+                    #time.sleep ( self.preferences.loop_wait + 1 )
                 
                 self.server.console ( "lp" )
             

@@ -44,12 +44,12 @@ class telnet_connect ( threading.Thread ):
             self.telnet.read_until ( b"Please enter password:" )
             passwd = self.telnet_password + '\n'
             self.telnet.write ( passwd.encode ( 'utf-8' ) )
-        except:
-            e = sys.exc_info ( ) [ 0 ]
+        except Exception as e:
             self.log.error ( "Error while opening connection: %s." % str ( e ) )
             if not self.framework.shutdown:
-                time.sleep ( loop_wait )
-                return self.open_connection ( )
+                time.sleep ( self.framework.preferences.loop_wait )
+                self.open_connection ( )
+                return
         linetest = self.telnet.read_until ( b'Logon successful.' )
         if b'Logon successful.' in linetest:
             self.log.debug ( linetest.decode('ascii') )
@@ -67,8 +67,7 @@ class telnet_connect ( threading.Thread ):
                 continue
             try:
                 line = self.telnet.read_until ( b'\n', 5 )
-            except:
-                e = sys.exc_info()[0]
+            except Exception as e:
                 self.log.error ( e )
                 self.close_connection ( )
                 self.open_connection ( )
