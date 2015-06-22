@@ -10,6 +10,7 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
+        self.__version__ = '0.1.1'
 
     def config ( self, preferences_file_name ):
         self.silence = False
@@ -70,8 +71,8 @@ class orchestrator ( threading.Thread ):
                 self.server.console ( "gt" )
                 self.log.debug ( "After gt" )
                 
-                #if count % 10 == 0:
-                    #self.server.offline_players ( )
+                if count % 10 == 0:
+                    self.server.offline_players ( )
                     #time.sleep ( self.preferences.loop_wait + 1 )
                 
                 self.server.console ( "lp" )
