@@ -51,6 +51,7 @@ class orchestrator ( threading.Thread ):
         self.log.debug ( "Attempting to load module %s." % full_module_name )
         try:
             mod_module = importlib.import_module ( full_module_name )
+            mod_module = importlib.reload ( mod_module )
         except Exception as e:
             self.log.error ( "Ignoring unloadable module: %s." % str ( e ) )
             return
