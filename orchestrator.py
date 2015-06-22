@@ -36,21 +36,30 @@ class orchestrator ( threading.Thread ):
 
         for mod in self.preferences.mods.keys ( ):
             module_name = self.preferences.mods [ mod ] [ 'module' ]
-            full_module_name = module_name + "." + module_name
-            self.log.debug ( "Attempting to load module %s." % full_module_name )
-            try:
-                mod_module = importlib.import_module ( full_module_name )
-            except Exception as e:
-                self.log.error ( e )
-                continue
-            self.log.debug ( "mod_module = %s" % str ( mod_module ) )
-            mod_class = getattr ( mod_module, module_name )
-            mod_instance = mod_class ( framework = self )
-            self.log.info ( "Mod %s loaded." % module_name )
-            self.mods.append ( mod_instance )
+            self.load_mod ( module_name )
         
         for mod in self.mods:
             mod.start ( )
+
+    def load_mod ( self, module_name ):
+        full_module_name = module_name + "." + module_name
+        
+        if ( full_module_name in self.mods ):
+            self.log.info ( "mod %s already in self.mods." % full_module_name )
+            return
+        
+        self.log.debug ( "Attempting to load module %s." % full_module_name )
+        try:
+            mod_module = importlib.import_module ( full_module_name )
+        except Exception as e:
+            self.log.error ( "Ignoring unloadable module: %s." % str ( e ) )
+            return
+        self.log.debug ( "mod_module = %s" % str ( mod_module ) )
+        mod_class = getattr ( mod_module, module_name )
+        mod_instance = mod_class ( framework = self )
+        self.log.info ( "Mod %s loaded." % module_name )
+        self.mods.append ( mod_instance )
+        return mod_instance
 
     def run ( self ):            
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
@@ -64,8 +73,17 @@ class orchestrator ( threading.Thread ):
                 
                 for mod in self.mods:
                     if mod.is_alive ( ) == False:
-                        self.log.warning ( "mod %s is dead, restarting framework." % str ( mod ) )
-                        self.shutdown = True
+                        self.log.warning ( "mod %s is dead, restarting." % str ( mod ) )
+                        module_name = mod.__class__.__name__
+                        mod.shutdown = True
+                        mod.join ( )
+                        self.mods.remove ( mod )
+                        mod_instance = self.load_mod ( module_name )
+                        mod_instance.start ( )
+                        
+                        while not mod_instance.is_alive ( ):
+                            self.log.warning ( "Sleeping 1 second to wait mod to run." )
+                            time.sleep ( 1 )
 
                 self.log.debug ( "Before gt" )
                 self.server.console ( "gt" )
@@ -79,17 +97,16 @@ class orchestrator ( threading.Thread ):
             
                 time.sleep ( self.preferences.loop_wait )
                 count += 1
-        except:
-            e = sys.exc_info ( ) [ 0 ]
-            self.log.info ( e )
-            self.log.info ( "Shutting down mod framework due to exception." )
+        except Exception as e:
+            self.log.critical ( "Shutting down mod framework due to unhandled exception: %s." % str ( e ) )
             self.shutdown = True
 
         for mod in self.mods:
             self.log.info ( "mod %s stop" % str ( mod ) )
             mod.stop ( )
             self.log.info ( "mod %s join" % str ( mod ) )
-            mod.join ( )
+            if mod.is_alive ( ):
+                mod.join ( )
 
         self.telnet.stop ( )
         self.telnet.join ( )

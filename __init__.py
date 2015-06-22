@@ -3,6 +3,7 @@ from .player_info      import player_info_v2 as player_info
 from .preferences      import preferences
 from .server           import server
 from .telnet_connect   import telnet_connect
+from .void_fall_detector import void_fall_detector
 
 import importlib
 import logging

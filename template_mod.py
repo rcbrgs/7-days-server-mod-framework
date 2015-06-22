@@ -7,7 +7,7 @@ import time
 class template ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
-        self.log = logging.getLogger ( __name__ )
+        self.log = framework.log
         self.__version__ = "0.1.0"
         self.framework = framework
         self.daemon = True
