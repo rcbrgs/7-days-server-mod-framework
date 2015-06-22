@@ -1,5 +1,5 @@
 from .orchestrator     import orchestrator
-from .player_info      import player_info
+from .player_info      import player_info_v2 as player_info
 from .preferences      import preferences
 from .server           import server
 from .telnet_connect   import telnet_connect

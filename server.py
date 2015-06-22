@@ -15,7 +15,7 @@ class server ( threading.Thread ):
         self.log = logging.getLogger ( __name__ )
         self.__version__ = '0.1.0'
 
-        self.log.info ( "server module initializing." )
+        self.log.info ( "Server module initializing." )
         self.shutdown = False
         self.framework = framework
         self.preferences = self.framework.preferences
@@ -199,7 +199,7 @@ class server ( threading.Thread ):
                                 self.say ( "%s invaded %s's base! [0000FF]Teleporting away...[FFFFFF]" % ( player.name_sane, self.players_info [ key ].name_sane ) )
                                 if beacon_distance < self.preferences.home_radius * 1.5:
                                     self.say ( "%s teleport destination is too near %s's base, changing it to starterbase." % ( player.name_sane, other.name_sane ) )
-                                    player.home_invasion_beacon = ( 896, 851, 71 + self.framework.preferences.teleport_lag_cushion )
+                                    player.home_invasion_beacon = ( 1500, 350, 67 + self.framework.preferences.teleport_lag_cushion )
                                 self.teleport ( player, player.home_invasion_beacon )
                                 return
                             self.console ( 'pm %s "You are still near ([880000]%dm[FFFFFF]) %s base!"' % ( player.playerid,
@@ -334,11 +334,11 @@ class server ( threading.Thread ):
             self.players_info [ key ].online = False
 
     def output_starter_base ( self, msg_origin, msg_content ):
-        self.say ( "The starterbase is at 850 N, 914 E. Password is 'noob'." )
-        self.say ( "The starterbase rules are:" )
-        self.say ( "Replant what you harvest." )
-        self.say ( "Take what you need, and repay with work around the base." )
-        self.say ( "Stop all fires and be silent during nights." )
+        self.say ( "The starterbase is at 1500 E, 350 N. Password is 'noob'." )
+        self.say ( "To teleport there, type /gostart." )
+        self.say ( "- Replant what you harvest." )
+        self.say ( "- Take what you need, and repay with work around the base." )
+        #self.say ( "- Stop all fires and be silent during nights." )
         
     def parse_get_time ( self,
                          msg = None ):
@@ -489,7 +489,7 @@ class server ( threading.Thread ):
                     if ( abs ( self.players_info [ playerid ].map_limit_beacon [ 0 ] ) > 4500 or
                          abs ( self.players_info [ playerid ].map_limit_beacon [ 1 ] ) > 4500 ):
                         self.say ( "Saved position also beyond hard limit; teleporting to starter base." )
-                        self.players_info [ playerid ].map_limit_beacon = ( 896, 851, 71 + 1 )                    
+                        self.players_info [ playerid ].map_limit_beacon = ( 1500, 350, 67 + 1 )                    
                     self.teleport ( name,
                                     self.players_info [ playerid ].map_limit_beacon )
                     return
@@ -642,25 +642,27 @@ class server ( threading.Thread ):
         self.console ( msg )
 
     def update_players_pickle ( self ):
+        import framework
         new_players_info = { }
         for key in self.players_info.keys ( ):
             player = self.get_player ( key )
             if player != None:
-                new_player = pinfo.player_info ( deaths = player.deaths,
-                                                 health = player.health,
-                                                 home = player.home,
-                                                 ip = player.ip,
-                                                 level = player.level,
-                                                 name = player.name,
-                                                 online = player.online,
-                                                 playerid = player.playerid,
-                                                 players = player.players,
-                                                 pos_x = player.pos_x,
-                                                 pos_y = player.pos_y,
-                                                 pos_z = player.pos_z,
-                                                 score = player.score,
-                                                 steamid = player.steamid,
-                                                 zombies = player.zombies )
+                
+                new_player = framework.player_info_v2 ( deaths = player.deaths,
+                                              health = player.health,
+                                              home = player.home,
+                                              ip = player.ip,
+                                              level = player.level,
+                                              name = player.name,
+                                              online = player.online,
+                                              playerid = player.playerid,
+                                              players = player.players,
+                                              pos_x = player.pos_x,
+                                              pos_y = player.pos_y,
+                                              pos_z = player.pos_z,
+                                              score = player.score,
+                                              steamid = player.steamid,
+                                              zombies = player.zombies )
                 new_player.home_invasion_beacon = player.home_invasion_beacon
                 new_player.home_invitees = player.home_invitees
                 new_player.language_preferred = player.language_preferred
@@ -670,7 +672,8 @@ class server ( threading.Thread ):
                 new_player.attributes = player.attributes
                 
                 # New attribute:
-                                
+                new_player.camp = None
+                
                 new_players_info [ key ] = new_player
 
         self.log.info ( "Creating new player info file." )

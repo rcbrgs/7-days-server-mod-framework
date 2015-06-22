@@ -11,6 +11,7 @@ class template ( threading.Thread ):
         self.__version__ = "0.1.0"
         self.framework = framework
         self.daemon = True
+        self.shutdown = False
 
         self.enabled = self.framework.preferences.mods [ self.__class__.__name__ ] [ 'enabled' ]
 
