@@ -14,8 +14,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.3.3'
+        self.__version__ = '0.3.4'
         self.changelog = {
+            '0.3.4' : "Fixed positions not being saved.",
             '0.3.3' : "Added accounting of play time (/me) and player position.",
             '0.3.2' : "Fixed db update function.",
             '0.3.1' : "Started to ignore command 'restart'.",
@@ -532,6 +533,7 @@ class server ( threading.Thread ):
             player_positions.append ( ( pos_x, pos_y, pos_z ) )
             if len ( player_positions ) > 24 * 60 * 60 / self.framework.preferences.loop_wait:
                 del ( player_positions [ 0 ] )
+            self.players_info [ playerid ].positions = player_positions
             #self.players_info [ playerid ].rot = rot
             #self.players_info [ playerid ].remote = remote
             self.players_info [ playerid ].timestamp_latest_update = now
