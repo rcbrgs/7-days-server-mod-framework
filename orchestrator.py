@@ -88,7 +88,7 @@ class orchestrator ( threading.Thread ):
                         mod_instance.start ( )
                         new_version = mod_instance.__version__
                         if old_version != new_version:
-                            self.server.say ( "Mod %s was updated from %s to %s. Changelog: %s." %
+                            self.server.say ( "Mod %s was updated from %s to %s. Changelog: %s" %
                                               ( mod_key, old_version, new_version,
                                                 mod_instance.changelog [ new_version ] ) )
                         
