@@ -144,6 +144,7 @@ class player_info_v3 ( object ):
         self.map_limit_beacon = None
         self.name_sane = None
         self.online_time = None
+        self.timestamp_latest_update = None
         
         # Extensible attributes dictionary:
         self.attributes = { }

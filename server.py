@@ -550,10 +550,6 @@ class server ( threading.Thread ):
             self.players_info [ playerid ] = new_player_info
             self.players_info [ playerid ].name_sane = self.sanitize ( name )
             country = self.geoip.country_code_by_addr ( ip )
-            #if country in self.framework.preferences.forbidden_countries:
-            #    self.say ( "%s is a new [FF0000]prisoner[FFFFFF], and now has an entry in the Gulag database." % self.sanitize ( name ) )
-            #else:
-            #    self.say ( "%s is a new player, and now has an entry in player database." % self.sanitize ( name ) )
 
     def command_print_player_info ( self, player_identifier, message ):
         player = self.get_player ( player_identifier )
