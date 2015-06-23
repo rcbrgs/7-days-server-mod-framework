@@ -13,8 +13,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.1.2'
+        self.__version__ = '0.2.0'
         self.changelog = {
+            '0.2.0' : "Upgraded player_info to v3, with stubs to new attributes.",
             '0.1.2' : "Fixed framework.mods being called as list, but now is dict." }
 
         self.log.info ( "Server module initializing." )
@@ -410,7 +411,6 @@ class server ( threading.Thread ):
         if b"[type=" in msg:
             return
         current_parse = player_info ( )
-        #text = msg.decode ('ascii')
         text = msg.decode ('utf-8')
 
         try:
@@ -660,32 +660,58 @@ class server ( threading.Thread ):
         for key in self.players_info.keys ( ):
             player = self.get_player ( key )
             if player != None:
-                
-                new_player = framework.player_info_v2 ( deaths = player.deaths,
-                                              health = player.health,
-                                              home = player.home,
-                                              ip = player.ip,
-                                              level = player.level,
-                                              name = player.name,
-                                              online = player.online,
-                                              playerid = player.playerid,
-                                              players = player.players,
-                                              pos_x = player.pos_x,
-                                              pos_y = player.pos_y,
-                                              pos_z = player.pos_z,
-                                              score = player.score,
-                                              steamid = player.steamid,
-                                              zombies = player.zombies )
-                new_player.home_invasion_beacon = player.home_invasion_beacon
-                new_player.home_invitees = player.home_invitees
-                new_player.language_preferred = player.language_preferred
-                new_player.languages_spoken = player.languages_spoken
-                new_player.map_limit_beacon = player.map_limit_beacon
-                new_player.name_sane = self.sanitize ( player.name )
-                new_player.attributes = player.attributes
-                
-                # New attribute:
-                new_player.camp = None
+
+                if self.players_info.__class__.__name__ == 'player_info':
+                    new_player = framework.player_info_v2 ( deaths = player.deaths,
+                                                            health = player.health,
+                                                            home = player.home,
+                                                            ip = player.ip,
+                                                            level = player.level,
+                                                            name = player.name,
+                                                            online = player.online,
+                                                            playerid = player.playerid,
+                                                            players = player.players,
+                                                            pos_x = player.pos_x,
+                                                            pos_y = player.pos_y,
+                                                            pos_z = player.pos_z,
+                                                            score = player.score,
+                                                            steamid = player.steamid,
+                                                            zombies = player.zombies )
+                    new_player.home_invasion_beacon = player.home_invasion_beacon
+                    new_player.home_invitees = player.home_invitees
+                    new_player.language_preferred = player.language_preferred
+                    new_player.languages_spoken = player.languages_spoken
+                    new_player.map_limit_beacon = player.map_limit_beacon
+                    new_player.name_sane = self.sanitize ( player.name )
+                    new_player.attributes = player.attributes
+                    # New attribute:
+                    new_player.camp = None
+                if self.players_info.__class__.__name__ == 'player_info_v2':
+                    new_player = framework.player_info_v3 ( deaths = player.deaths,
+                                                            health = player.health,
+                                                            home = player.home,
+                                                            ip = player.ip,
+                                                            level = player.level,
+                                                            name = player.name,
+                                                            online = player.online,
+                                                            playerid = player.playerid,
+                                                            players = player.players,
+                                                            pos_x = player.pos_x,
+                                                            pos_y = player.pos_y,
+                                                            pos_z = player.pos_z,
+                                                            score = player.score,
+                                                            steamid = player.steamid,
+                                                            zombies = player.zombies )
+                    new_player.home_invasion_beacon = player.home_invasion_beacon
+                    new_player.home_invitees = player.home_invitees
+                    new_player.language_preferred = player.language_preferred
+                    new_player.languages_spoken = player.languages_spoken
+                    new_player.map_limit_beacon = player.map_limit_beacon
+                    new_player.name_sane = self.sanitize ( player.name )
+                    new_player.attributes = player.attributes
+                    new_player.camp = player.camp
+                    # new
+                    new_player.online_time = 0
                 
                 new_players_info [ key ] = new_player
 

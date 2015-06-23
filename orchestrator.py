@@ -1,6 +1,7 @@
 import framework
 import importlib
 import logging
+import pickle
 import sys
 import threading
 import time
@@ -10,8 +11,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.2.2'
+        self.__version__ = '0.3.0'
         self.changelog = {
+            '0.3.0' : "Added support for saving the framework state.",
             '0.2.2' : "Increased interval between offline_all_players calls, because everything is racing this.",
             '0.2.1' : "Fixing errors regarding self.mods change.",
             '0.2.0' : "Changed self.mods to be a dict, and output changelog during updates." }
@@ -26,15 +28,32 @@ class orchestrator ( threading.Thread ):
         self.log.info ( "**************************   Starting framework   ***************************" )
         
         self.preferences.output ( )
+
+        file_found = True
+        try:
+            pickle_file = open ( self.preferences.framework_state_file, 'rb' )
+        except FileNotFoundError as e:
+            self.log.error ( e )
+            self.log.info ( "Creating new framework state file." )
+            file_found = False
+
+        if ( file_found ):
+            self.old_framework_state = pickle.load ( pickle_file )
+        else:
+            self.old_framework_state = None
+
+        self.framework_state = { 'orchestrator' : { 'version' : self.__version__ } }
         
         self.telnet = framework.telnet_connect ( framework = self )
         self.telnet.open_connection ( )
 
-        self.mods = [ ]
         self.server = framework.server ( framework = self )
-        self.server.start ( )
 
+        self.server.start ( )
         self.telnet.start ( )
+
+        self.framework_state [ 'telnet' ] = { 'version' : self.telnet.__version__ }
+        self.framework_state [ 'server' ] = { 'version' : self.server.__version__ }
 
         self.mods = { }
 
@@ -45,6 +64,16 @@ class orchestrator ( threading.Thread ):
         for mod in self.mods.keys ( ):
             self.mods [ mod ] [ 'reference' ].start ( )
 
+        for component in self.framework_state.keys ( ):
+            try:
+                old_version = self.old_framework_state [ component ] [ 'version' ]
+            except Exception as e:
+                self.log.error ( e )
+                old_version = 'unknown'
+            new_version = self.framework_state [ component ] [ 'version' ]
+            if old_version != new_version:
+                self.server.say ( "Mod %s updated to %s." % ( component, new_version ) )                
+            
     def load_mod ( self, module_name ):
         full_module_name = module_name + "." + module_name
         
@@ -63,6 +92,7 @@ class orchestrator ( threading.Thread ):
         mod_class = getattr ( mod_module, module_name )
         mod_instance = mod_class ( framework = self )
         self.log.info ( "Mod %s loaded." % module_name )
+        self.framework_state [ module_name ] = { 'version' : mod_instance.__version__ }
         self.mods [ module_name ] = { 'reference'      : mod_instance,
                                       'loaded version' : mod_instance.__version__ }
         return mod_instance
@@ -92,7 +122,6 @@ class orchestrator ( threading.Thread ):
                             self.server.say ( "Mod %s updated to v%s. Changelog: %s" %
                                               ( mod_key, old_version, new_version,
                                                 mod_instance.changelog [ new_version ] ) )
-                        
                         while not mod_instance.is_alive ( ):
                             self.log.warning ( "Sleeping 1 second to wait mod to run." )
                             time.sleep ( 1 )
@@ -130,6 +159,9 @@ class orchestrator ( threading.Thread ):
 
     def stop ( self ):
         self.log.info ( "<framework>.stop" )
+        pickle_file = open ( self.preferences.framework_state_file, 'wb' )
+        pickle.dump ( self.framework_state, pickle_file, pickle.HIGHEST_PROTOCOL )
+
         self.shutdown = True
 
     def __del__ ( self ):

@@ -7,7 +7,8 @@ import threading
 class telnet_connect ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( telnet_connect, self ).__init__ ( )
-        self.log = logging.getLogger ( __name__ )
+        self.log = framework.log
+        self.__version__ = '0.1.1'
 
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
         
