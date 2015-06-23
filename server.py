@@ -13,13 +13,18 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.2.0'
+        self.__version__ = '0.3.1'
         self.changelog = {
+            '0.3.1' : "Started to ignore command 'restart'.",
             '0.3.0' : "Added pm wrapper function.",
             '0.2.0' : "Upgraded player_info to v3, with stubs to new attributes.",
             '0.1.2' : "Fixed framework.mods being called as list, but now is dict." }
 
         self.log.info ( "Server module initializing." )
+
+        # Other programs might have /keywords that we want to ignore. Put those here.
+        self.external_commands = [ 'restart' ]
+        
         self.shutdown = False
         self.framework = framework
         self.preferences = self.framework.preferences
@@ -398,6 +403,9 @@ class server ( threading.Thread ):
                             if msg_content [ 1 : len ( key ) + 1 ] == key:
                                 mod.commands [ key ] [ 0 ] ( msg_origin, msg_content )
                                 return
+                    for external_command in self.external_commands:
+                        if msg_content [ 1 : -1 ] == external_command:
+                            return
                     self.say ( "Syntax error: %s." % msg_content [ 1 : -1 ] )
                 else:
                     for mod_key in self.framework.mods.keys ( ):

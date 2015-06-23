@@ -11,8 +11,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.3.1'
+        self.__version__ = '0.3.2'
         self.changelog = {
+            '0.3.2' : "Let players know when mods go up or down.",
             '0.3.1' : "Framework state will now save and output changelog.",
             '0.3.0' : "Added support for saving the framework state.",
             '0.2.2' : "Increased interval between offline_all_players calls, because everything is racing this.",
@@ -76,7 +77,7 @@ class orchestrator ( threading.Thread ):
                 old_version = 'unknown'
             new_version = self.framework_state [ component ] [ 'version' ]
             if old_version != new_version:
-                self.server.say ( "Mod %s updated to %s (%s)." %
+                self.server.say ( "Mod %s updated to %s: %s" %
                                   ( component, new_version,
                                     self.framework_state [ component ] [ 'changelog' ] ) )                
             
@@ -107,6 +108,7 @@ class orchestrator ( threading.Thread ):
     def run ( self ):            
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
+        self.server.say ( "Mods up." )
         self.server.offline_players ( )
         count = 1
 
@@ -166,6 +168,7 @@ class orchestrator ( threading.Thread ):
 
     def stop ( self ):
         self.log.info ( "<framework>.stop" )
+        self.server.say ( "Mods down." )
         pickle_file = open ( self.preferences.framework_state_file, 'wb' )
         pickle.dump ( self.framework_state, pickle_file, pickle.HIGHEST_PROTOCOL )
 
