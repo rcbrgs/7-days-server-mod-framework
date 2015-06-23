@@ -13,7 +13,7 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.1.1'
 
         self.log.info ( "Server module initializing." )
         self.shutdown = False
@@ -322,7 +322,11 @@ class server ( threading.Thread ):
             return
         
         self.log.info ( "Trying get_player ( %s )" % str ( player_name ) )
-        player = self.get_player ( player_name )
+        try:
+            player = self.get_player ( player_name )
+        except Exception as e:
+            self.log.error ( "offline_player ( '%s' ): %s." % ( server_log, str ( e ) ) )
+            player = None
             
         if player != None:
             player.online = False
