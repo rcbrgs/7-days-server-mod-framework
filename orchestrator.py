@@ -10,9 +10,10 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.2.0'
+        self.__version__ = '0.2.1'
         self.changelog = {
-            '0.2.0' : 'Changed self.mods to be a dict, and output changelog during updates.' }
+            '0.2.1' : "Fixing errors regarding self.mods change.",
+            '0.2.0' : "Changed self.mods to be a dict, and output changelog during updates." }
 
     def config ( self, preferences_file_name ):
         self.silence = False
@@ -112,7 +113,7 @@ class orchestrator ( threading.Thread ):
             self.shutdown = True
 
         for mod_key in self.mods.keys ( ):
-            mod = self.mods [ mod_key ]
+            mod = self.mods [ mod_key ] [ 'reference' ]
             self.log.info ( "mod %s stop" % str ( mod ) )
             mod.stop ( )
             self.log.info ( "mod %s join" % str ( mod ) )
