@@ -78,8 +78,8 @@ class orchestrator ( threading.Thread ):
             new_version = self.framework_state [ component ] [ 'version' ]
             if old_version != new_version:
                 self.server.say ( "Mod %s updated to %s: %s" %
-                                  ( component, new_version,
-                                    self.framework_state [ component ] [ 'changelog' ] ) )                
+                                  ( str ( component ), str ( new_version ),
+                                    str ( self.framework_state [ component ] [ 'changelog' ] ) ) )
             
     def load_mod ( self, module_name ):
         full_module_name = module_name + "." + module_name
