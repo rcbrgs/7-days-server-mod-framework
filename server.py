@@ -14,8 +14,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.3.8'
+        self.__version__ = '0.3.9'
         self.changelog = {
+            '0.3.9' : "Disabled old prison system.",
             '0.3.8' : "Fixed 'lp storm' by only calling lp if needed, not every interval.",
             '0.3.7' : "Preventively change player position after teleport.",
             '0.3.6' : "Added pkill explanations to /me.",
@@ -571,12 +572,12 @@ class server ( threading.Thread ):
             if int ( players ) > self.players_info [ playerid ].players:
                 self.log.info ( "Player %s has killed another player!" %
                                 self.players_info [ playerid ].name_sane )
-                self.say ( "%s is imprisoned for killing another player." %
-                           self.players_info [ playerid ].name_sane )
-                self.players_info [ playerid ].players = int ( players )
-                prison_mod = self.framework.mods [ 'prison' ] [ 'reference' ]
-                prison_mod.named_prisoners.append ( playerid )
-                prison_mod.save_prisoners ( )
+                #self.say ( "%s is imprisoned for killing another player." %
+                #           self.players_info [ playerid ].name_sane )
+                #self.players_info [ playerid ].players = int ( players )
+                #prison_mod = self.framework.mods [ 'prison' ] [ 'reference' ]
+                #prison_mod.named_prisoners.append ( playerid )
+                #prison_mod.save_prisoners ( )
                 
         else:
             new_player_info = player_info ( health = health,
@@ -726,7 +727,35 @@ class server ( threading.Thread ):
         player.pos_x = where_to [ 0 ]
         player.pos_y = where_to [ 1 ]
         player.pos_z = where_to [ 2 ]
+
+    def preteleport ( self, player_info, where_to ):
+        """
+        The where_to argument expects a tuple with coordinates ( +E/-W, +N/-S, height ).
+        """
+        player = self.get_player ( player_info )
+        if player == None:
+            self.log.error ( "teleport received None from get_player." )
+            return
         
+        if player != None:
+            msg = 'teleportplayer ' + str ( player.playerid ) + ' '
+        else:
+            msg = 'teleportplayer ' + str ( player_info ) + ' '
+        premsg = msg
+        if isinstance ( where_to, tuple ):
+            msg += str ( int ( where_to [ 0 ] ) ) + " " + \
+                   str ( int ( where_to [ 2 ] ) + 1 ) + " " + \
+                   str ( int ( where_to [ 1 ] ) )
+            premsg += str ( int ( where_to [ 0 ] ) ) + " " + \
+                      str ( int ( where_to [ 2 ] ) - 5000 ) + " " + \
+                      str ( int ( where_to [ 1 ] ) )
+        self.console ( premsg )
+        time.sleep ( 2 )
+        self.console ( msg )
+        player.pos_x = where_to [ 0 ]
+        player.pos_y = where_to [ 1 ]
+        player.pos_z = where_to [ 2 ]
+
     def update_players_pickle ( self ):
         import framework
         new_players_info = { }

@@ -52,12 +52,17 @@ class void_fall_detector ( threading.Thread ):
 
         online_players_heights = { }
         
-        while ( self.shutdown == False ):
+        while ( self.shutdown == False ):           
+            #time.sleep ( self.framework.preferences.loop_wait )
+            custom_wait = 0.1
+            time.sleep ( custom_wait )
+            if not self.enabled:
+                continue
 
             # STARTMOD
 
-            speed = 0.9
-            height_measurements = 4
+            speed = 10
+            height_measurements = 2
 
             next_online_players_heights = { }
 
@@ -77,22 +82,16 @@ class void_fall_detector ( threading.Thread ):
 
                     if len ( online_players_heights [ player.playerid ] [ 'height' ] ) == height_measurements:
                         self.log.debug ( "%s heights = %s." % ( player.name_sane, online_players_heights [ playerid ] [ 'height' ] ) )
-                        if not ( online_players_heights [ player.playerid ] [ 'x' ] [ 0 ] == online_players_heights [ player.playerid ] [ 'x' ] [ 1 ] and
-                                 online_players_heights [ player.playerid ] [ 'x' ] [ 1 ] == online_players_heights [ player.playerid ] [ 'x' ] [ 2 ] and
-                                 online_players_heights [ player.playerid ] [ 'x' ] [ 2 ] == online_players_heights [ player.playerid ] [ 'x' ] [ 3 ] ):
+                        if not ( online_players_heights [ player.playerid ] [ 'x' ] [ 0 ] == online_players_heights [ player.playerid ] [ 'x' ] [ 1 ] ):
                             continue
 
-                        if not ( online_players_heights [ player.playerid ] [ 'y' ] [ 0 ] == online_players_heights [ player.playerid ] [ 'y' ] [ 1 ] and
-                                 online_players_heights [ player.playerid ] [ 'y' ] [ 1 ] == online_players_heights [ player.playerid ] [ 'y' ] [ 2 ] and
-                                 online_players_heights [ player.playerid ] [ 'y' ] [ 2 ] == online_players_heights [ player.playerid ] [ 'y' ] [ 3 ] ):
+                        if not ( online_players_heights [ player.playerid ] [ 'y' ] [ 0 ] == online_players_heights [ player.playerid ] [ 'y' ] [ 1 ] ):
                             continue
-
-                        if ( online_players_heights [ player.playerid ] [ 'height' ] [ 0 ] > online_players_heights [ player.playerid ] [ 'height' ] [ 1 ] + speed * self.framework.preferences.loop_wait and
-                             online_players_heights [ player.playerid ] [ 'height' ] [ 1 ] > online_players_heights [ player.playerid ] [ 'height' ] [ 2 ] + speed * self.framework.preferences.loop_wait and
-                             online_players_heights [ player.playerid ] [ 'height' ] [ 2 ] > online_players_heights [ player.playerid ] [ 'height' ] [ 3 ] + speed * self.framework.preferences.loop_wait ):
+                        self.log.debug ( "%s heights = %s." % ( player.name_sane, online_players_heights [ playerid ] [ 'height' ] ) )
+                        if ( online_players_heights [ player.playerid ] [ 'height' ] [ 0 ] > online_players_heights [ player.playerid ] [ 'height' ] [ 1 ] + speed * custom_wait ):
                             self.log.info ( "%s heights = %s." % ( player.name_sane, online_players_heights [ playerid ] [ 'height' ] ) )
                             self.framework.server.say ( "Player %s has been falling the last %d seconds." % ( player.name_sane,
-                                                                                                              height_measurements * self.framework.preferences.loop_wait ) )
+                                                                                                              height_measurements * custom_wait ) )
                             if 'last teleport height' not in online_players_heights [ player.playerid ].keys ( ):
                                 online_players_heights [ player.playerid ] [ 'last teleport height' ] = player.pos_z
                             destiny_height = max ( ( online_players_heights [ player.playerid ] [ 'last teleport height' ],
@@ -123,8 +122,6 @@ class void_fall_detector ( threading.Thread ):
                 continue
             
             # ENDMOD                             
-            
-            time.sleep ( self.framework.preferences.loop_wait )
 
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
 

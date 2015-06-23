@@ -9,6 +9,9 @@ class template ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = framework.log
         self.__version__ = "0.1.0"
+        self.changelog = {
+            '0.1.0' : "Initial version." }
+        
         self.framework = framework
         self.daemon = True
         self.shutdown = False
@@ -48,6 +51,9 @@ class template ( threading.Thread ):
         # this ensures that your code is run the right number of times.
 
         while ( self.shutdown == False ):
+            time.sleep ( self.framework.preferences.loop_wait )
+            if not self.enabled:
+                continue
 
             # STARTMOD
 
@@ -55,8 +61,6 @@ class template ( threading.Thread ):
             
             # ENDMOD                             
             
-            time.sleep ( self.framework.preferences.loop_wait )
-
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
     def stop ( self ):
