@@ -10,8 +10,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.2.1'
+        self.__version__ = '0.2.2'
         self.changelog = {
+            '0.2.2' : "Increased interval between offline_all_players calls, because everything is racing this.",
             '0.2.1' : "Fixing errors regarding self.mods change.",
             '0.2.0' : "Changed self.mods to be a dict, and output changelog during updates." }
 
@@ -88,7 +89,7 @@ class orchestrator ( threading.Thread ):
                         mod_instance.start ( )
                         new_version = mod_instance.__version__
                         if old_version != new_version:
-                            self.server.say ( "Mod %s was updated from %s to %s. Changelog: %s" %
+                            self.server.say ( "Mod %s updated to v%s. Changelog: %s" %
                                               ( mod_key, old_version, new_version,
                                                 mod_instance.changelog [ new_version ] ) )
                         
@@ -100,7 +101,7 @@ class orchestrator ( threading.Thread ):
                 self.server.console ( "gt" )
                 self.log.debug ( "After gt" )
                 
-                if count % 10 == 0:
+                if count % 100 == 0:
                     self.server.offline_players ( )
                     #time.sleep ( self.preferences.loop_wait + 1 )
                 

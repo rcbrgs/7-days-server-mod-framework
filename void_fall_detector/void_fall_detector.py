@@ -8,7 +8,9 @@ class void_fall_detector ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = "0.1.0"
+        self.__version__ = "0.1.1"
+        self.changelog = {
+            '0.1.1' : "Made detector try a second time if player is marked offline." }
         self.framework = framework
         self.daemon = True
         self.shutdown = False
@@ -112,6 +114,10 @@ class void_fall_detector ( threading.Thread ):
                     player = self.framework.server.get_player ( playerid )
                     if player.online:
                         new_online_players_heights [ player.playerid ] = online_players_heights [ player.playerid ]
+                    else:
+                        time.sleep ( self.framework.preferences.loop_wait + 1 )
+                        if player.online:
+                            new_online_players_heights [ player.playerid ] = online_players_heights [ player.playerid ]
                 online_players_heights = new_online_players_heights
             except RuntimeError as e:
                 self.log.error ( "Handling %s." % str ( e ) )
