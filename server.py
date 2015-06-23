@@ -13,7 +13,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.1.1'
+        self.__version__ = '0.1.2'
+        self.changelog = {
+            '0.1.2' : "Fixed framework.mods being called as list, but now is dict." }
 
         self.log.info ( "Server module initializing." )
         self.shutdown = False
@@ -386,7 +388,8 @@ class server ( threading.Thread ):
                         if msg_content [ 1 : len ( key ) + 1 ] == key:
                             self.commands [ key ] [ 0 ] ( msg_origin, msg_content )
                             return
-                    for mod in self.framework.mods:
+                    for mod_key in self.framework.mods:
+                        mod = self.framework.mods [ mod_key ]
                         for key in mod.commands.keys ( ):
                             if msg_content [ 1 : len ( key ) + 1 ] == key:
                                 mod.commands [ key ] [ 0 ] ( msg_origin, msg_content )

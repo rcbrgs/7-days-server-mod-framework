@@ -87,9 +87,9 @@ class orchestrator ( threading.Thread ):
                         mod_instance.start ( )
                         new_version = mod_instance.__version__
                         if old_version != new_version:
-                            self.log.info ( "Mod %s was updated from %s to %s. Changelog: %s." %
-                                            ( mod_key, old_version, new_version,
-                                              mod_instance.changelog [ new_version ] ) )
+                            self.server.say ( "Mod %s was updated from %s to %s. Changelog: %s." %
+                                              ( mod_key, old_version, new_version,
+                                                mod_instance.changelog [ new_version ] ) )
                         
                         while not mod_instance.is_alive ( ):
                             self.log.warning ( "Sleeping 1 second to wait mod to run." )
