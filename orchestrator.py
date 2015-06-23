@@ -11,8 +11,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.3.0'
+        self.__version__ = '0.3.1'
         self.changelog = {
+            '0.3.1' : "Framework state will now save and output changelog.",
             '0.3.0' : "Added support for saving the framework state.",
             '0.2.2' : "Increased interval between offline_all_players calls, because everything is racing this.",
             '0.2.1' : "Fixing errors regarding self.mods change.",
@@ -42,7 +43,8 @@ class orchestrator ( threading.Thread ):
         else:
             self.old_framework_state = None
 
-        self.framework_state = { 'orchestrator' : { 'version' : self.__version__ } }
+        self.framework_state = { 'orchestrator' : { 'version' : self.__version__,
+                                                    'changelog' : self.changelog [ self.__version__ ] } }
         
         self.telnet = framework.telnet_connect ( framework = self )
         self.telnet.open_connection ( )
@@ -52,8 +54,10 @@ class orchestrator ( threading.Thread ):
         self.server.start ( )
         self.telnet.start ( )
 
-        self.framework_state [ 'telnet' ] = { 'version' : self.telnet.__version__ }
-        self.framework_state [ 'server' ] = { 'version' : self.server.__version__ }
+        self.framework_state [ 'telnet' ] = { 'version' : self.telnet.__version__,
+                                              'changelog' : self.telnet.changelog [ self.telnet.__version__ ] }
+        self.framework_state [ 'server' ] = { 'version' : self.server.__version__,
+                                              'changelog' : self.server.changelog [ self.server.__version__ ] }
 
         self.mods = { }
 
@@ -72,7 +76,9 @@ class orchestrator ( threading.Thread ):
                 old_version = 'unknown'
             new_version = self.framework_state [ component ] [ 'version' ]
             if old_version != new_version:
-                self.server.say ( "Mod %s updated to %s." % ( component, new_version ) )                
+                self.server.say ( "Mod %s updated to %s (%s)." %
+                                  ( component, new_version,
+                                    self.framework_state [ component ] [ 'changelog' ] ) )                
             
     def load_mod ( self, module_name ):
         full_module_name = module_name + "." + module_name
@@ -92,7 +98,8 @@ class orchestrator ( threading.Thread ):
         mod_class = getattr ( mod_module, module_name )
         mod_instance = mod_class ( framework = self )
         self.log.info ( "Mod %s loaded." % module_name )
-        self.framework_state [ module_name ] = { 'version' : mod_instance.__version__ }
+        self.framework_state [ module_name ] = { 'version' : mod_instance.__version__,
+                                                 'changelog' : mod_instance.changelog [ mod_instance.__version__ ] }
         self.mods [ module_name ] = { 'reference'      : mod_instance,
                                       'loaded version' : mod_instance.__version__ }
         return mod_instance

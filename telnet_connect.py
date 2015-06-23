@@ -8,7 +8,9 @@ class telnet_connect ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( telnet_connect, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = '0.1.1'
+        self.__version__ = '0.1.2'
+        self.changelog = {
+            '0.1.2' : "Added changelog." }
 
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
         

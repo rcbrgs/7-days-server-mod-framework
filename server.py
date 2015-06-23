@@ -15,6 +15,7 @@ class server ( threading.Thread ):
         self.log = logging.getLogger ( __name__ )
         self.__version__ = '0.2.0'
         self.changelog = {
+            '0.3.0' : "Added pm wrapper function.",
             '0.2.0' : "Upgraded player_info to v3, with stubs to new attributes.",
             '0.1.2' : "Fixed framework.mods being called as list, but now is dict." }
 
@@ -567,6 +568,13 @@ class server ( threading.Thread ):
         msg += "."
         self.say ( msg )
 
+    def pm ( self, destiny, message ):
+        destiny_player = self.get_player ( destiny )
+        if destiny_player == None:
+            self.log.error ( "pm '%s' failed because destiny player invalid." % message )
+            return
+        self.console ( 'pm %s "%s"' % ( destiny.playerid, message ) )
+        
     def print_players_info ( self, msg_origin, msg_content ):
         for key in self.players_info.keys ( ):
             if self.players_info [ key ].online:
