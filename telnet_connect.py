@@ -8,8 +8,9 @@ class telnet_connect ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( telnet_connect, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = '0.1.2'
+        self.__version__ = '0.1.3'
         self.changelog = {
+            '0.1.3' : "Catching exception during unicode decode.",
             '0.1.2' : "Added changelog." }
 
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
@@ -75,7 +76,12 @@ class telnet_connect ( threading.Thread ):
                 self.close_connection ( )
                 self.open_connection ( )
                 continue
-            line_string = line [:-1].decode ( 'utf-8' )
+            try:
+                line_string = line [:-1].decode ( 'utf-8' )
+            except UnicodeDecodeError as e:
+                self.log.error ( "Error %s while processing line.decode (%s)" %
+                                 ( e, line [:-1] ) )
+                
             self.log.debug ( line_string )
 
             if ( " INF Executing command 'gt' by Telnet from " in line_string or
