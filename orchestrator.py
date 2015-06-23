@@ -103,6 +103,8 @@ class orchestrator ( threading.Thread ):
                                                  'changelog' : mod_instance.changelog [ mod_instance.__version__ ] }
         self.mods [ module_name ] = { 'reference'      : mod_instance,
                                       'loaded version' : mod_instance.__version__ }
+        self.log.info ( "framework_state update with info for mod %s." %
+                        module_name )
         return mod_instance
 
     def run ( self ):            

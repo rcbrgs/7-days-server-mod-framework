@@ -14,8 +14,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.3.5'
+        self.__version__ = '0.3.6'
         self.changelog = {
+            '0.3.6' : "Added pkill explanations to /me.",
             '0.3.5' : "Added lp after teleport to prevent double teleports.",
             '0.3.4' : "Fixed positions not being saved.",
             '0.3.3' : "Added accounting of play time (/me) and player position.",
@@ -613,7 +614,10 @@ class server ( threading.Thread ):
         for language in player.languages_spoken:
             msg += " " + language
         msg += ', translation to %s' % player.language_preferred
-        msg += ', played %dh' % ( round ( player.online_ime / 3600 ) )
+        msg += ', played %dh' % ( round ( player.online_time / 3600 ) )
+        if isinstance ( player.player_kills_explanations, list ):
+            for explanation in player.player_kills_explanations:
+                msg += ", pkilled explained: %s" % explanation
         msg += "."
         self.say ( msg )
 
