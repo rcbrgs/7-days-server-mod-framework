@@ -98,7 +98,8 @@ class server ( threading.Thread ):
                 if msg_content [ 6 : -1 ] == key:
                     self.say ( self.commands [ key ] [ 1 ] )
                     return
-            for mod in self.framework.mods:
+            for mod_key in self.framework.mods.keys ( ):
+                mod = self.framework.mods [ mod_key ] [ 'reference' ]
                 for key in mod.commands.keys ( ):
                     if msg_content [ 6 : -1 ] == key:
                         self.say ( mod.commands [ key ] [ 1 ] )
@@ -107,7 +108,8 @@ class server ( threading.Thread ):
         command_list = [ ]
         for key in self.commands.keys ( ):
             command_list.append ( key )
-        for mod in self.framework.mods:
+        for mod_key in self.framework.mods:
+            mod = self.framework.mods [ mod_key ] [ 'reference' ]
             for key in mod.commands.keys ( ):
                 command_list.append ( key )
 
