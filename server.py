@@ -16,6 +16,7 @@ class server ( threading.Thread ):
         self.log = logging.getLogger ( __name__ )
         self.__version__ = '0.3.3'
         self.changelog = {
+            '0.3.3' : "Added accounting of play time (/me) and player position.",
             '0.3.2' : "Fixed db update function.",
             '0.3.1' : "Started to ignore command 'restart'.",
             '0.3.0' : "Added pm wrapper function.",
@@ -45,7 +46,7 @@ class server ( threading.Thread ):
                                             " /about will tell you where to get this mod." ),
                           'curse'       : ( self.curse_player,
                                             " /curse player_name prints an unfriendly message." ),
-                          'me'          : ( self.command_print_player_info,
+                          'me'          : ( self.command_me,
                                             " /me will print your info." ),
                           'help'        : ( self.command_help,
                                             " /help shows the list of commands." ),
@@ -450,55 +451,94 @@ class server ( threading.Thread ):
             self.log.error ( "Error during parse_id." )
             return
         
-        self.players_info_update ( level = 1,
-                                   name = playername,
-                                   online = True,
-                                   playerid = playerid,
-                                   pos_x = playerposition_x,
-                                   pos_y = playerposition_y,
-                                   pos_z = playerposition_z,
-                                   health = playerhealth,
-                                   ip = player_ip,
-                                   deaths = int ( playerdeaths ),
-                                   zombies = int ( playerzombies ),
-                                   players = int ( playerkills ),
-                                   score = int ( playerscore ),
-                                   steamid = playersteamid )
+        self.player_info_update ( level = 1,
+                                  name = playername,
+                                  online = True,
+                                  playerid = playerid,
+                                  pos_x = playerposition_x,
+                                  pos_y = playerposition_y,
+                                  pos_z = playerposition_z,
+                                  health = playerhealth,
+                                  ip = player_ip,
+                                  deaths = int ( playerdeaths ),
+                                  zombies = int ( playerzombies ),
+                                  players = int ( playerkills ),
+                                  score = int ( playerscore ),
+                                  steamid = playersteamid )
 
         pickle_file = open ( self.player_info_file, 'wb' )
         pickle.dump ( self.players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
-
-        #self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )
         
-    def players_info_update ( self,
-                              level,
-                              online,
-                              playerid,
-                              name,
-                              pos_x,
-                              pos_y,
-                              pos_z,
-                              health,
-                              ip,
-                              deaths,
-                              zombies,
-                              players,
-                              score,
-                              steamid ):
+    def player_info_update ( self,
+                             level,
+                             online,
+                             playerid,
+                             name,
+                             pos_x,
+                             pos_y,
+                             pos_z,
+                             health,
+                             ip,
+                             deaths,
+                             zombies,
+                             players,
+                             score,
+                             steamid ):
         
         if playerid in self.players_info.keys ( ):
+            now = time.time ( )
+            
+            # event
+            if self.players_info [ playerid ].online == False:
+                self.log.debug ( "%s is online." % name )
+            else:
+                last_time = self.players_info [ playerid ].timestamp_latest_update
+                if isinstance ( last_time, float ):
+                    added_time = 0
+                    time_difference = now - last_time
+                    if time_difference < self.framework.preferences.loop_wait + 1:
+                        added_time = time_difference
+                    total_time = self.players_info [ playerid ].online_time
+                    if isinstance ( total_time, float ):
+                        new_total_time = total_time + added_time
+                    else:
+                        new_total_time = added_time
+                    self.players_info [ playerid ].online_time = new_total_time
+
+                    # event
+                    old_minutes = round ( total_time / 3600 )
+                    new_minutes = round ( new_total_time / 3600 )
+                    if ( new_minutes > old_minutes ):
+                        self.log.info ( "%s played for %d hours." %
+                                        ( self.players_info [ playerid ].name_sane,
+                                          new_minutes ) )
+                    
+                else:
+                    self.players_info [ playerid ].online_time = 0
+
+            self.players_info [ playerid ].deaths = int ( deaths )
+            self.players_info [ playerid ].health = health
             self.players_info [ playerid ].ip = ip
             self.players_info [ playerid ].level = level
             self.players_info [ playerid ].name = name
             self.players_info [ playerid ].name_sane = self.sanitize ( name )
-            if self.players_info [ playerid ].online == False:
-                self.log.debug ( "%s is online." % name )
             self.players_info [ playerid ].online = online
             self.players_info [ playerid ].pos_x = pos_x
             self.players_info [ playerid ].pos_y = pos_y
             self.players_info [ playerid ].pos_z = pos_z
-
-            self.enforce_home_radii ( playerid )
+            player_positions = self.players_info [ playerid ].positions
+            if not isinstance ( player_positions, list ):
+                player_positions = [ ]
+            player_positions.append ( ( pos_x, pos_y, pos_z ) )
+            if len ( player_positions ) > 24 * 60 * 60 / self.framework.preferences.loop_wait:
+                del ( player_positions [ 0 ] )
+            #self.players_info [ playerid ].rot = rot
+            #self.players_info [ playerid ].remote = remote
+            self.players_info [ playerid ].timestamp_latest_update = now
+            self.players_info [ playerid ].score = int ( score )
+            self.players_info [ playerid ].zombies = int ( zombies )
+           
+            self.enforce_home_radii ( playerid ) #todo event
             
             if ( ( abs ( float ( pos_x ) ) > 4400 ) or
                  ( abs ( float ( pos_y ) ) > 4400 ) ):
@@ -519,24 +559,17 @@ class server ( threading.Thread ):
             else:
                 self.players_info [ playerid ].map_limit_beacon = None
             
-            #self.players_info [ playerid ].rot = rot
-            #self.players_info [ playerid ].remote = remote
-            self.players_info [ playerid ].health = health
-            self.players_info [ playerid ].ip = ip
-            self.players_info [ playerid ].deaths = int ( deaths )
-            self.players_info [ playerid ].zombies = int ( zombies )
+            #todo: event
             if int ( players ) > self.players_info [ playerid ].players:
-                self.log.info ( "Player %s has killed another player!" % self.players_info [ playerid ].name_sane )
-                self.say ( "%s is imprisoned for killing another player." % self.players_info [ playerid ].name_sane )
+                self.log.info ( "Player %s has killed another player!" %
+                                self.players_info [ playerid ].name_sane )
+                self.say ( "%s is imprisoned for killing another player." %
+                           self.players_info [ playerid ].name_sane )
                 self.players_info [ playerid ].players = int ( players )
-                for mod in self.framework.mods:
-                    if mod.__class__.__name__ == 'prison':
-                        mod.named_prisoners.append ( playerid )
-                        mod.save_prisoners ( )
-            self.players_info [ playerid ].score = int ( score )
-            #self.players_info [ playerid ].level = level
-            #self.players_info [ playerid ].ip = ip
-            #self.players_info [ playerid ].ping = ping
+                prison_mod = self.framework.mods [ 'prison' ] [ 'reference' ]
+                prison_mod.named_prisoners.append ( playerid )
+                prison_mod.save_prisoners ( )
+                
         else:
             new_player_info = player_info ( health = health,
                                             ip = ip,
@@ -551,11 +584,15 @@ class server ( threading.Thread ):
                                             score = score,
                                             level = level,
                                             steamid = steamid )
+            new_player_info.name_sane = self.sanitize ( name )
+            new_player_info.online = True
+            new_player_info.online_time = 0
+            new_player_info.positions = [ ( pos_x, pos_y, pos_z ) ]
+            new_player_info.timestamp_latest_update = time.time ( )
+            
             self.players_info [ playerid ] = new_player_info
-            self.players_info [ playerid ].name_sane = self.sanitize ( name )
-            country = self.geoip.country_code_by_addr ( ip )
 
-    def command_print_player_info ( self, player_identifier, message ):
+    def command_me ( self, player_identifier, message ):
         player = self.get_player ( player_identifier )
         if player == None:
             self.say ( "No such player: %s" % str ( player_identifier ) )
@@ -573,6 +610,7 @@ class server ( threading.Thread ):
         for language in player.languages_spoken:
             msg += " " + language
         msg += ', translation to %s' % player.language_preferred
+        msg += ', played %dh' % ( round ( player.online_ime / 3600 ) )
         msg += "."
         self.say ( msg )
 
@@ -586,7 +624,7 @@ class server ( threading.Thread ):
     def print_players_info ( self, msg_origin, msg_content ):
         for key in self.players_info.keys ( ):
             if self.players_info [ key ].online:
-                self.command_print_player_info ( key, msg_content )
+                self.command_me ( key, msg_content )
 
     def random_online_player ( self ):
         possibilities = [ ]

@@ -158,6 +158,7 @@ class orchestrator ( threading.Thread ):
             self.log.info ( "mod %s join" % str ( mod ) )
             if mod.is_alive ( ):
                 mod.join ( )
+        self.log.info ( "All mods stopped." )
 
         self.telnet.stop ( )
         self.telnet.join ( )
