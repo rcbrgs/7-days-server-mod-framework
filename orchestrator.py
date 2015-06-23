@@ -10,7 +10,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.1.1'
+        self.__version__ = '0.2.0'
+        self.changelog = {
+            '0.2.0' : 'Changed self.mods to be a dict, and output changelog during updates.' }
 
     def config ( self, preferences_file_name ):
         self.silence = False
@@ -32,14 +34,14 @@ class orchestrator ( threading.Thread ):
 
         self.telnet.start ( )
 
-        self.mods = [ ]
+        self.mods = { }
 
         for mod in self.preferences.mods.keys ( ):
             module_name = self.preferences.mods [ mod ] [ 'module' ]
             self.load_mod ( module_name )
         
-        for mod in self.mods:
-            mod.start ( )
+        for mod in self.mods.keys ( ):
+            self.mods [ mod ] [ 'reference' ].start ( )
 
     def load_mod ( self, module_name ):
         full_module_name = module_name + "." + module_name
@@ -59,7 +61,8 @@ class orchestrator ( threading.Thread ):
         mod_class = getattr ( mod_module, module_name )
         mod_instance = mod_class ( framework = self )
         self.log.info ( "Mod %s loaded." % module_name )
-        self.mods.append ( mod_instance )
+        self.mods [ module_name ] = { 'reference'      : mod_instance,
+                                      'loaded version' : mod_instance.__version__ }
         return mod_instance
 
     def run ( self ):            
@@ -72,15 +75,21 @@ class orchestrator ( threading.Thread ):
             while self.shutdown == False:
                 self.log.debug ( "Tick" )
                 
-                for mod in self.mods:
+                for mod_key in self.mods.keys ( ):
+                    mod = self.mods [ mod_key ] [ 'reference' ]
                     if mod.is_alive ( ) == False:
                         self.log.warning ( "mod %s is dead, restarting." % str ( mod ) )
+                        old_version = mod.__version__
                         module_name = mod.__class__.__name__
                         mod.shutdown = True
                         mod.join ( )
-                        self.mods.remove ( mod )
                         mod_instance = self.load_mod ( module_name )
                         mod_instance.start ( )
+                        new_version = mod_instance.__version__
+                        if old_version != new_version:
+                            self.log.info ( "Mod %s was updated from %s to %s. Changelog: %s." %
+                                            ( mod_key, old_version, new_version,
+                                              mod_instance.changelog [ new_version ] ) )
                         
                         while not mod_instance.is_alive ( ):
                             self.log.warning ( "Sleeping 1 second to wait mod to run." )
@@ -102,7 +111,8 @@ class orchestrator ( threading.Thread ):
             self.log.critical ( "Shutting down mod framework due to unhandled exception: %s." % str ( e ) )
             self.shutdown = True
 
-        for mod in self.mods:
+        for mod_key in self.mods.keys ( ):
+            mod = self.mods [ mod_key ]
             self.log.info ( "mod %s stop" % str ( mod ) )
             mod.stop ( )
             self.log.info ( "mod %s join" % str ( mod ) )

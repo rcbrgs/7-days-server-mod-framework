@@ -632,6 +632,9 @@ class server ( threading.Thread ):
         self.shutdown = True
         
     def teleport ( self, player_info, where_to ):
+        """
+        The where_to argument expects a tuple with coordinates ( +E/-W, +N/-S, height ).
+        """
         player = self.get_player ( player_info )
         if player != None:
             msg = 'teleportplayer ' + str ( player.playerid ) + ' '
