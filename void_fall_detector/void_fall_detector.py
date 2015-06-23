@@ -100,7 +100,7 @@ class void_fall_detector ( threading.Thread ):
                                                      max ( online_players_heights [ player.playerid ] [ 'height' ] ),
                                                      player.pos_z ) ) + self.framework.preferences.teleport_lag_cushion
                             online_players_heights [ player.playerid ] [ 'last teleport height' ] = destiny_height
-                            self.framework.server.say ( "Trying to teleport %s to current position at height %f." % ( player.name_sane, destiny_height ) )
+                            self.framework.server.say ( "Trying to teleport %s to current position at height %.1f." % ( player.name_sane, destiny_height ) )
                             self.framework.server.teleport ( player, ( player.pos_x, player.pos_y, destiny_height ) )
                             
                 else:

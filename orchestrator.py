@@ -11,8 +11,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.3.2'
+        self.__version__ = '0.3.3'
         self.changelog = {
+            '0.3.3' : "Do not call module when module reload fails.",
             '0.3.2' : "Let players know when mods go up or down.",
             '0.3.1' : "Framework state will now save and output changelog.",
             '0.3.0' : "Added support for saving the framework state.",
@@ -127,6 +128,8 @@ class orchestrator ( threading.Thread ):
                         mod.shutdown = True
                         mod.join ( )
                         mod_instance = self.load_mod ( module_name )
+                        if mod_instance == None:
+                            continue
                         mod_instance.start ( )
                         new_version = mod_instance.__version__
                         if old_version != new_version:

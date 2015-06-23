@@ -14,8 +14,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.3.6'
+        self.__version__ = '0.3.7'
         self.changelog = {
+            '0.3.7' : "Preventively change player position after teleport.",
             '0.3.6' : "Added pkill explanations to /me.",
             '0.3.5' : "Added lp after teleport to prevent double teleports.",
             '0.3.4' : "Fixed positions not being saved.",
@@ -718,8 +719,9 @@ class server ( threading.Thread ):
                    str ( int ( where_to [ 2 ] ) ) + " " + \
                    str ( int ( where_to [ 1 ] ) )
         self.console ( msg )
-        # This lp is to try to update the player db before a second teleport is triggered on stale data.
-        self.console ( "lp" )
+        player.pos_x = where_to [ 0 ]
+        player.pos_y = where_to [ 1 ]
+        player.pos_z = where_to [ 2 ]
         
     def update_players_pickle ( self ):
         import framework
