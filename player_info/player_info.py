@@ -1,4 +1,4 @@
-class player_info ( object ):
+class player_info_v1 ( object ):
     def __init__ ( self,
                    deaths = None,
                    health = None,
