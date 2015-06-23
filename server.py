@@ -389,14 +389,15 @@ class server ( threading.Thread ):
                             self.commands [ key ] [ 0 ] ( msg_origin, msg_content )
                             return
                     for mod_key in self.framework.mods:
-                        mod = self.framework.mods [ mod_key ]
+                        mod = self.framework.mods [ mod_key ] [ 'reference' ]
                         for key in mod.commands.keys ( ):
                             if msg_content [ 1 : len ( key ) + 1 ] == key:
                                 mod.commands [ key ] [ 0 ] ( msg_origin, msg_content )
                                 return
                     self.say ( "Syntax error: %s." % msg_content [ 1 : -1 ] )
                 else:
-                    for mod in self.framework.mods:
+                    for mod_key in self.framework.mods.keys ( ):
+                        mod = self.framework.mods [ mod_key ] [ 'reference' ]
                         if mod.__class__.__name__ == "translator":
                             mod.translate ( msg_origin, msg_content [ : -1 ] )
 
