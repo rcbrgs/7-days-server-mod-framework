@@ -141,7 +141,7 @@ class telnet_connect ( threading.Thread ):
 
             if ( b', [type=EntityZombie' in line or
                  b', [type=EntityHornet' in line ):
-                self.framework.zombie_cleanup.parse_le ( line )
+                #self.framework.zombie_cleanup.parse_le ( line )
                 continue
 
             if ( b', [type=EntityAnimal' in line or
@@ -152,10 +152,12 @@ class telnet_connect ( threading.Thread ):
                 continue
             
             if ( ( b'. id=' in line )  and ( b'remote=True' in line ) ):
+                self.log.debug ( "calling parse_id ( '%s' )" % line )
                 self.framework.server.parse_id ( line )
                 continue
             
             if ( b"Day " in line ):
+                self.log.debug ( "calling parse_gt" )
                 self.framework.server.parse_get_time ( line )
                 continue
 

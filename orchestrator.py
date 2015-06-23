@@ -11,8 +11,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.3.3'
+        self.__version__ = '0.3.4'
         self.changelog = {
+            '0.3.4' : "Only call lp if needed.",
             '0.3.3' : "Do not call module when module reload fails.",
             '0.3.2' : "Let players know when mods go up or down.",
             '0.3.1' : "Framework state will now save and output changelog.",
@@ -136,9 +137,9 @@ class orchestrator ( threading.Thread ):
                             self.server.say ( "Mod %s updated to v%s. Changelog: %s" %
                                               ( mod_key, old_version, new_version,
                                                 mod_instance.changelog [ new_version ] ) )
-                        while not mod_instance.is_alive ( ):
-                            self.log.warning ( "Sleeping 1 second to wait mod to run." )
-                            time.sleep ( 1 )
+                        #while not mod_instance.is_alive ( ):
+                        #    self.log.warning ( "Sleeping 1 second to wait mod to run." )
+                        #    time.sleep ( 1 )
 
                 self.log.debug ( "Before gt" )
                 self.server.console ( "gt" )
@@ -146,9 +147,10 @@ class orchestrator ( threading.Thread ):
                 
                 if count % 100 == 0:
                     self.server.offline_players ( )
-                    #time.sleep ( self.preferences.loop_wait + 1 )
-                
-                self.server.console ( "lp" )
+
+                if ( time.time ( ) - self.server.latest_id_parse_call ) > self.preferences.loop_wait:
+                    self.log.debug ( "Too long since last update, doing lp." )
+                    self.server.console ( "lp" )
             
                 time.sleep ( self.preferences.loop_wait )
                 count += 1

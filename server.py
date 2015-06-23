@@ -14,8 +14,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.3.7'
+        self.__version__ = '0.3.8'
         self.changelog = {
+            '0.3.8' : "Fixed 'lp storm' by only calling lp if needed, not every interval.",
             '0.3.7' : "Preventively change player position after teleport.",
             '0.3.6' : "Added pkill explanations to /me.",
             '0.3.5' : "Added lp after teleport to prevent double teleports.",
@@ -32,6 +33,7 @@ class server ( threading.Thread ):
         # Other programs might have /keywords that we want to ignore. Put those here.
         self.external_commands = [ 'restart' ]
         
+        self.latest_id_parse_call = time.time ( )
         self.shutdown = False
         self.framework = framework
         self.preferences = self.framework.preferences
@@ -425,6 +427,7 @@ class server ( threading.Thread ):
     def parse_id ( self,
                    msg = None ):
         #self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
+        self.latest_id_parse_call = time.time ( )
         
         if b"[type=" in msg:
             return
@@ -623,6 +626,7 @@ class server ( threading.Thread ):
         self.say ( msg )
 
     def pm ( self, destiny, message ):
+        return
         destiny_player = self.get_player ( destiny )
         if destiny_player == None:
             self.log.error ( "pm '%s' failed because destiny player invalid." % message )
