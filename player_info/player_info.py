@@ -186,6 +186,7 @@ class player_info_v4 ( object ):
         self.zombies = zombies
 
         # Attributes received from mods:
+        self.accounted_zombies = None
         self.camp = None
         self.cash = None
         self.home_invasion_beacon = None

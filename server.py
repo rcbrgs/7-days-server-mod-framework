@@ -1,5 +1,5 @@
 import framework
-from framework.player_info import player_info_v3 as player_info
+from framework.player_info import player_info_v4 as player_info
 import logging
 import math
 import pickle
@@ -14,8 +14,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.3.12'
+        self.__version__ = '0.3.13'
         self.changelog = {
+            '0.3.13' : "Added zombie accountability for giving cash for zombie kills.",
             '0.3.12' : "Fixed error on parsing messages containing colons.",
             '0.3.11' : "Adapted for pm sent from events. Fixed /status bug.",
             '0.3.10' : "Made backend lp more useful. Added +1 karma every 1h. Added karma to /me.",
@@ -305,6 +306,19 @@ class server ( threading.Thread ):
         self.log.error ( "No player with identifier %s." % str ( player ) )
         return None
 
+    def give_cash ( self, player_id = None, amount = 0 ):
+        if amount == 0:
+            return
+        player = self.get_player ( player_id )
+        if player is None:
+            return
+        try:
+            self.log.debug ( player.cash )
+            player.cash += amount
+            self.log.debug ( player.cash )
+        except Exception as e:
+            self.log.error ( e )
+        
     def give_karma ( self, player_id = None, amount = 0 ):
         if amount == 0:
             return
@@ -356,19 +370,25 @@ class server ( threading.Thread ):
         return result
             
     def list_online_players ( self ):
-        print ( "%-10s | %-10s | %-6s | %-3s | %-3s | %-6s" %
+        #print ( "%-10s | %-10s | %-6s | %-3s | %-3s | %-6s" %
+        #        ( "name_sane", "playerid", "time", "pks", "kar", "cash" ) )
+        print ( "%-10s | %-10s | %-6s | %-3s | %-3s | %-6s | uzed | zeds" %
                 ( "name_sane", "playerid", "time", "pks", "kar", "cash" ) )
-        print ( "-----------+------------+--------+-----+-----+-----" )
+        print ( "-----------+------------+--------+-----+-----+--------+------+------" )
         for key in self.players_info.keys ( ):
             player = self.players_info [ key ]
             if player.online == True:
-                player_line = "{:<10s} | {:<10d} | {:<6.1f} | {:<3d} | {:<3d} | {:<6d}" .format (
+                #player_line = "{:<10s} | {:<10d} | {:<6.1f} | {:<3d} | {:<3d} | {:<6d}" .format (
+                player_line = "{:<10s} | {:<10d} | {:<6.1f} | {:<3d} | {:<3d} | {:<6d} | {:<4d} | {:<4d}" .format (
                     str ( player.name_sane [ : 9 ] ),
                     player.playerid,
                     player.online_time / 3600,
                     player.players,
                     player.karma,
-                    player.cash )
+                    player.cash,
+                    player.zombies - player.accounted_zombies,
+                    player.zombies, )
+
                 print ( player_line )
 
     def mod_status ( self, msg_origin, msg_content ):
@@ -600,8 +620,20 @@ class server ( threading.Thread ):
             #self.players_info [ playerid ].remote = remote
             self.players_info [ playerid ].timestamp_latest_update = now
             self.players_info [ playerid ].score = int ( score )
+
+            try:
+                unaccounted_zombies = zombies - self.players_info [ playerid ].accounted_zombies
+                if unaccounted_zombies > 100:
+                    self.framework.game_events.player_killed_100_zombies ( playerid )
+                    self.players_info [ playerid ].accounted_zombies += 100
+            except Exception as e:
+                self.log.error ( "While parsing player {:s}: {:s}.".format (
+                    self.players_info [ playerid ].name_sane, e ) )
+                unaccounted_zombies = 0
+                self.players_info [ playerid ].accounted_zombies = zombies
+                
             self.players_info [ playerid ].zombies = int ( zombies )
-           
+                
             self.enforce_home_radii ( playerid ) #todo event
             
             if ( ( abs ( float ( pos_x ) ) > 4400 ) or
@@ -673,6 +705,7 @@ class server ( threading.Thread ):
             msg += ", pkills (total/explained): %d" % (
                 player.players, len ( explanation ) )
         msg += ", karma {:d}".format ( player.karma )
+        msg += ", cash {:d}".format ( player.cash )
         msg += "."
         self.say ( msg )
 
@@ -866,9 +899,10 @@ class server ( threading.Thread ):
                     new_player.camp = player.camp
                     # new
                     new_player.online_time = 0
+                    new_player.player_kills_explanations = [ ]
 
                 if self.players_info [ a_key ].__class__.__name__ == 'player_info_v3':
-                    new_player = framework.player_info.player_info_v3 ( deaths = player.deaths,
+                    new_player = framework.player_info.player_info_v4 ( deaths = player.deaths,
                                                                         health = player.health,
                                                                         home = player.home,
                                                                         ip = player.ip,
@@ -883,6 +917,8 @@ class server ( threading.Thread ):
                                                                         score = player.score,
                                                                         steamid = player.steamid,
                                                                         zombies = player.zombies )
+                    new_player.attributes = player.attributes
+                    new_player.camp = player.camp
                     new_player.cash = player.cash
                     new_player.home_invasion_beacon = player.home_invasion_beacon
                     new_player.home_invitees = player.home_invitees
@@ -891,10 +927,12 @@ class server ( threading.Thread ):
                     new_player.languages_spoken = player.languages_spoken
                     new_player.map_limit_beacon = player.map_limit_beacon
                     new_player.name_sane = self.sanitize ( player.name )
-                    new_player.attributes = player.attributes
-                    new_player.camp = player.camp
                     new_player.online_time = player.online_time
+                    new_player.player_kills_explanations = player.player_kills_exaplanations
                     new_player.timestamp_latest_update = player.timestamp_latest_update
+
+                    #new
+                    new_player.accounted_zombies = player.zombies
 
                 if new_player == None:
                     self.log.error ( "new_player == None!" )
