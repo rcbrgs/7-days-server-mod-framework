@@ -6,7 +6,7 @@ import threading
 import time
 
 class game_events ( threading.Thread ):
-    def __init__ ( self, framework):
+    def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = framework.log
         self.__version__ = "0.2.0"

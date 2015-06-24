@@ -63,6 +63,7 @@ class orchestrator ( threading.Thread ):
         self.game_events.start ( )
 
         self.utils = framework.utils ( )
+        self.console = framework.console ( framework = self )
 
         self.framework_state [ 'telnet' ] = { 'version' : self.telnet.__version__,
                                               'changelog' : self.telnet.changelog [ self.telnet.__version__ ] }

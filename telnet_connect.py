@@ -1,4 +1,5 @@
 import logging
+import re
 import sys
 import telnetlib
 import time
@@ -8,8 +9,9 @@ class telnet_connect ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( telnet_connect, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = '0.1.3'
+        self.__version__ = '0.1.4'
         self.changelog = {
+            '0.1.4' : "Added catching memory information output from server.",
             '0.1.3' : "Catching exception during unicode decode.",
             '0.1.2' : "Added changelog." }
 
@@ -84,6 +86,13 @@ class telnet_connect ( threading.Thread ):
                 
             self.log.debug ( line_string )
 
+            mem_output = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.* INF Time: [0-9]+.[0-9]+m FPS: [0-9]+.[0-9]+ Heap: [0-9]+.[0-9]+MB Max: [0-9]+.[0-9]+MB Chunks: [0-9]+ CGO: [0-9]+ Ply: [0-9]+ Zom: .* Ent: .* Items: [0-9]+' )
+            mem_match = mem_output.match ( line_string )
+            if mem_match:
+                self.log.debug ( "memory info: {:s}".format ( line_string ) )
+                self.framework.server.update_memory_info ( line_string )
+                continue
+            
             if ( " INF Executing command 'gt' by Telnet from " in line_string or
                  " INF Executing command 'le' by Telnet from " in line_string or
                  " INF Executing command 'lp' by Telnet from " in line_string or
@@ -117,10 +126,6 @@ class telnet_connect ( threading.Thread ):
                  " INF Token length: " in line_string  or
                  " INF PlayerLogin: " in line_string  or
                  " INF [NET] PlayerConnected EntityID=-1, PlayerID='', OwnerID='', PlayerName=''" in line_string ):
-                continue
-            
-            if ( " INF Time: " in line_string and
-                 " Heap: " in line_string ):
                 continue
             
             if ( "Total of " == line_string [ : 9 ] and

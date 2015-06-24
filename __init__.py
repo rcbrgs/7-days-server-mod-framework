@@ -1,3 +1,4 @@
+from .console          import console
 from .game_events      import game_events
 from .orchestrator     import orchestrator
 from .player_info      import player_info
@@ -23,8 +24,8 @@ def config ( preferences_file_name ):
     maestro.config ( preferences_file_name )
     maestro.start ( )
 
-def console ( input_string ):
-    maestro.server.console ( input_string )
+#def console ( input_string ):
+#    maestro.server.console ( input_string )
 
 def set_log_file ( log_file_name ):
     log_handler = logging.FileHandler ( log_file_name )

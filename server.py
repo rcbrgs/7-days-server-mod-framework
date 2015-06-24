@@ -5,6 +5,7 @@ import math
 import pickle
 import pygeoip
 import random
+import re
 import sys
 import threading
 import time
@@ -16,6 +17,7 @@ class server ( threading.Thread ):
         self.log = logging.getLogger ( __name__ )
         self.__version__ = '0.3.15'
         self.changelog = {
+            '0.3.16' : "Added display memory info functionality.",
             '0.3.15' : "Fixed attributes not being set on new players. Moved some functions to utils.",
             '0.3.14' : "Changed tele to preteleports for map limits and home invasion.",
             '0.3.13' : "Added zombie accountability for giving cash for zombie kills.",
@@ -37,14 +39,15 @@ class server ( threading.Thread ):
 
         self.log.info ( "Server module initializing." )
 
+        self.chat = None
         # Other programs might have /keywords that we want to ignore. Put those here.
         self.external_commands = [ 'restart' ]
-        
+        self.framework = framework        
         self.latest_id_parse_call = time.time ( )
+        self.memory_info = { }
         self.shutdown = False
-        self.framework = framework
+
         self.preferences = self.framework.preferences
-        self.chat = None
         self.chat_log_file = self.preferences.chat_log_file
         self.telnet_connection = self.framework.telnet
         self.player_info_file = self.preferences.player_info_file
@@ -186,6 +189,12 @@ class server ( threading.Thread ):
         else:
             self.say ( "I would never curse such a nice person!" )
 
+    def display_memory_info ( self ):
+        msg = ""
+        for key in self.memory_info.keys ( ):
+            msg += " {:s} = {:s}".format ( key, str ( self.memory_info [ key ] ) )
+        print ( msg )
+            
     def enforce_home_radii ( self, playerid ):
         player = self.get_player ( playerid )
         for key in self.players_info.keys ( ):
@@ -679,23 +688,25 @@ class server ( threading.Thread ):
         if player == None:
             self.say ( "No such player: %s" % str ( player_identifier ) )
             return
-        msg = "%s, " % player.name_sane
+        msg = "%s: " % player.name_sane
         msg += self.geoip.country_code_by_addr ( player.ip )
         if player.home != None:
-            msg += ", home at %s" % ( str ( player.home ) )
+            msg += ", home at %s" % ( self.framework.utils.get_map_coordinates ( player.home ) )
             if self.framework.utils.calculate_distance ( ( player.pos_x, player.pos_y ),
                                                          player.home ) < self.preferences.home_radius:
                 msg += ", inside"
             else:
                 msg += ", outside"
-        msg += ", speaks" 
-        for language in player.languages_spoken:
-            msg += " " + language
-        msg += ', translation to %s' % player.language_preferred
+        if player.languages_spoken:
+            msg += ", speaks"
+            for language in player.languages_spoken:
+                msg += " " + language
+        if player.language_preferred:
+            msg += ', translation to %s' % player.language_preferred
         msg += ', played %dh' % ( round ( player.online_time / 3600 ) )
         if isinstance ( player.player_kills_explanations, list ):
-            msg += ", pkills (total/explained): %d" % (
-                player.players, len ( explanation ) )
+            msg += ", pkills (total/explained): %d/%d" % (
+                player.players, len ( player.player_kills_explanations ) )
         msg += ", karma {:d}".format ( player.karma )
         msg += ", cash {:d}".format ( player.cash )
         msg += "."
@@ -830,6 +841,55 @@ class server ( threading.Thread ):
         player.pos_y = where_to [ 1 ]
         player.pos_z = where_to [ 2 ]
 
+    def update_memory_info ( self, line_string ):
+        new_mem_info = { } 
+        time_matcher = re.compile ( r'Time: ([0-9]+.[0-9]+)m' )
+        time_match = time_matcher.search ( line_string )
+        if time_match:
+            new_mem_info [ 'time' ] = time_match.group ( 0 )
+        fps_matcher = re.compile ( r'FPS: ([0-9]+.[0-9]+)' )
+        fps_match = fps_matcher.search ( line_string )
+        if fps_match:
+            new_mem_info [ 'fps' ] = fps_match.group ( 0 )
+        heap_matcher = re.compile ( r'Heap: ([0-9]+.[0-9]+)MB' )
+        heap_match = heap_matcher.search ( line_string )
+        if heap_match:
+            new_mem_info [ 'heap' ] = heap_match.group ( 0 )
+        max_matcher = re.compile ( r'Max: ([0-9]+.[0-9]+)MB' )
+        max_match = max_matcher.search ( line_string )
+        if max_match:
+            new_mem_info [ 'max' ] = max_match.group ( 0 )
+        chunks_matcher = re.compile ( r'Chunks: ([0-9]+)' )
+        chunks_match = chunks_matcher.search ( line_string )
+        if chunks_match:
+            new_mem_info [ 'chunks' ] = chunks_match.group ( 0 )
+        cgo_matcher = re.compile ( r'CGO: ([0-9]+)' )
+        cgo_match = cgo_matcher.search ( line_string )
+        if cgo_match:
+            new_mem_info [ 'cgo' ] = cgo_match.group ( 0 )
+        players_matcher = re.compile ( r'Ply: ([0-9]+)' )
+        players_match = players_matcher.search ( line_string )
+        if players_match:
+            new_mem_info [ 'players' ] = players_match.group ( 0 )
+        zombies_matcher = re.compile ( r'Zom: ([0-9]+)' )
+        zombies_match = zombies_matcher.search ( line_string )
+        if zombies_match:
+            new_mem_info [ 'zombies' ] = zombies_match.group ( 0 )
+        entities_1_matcher = re.compile ( r'Ent: ([0-9]+)' )
+        entities_1_match = entities_1_matcher.search ( line_string )
+        if entities_1_match:
+            new_mem_info [ 'entities_1' ] = entities_1_match.group ( 0 )
+        entities_2_matcher = re.compile ( r'Ent: [0-9]+ \(([0-9]+)\)' )
+        entities_2_match = entities_2_matcher.search ( line_string )
+        if entities_2_match:
+            new_mem_info [ 'entities_2' ] = entities_2_match.group ( 0 )
+        items_matcher = re.compile ( r'Items: ([0-9]+)' )
+        items_match = items_matcher.search ( line_string )
+        if items_match:
+            new_mem_info [ 'items' ] = items_match.group ( 0 )
+            
+        self.memory_info = new_mem_info
+        
     def update_players_pickle ( self ):
         import framework
         new_players_info = { }
