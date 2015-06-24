@@ -11,8 +11,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.3.4'
+        self.__version__ = '0.3.5'
         self.changelog = {
+            '0.3.5' : "Linked with game events.",
             '0.3.4' : "Only call lp if needed.",
             '0.3.3' : "Do not call module when module reload fails.",
             '0.3.2' : "Let players know when mods go up or down.",
@@ -57,10 +58,15 @@ class orchestrator ( threading.Thread ):
         self.server.start ( )
         self.telnet.start ( )
 
+        self.game_events = framework.game_events ( framework = self )
+        self.game_events.start ( )
+
         self.framework_state [ 'telnet' ] = { 'version' : self.telnet.__version__,
                                               'changelog' : self.telnet.changelog [ self.telnet.__version__ ] }
         self.framework_state [ 'server' ] = { 'version' : self.server.__version__,
                                               'changelog' : self.server.changelog [ self.server.__version__ ] }
+        self.framework_state [ 'game_events' ] = { 'version'   : self.game_events.__version__,
+                                                   'changelog' : self.game_events.changelog [ self.game_events.__version__ ] }
 
         self.mods = { }
 

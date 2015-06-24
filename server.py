@@ -14,9 +14,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.3.9'
+        self.__version__ = '0.3.10'
         self.changelog = {
-            '0.3.10' : "Made backend lp more useful.",
+            '0.3.10' : "Made backend lp more useful. Added +1 karma every 1h. Added karma to /me.",
             '0.3.9' : "Disabled old prison system.",
             '0.3.8' : "Fixed 'lp storm' by only calling lp if needed, not every interval.",
             '0.3.7' : "Preventively change player position after teleport.",
@@ -265,8 +265,8 @@ class server ( threading.Thread ):
             
     def get_player ( self, player ):
         if isinstance ( player, player_info ):
-            self.log.info ( "get_player called with player_info argument by %s" %
-                            str ( sys._getframe ( ).f_code.co_name ) )
+            self.log.debug ( "get_player called with player_info argument by %s" %
+                             str ( sys._getframe ( ).f_code.co_name ) )
             return player
         if isinstance ( player, int ):
             if player in self.players_info.keys ( ):
@@ -302,7 +302,20 @@ class server ( threading.Thread ):
         
         self.log.error ( "No player with identifier %s." % str ( player ) )
         return None
-            
+
+    def give_player_karma ( self, amount = 0, player_id = None ):
+        if amount == 0:
+            return
+        player = self.get_player ( player_id )
+        if player is None:
+            return
+        try:
+            self.log.debug ( player.karma )
+            player.karma += amount
+            self.log.debug ( player.karma )
+        except Exception as e:
+            self.log.error ( e )
+    
     def give_player_stuff ( self,
                             player_input,
                             stuff,
@@ -346,13 +359,13 @@ class server ( threading.Thread ):
         for key in self.players_info.keys ( ):
             player = self.players_info [ key ]
             if player.online == True:
-                player_line = "%-10s | %-10d | %-06.1f | %-3d | %-3d | %-6d" % (
-                    player.name_sane,
+                player_line = "{:<10s} | {:<10d} | {:<6.1f} | {:<3d} | {:<3d} | {:<6d}" .format (
+                    player.name_sane [ : 9 ],
                     player.playerid,
                     player.online_time / 3600,
                     player.players,
                     player.karma,
-                    player.cash ) 
+                    player.cash )
                 print ( player_line )
 
     def mod_status ( self, msg_origin, msg_content ):
@@ -558,6 +571,7 @@ class server ( threading.Thread ):
                         self.log.info ( "%s played for %d hours." %
                                         ( self.players_info [ playerid ].name_sane,
                                           new_minutes ) )
+                        self.framework.game_events.player_played_one_hour ( playerid )
                     
                 else:
                     self.players_info [ playerid ].online_time = 0
@@ -659,8 +673,9 @@ class server ( threading.Thread ):
         msg += ', translation to %s' % player.language_preferred
         msg += ', played %dh' % ( round ( player.online_time / 3600 ) )
         if isinstance ( player.player_kills_explanations, list ):
-            for explanation in player.player_kills_explanations:
-                msg += ", pkilled explained: %s" % explanation
+            msg += ", pkills (total/explained): %d" % (
+                player.players, len ( explanation ) )
+        msg += ", karma {:d}".format ( player.karma )
         msg += "."
         self.say ( msg )
 
@@ -827,6 +842,7 @@ class server ( threading.Thread ):
                     new_player.attributes = player.attributes
                     # New attribute:
                     new_player.camp = None
+                    
                 if self.players_info [ a_key ].__class__.__name__ == 'player_info_v2':
                     new_player = framework.player_info.player_info_v3 ( deaths = player.deaths,
                                                                         health = player.health,
@@ -853,6 +869,35 @@ class server ( threading.Thread ):
                     new_player.camp = player.camp
                     # new
                     new_player.online_time = 0
+
+                if self.players_info [ a_key ].__class__.__name__ == 'player_info_v3':
+                    new_player = framework.player_info.player_info_v3 ( deaths = player.deaths,
+                                                                        health = player.health,
+                                                                        home = player.home,
+                                                                        ip = player.ip,
+                                                                        level = player.level,
+                                                                        name = player.name,
+                                                                        online = player.online,
+                                                                        playerid = player.playerid,
+                                                                        players = player.players,
+                                                                        pos_x = player.pos_x,
+                                                                        pos_y = player.pos_y,
+                                                                        pos_z = player.pos_z,
+                                                                        score = player.score,
+                                                                        steamid = player.steamid,
+                                                                        zombies = player.zombies )
+                    new_player.cash = player.cash
+                    new_player.home_invasion_beacon = player.home_invasion_beacon
+                    new_player.home_invitees = player.home_invitees
+                    new_player.karma = player.karma
+                    new_player.language_preferred = player.language_preferred
+                    new_player.languages_spoken = player.languages_spoken
+                    new_player.map_limit_beacon = player.map_limit_beacon
+                    new_player.name_sane = self.sanitize ( player.name )
+                    new_player.attributes = player.attributes
+                    new_player.camp = player.camp
+                    new_player.online_time = player.online_time
+                    new_player.timestamp_latest_update = player.timestamp_latest_update
 
                 if new_player == None:
                     self.log.error ( "new_player == None!" )

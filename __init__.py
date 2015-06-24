@@ -1,3 +1,4 @@
+from .game_events      import game_events
 from .orchestrator     import orchestrator
 from .player_info      import player_info
 from .preferences      import preferences
