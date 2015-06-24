@@ -195,12 +195,12 @@ class player_info_v4 ( object ):
         self.karma = None
         self.language_preferred = None
         self.languages_spoken = None
-        self.permissions = None
-        self.player_kills_explanations = None
-        self.positions = None
         self.map_limit_beacon = None
         self.name_sane = None
         self.online_time = None
+        self.permissions = None
+        self.player_kills_explanations = None
+        self.positions = None
         self.timestamp_latest_update = None
         
         # Extensible attributes dictionary:

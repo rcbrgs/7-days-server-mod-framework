@@ -1,6 +1,24 @@
 import framework
+import math
 
 class utils ( object ):
+    def calculate_bearings ( self, player_origin, player_helper ):
+        origin_x = player_origin.pos_x
+        origin_y = player_origin.pos_y
+        helper_x = player_helper.pos_x
+        helper_y = player_helper.pos_y
+        relative_x = origin_x - helper_x
+        relative_y = origin_y - helper_y
+        distance = math.sqrt ( relative_x ** 2 + relative_y ** 2 )
+        acos = math.degrees ( math.acos ( relative_x / distance ) )
+        if ( relative_y < 0 ):
+            acos += 180
+        return ( distance , int ( ( acos - 90 ) % 360 ) )
+
+    def calculate_distance ( self, point_A, point_B ):
+        return math.sqrt ( ( point_A [ 0 ] - point_B [ 0 ] ) ** 2 +
+                           ( point_A [ 1 ] - point_B [ 1 ] ) ** 2 )
+
     def get_coordinates ( self, player = None ):
         return ( player.pos_x, player.pos_y, player.pos_z )
         

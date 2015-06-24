@@ -14,8 +14,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.3.14'
+        self.__version__ = '0.3.15'
         self.changelog = {
+            '0.3.15' : "Fixed attributes not being set on new players. Moved some functions to utils.",
             '0.3.14' : "Changed tele to preteleports for map limits and home invasion.",
             '0.3.13' : "Added zombie accountability for giving cash for zombie kills.",
             '0.3.12' : "Fixed error on parsing messages containing colons.",
@@ -92,23 +93,6 @@ class server ( threading.Thread ):
             self.chat.close ( )
         pickle_file = open ( self.player_info_file, 'wb' )
         pickle.dump ( self.players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
-
-    def calculate_bearings ( self, player_origin, player_helper ):
-        origin_x = player_origin.pos_x
-        origin_y = player_origin.pos_y
-        helper_x = player_helper.pos_x
-        helper_y = player_helper.pos_y
-        relative_x = origin_x - helper_x
-        relative_y = origin_y - helper_y
-        distance = math.sqrt ( relative_x ** 2 + relative_y ** 2 )
-        acos = math.degrees ( math.acos ( relative_x / distance ) )
-        if ( relative_y < 0 ):
-            acos += 180
-        return ( distance , int ( ( acos - 90 ) % 360 ) )
-
-    def calculate_distance ( self, point_A, point_B ):
-        return math.sqrt ( ( point_A [ 0 ] - point_B [ 0 ] ) ** 2 +
-                           ( point_A [ 1 ] - point_B [ 1 ] ) ** 2 )
 
     def command_about ( self, origin, message ):
         self.say ( "This mod was initiated by Schabracke and is developed by rc." )
@@ -676,9 +660,15 @@ class server ( threading.Thread ):
                                             score = score,
                                             level = level,
                                             steamid = steamid )
+            new_player_info.accounted_zombies = zombies
+            new_player_info.cash = 0
+            new_player_info.home_invitees = [ ]
+            new_player_info.inventory_tracker = [ ]
+            new_player_info.karma = 0
             new_player_info.name_sane = self.sanitize ( name )
             new_player_info.online = True
             new_player_info.online_time = 0
+            new_player_info.player_kills_explanations = [ ]
             new_player_info.positions = [ ( pos_x, pos_y, pos_z ) ]
             new_player_info.timestamp_latest_update = time.time ( )
             
