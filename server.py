@@ -194,8 +194,8 @@ class server ( threading.Thread ):
                 if other.home != None:
                     if ( other.home_invitees != None and
                          not player.playerid in other.home_invitees ):
-                        distance = self.calculate_distance ( ( player.pos_x, player.pos_y ),
-                                                             other.home )
+                        distance = self.framework.utils.calculate_distance ( ( player.pos_x, player.pos_y ),
+                                                                             other.home )
                         if  distance < self.preferences.home_radius * 2:
                             if other.online == True:
                                 self.console ( 'pm %s "[FF0000]%s[FFFFFF] is near ([FF0000]%dm[FFFFFF]) your base!"' % ( other.playerid, player.name_sane, int ( distance ) ) )
@@ -203,8 +203,8 @@ class server ( threading.Thread ):
                                 self.console ( 'pm %s "You are too near %s base! Teleport position saved."' % ( player.playerid, other.name_sane ) )
                                 player.home_invasion_beacon = ( player.pos_x, player.pos_y, player.pos_z )
                                 return
-                            beacon_distance = self.calculate_distance ( player.home_invasion_beacon,
-                                                                        other.home )
+                            beacon_distance = self.framework.utils.calculate_distance ( player.home_invasion_beacon,
+                                                                                        other.home )
                             if distance < self.preferences.home_radius:
                                 self.say ( "%s invaded %s's base! [0000FF]Teleporting away...[FFFFFF]" % ( player.name_sane, self.players_info [ key ].name_sane ) )
                                 if beacon_distance < self.preferences.home_radius * 1.5:
@@ -683,8 +683,8 @@ class server ( threading.Thread ):
         msg += self.geoip.country_code_by_addr ( player.ip )
         if player.home != None:
             msg += ", home at %s" % ( str ( player.home ) )
-            if self.calculate_distance ( ( player.pos_x, player.pos_y ),
-                                         player.home ) < self.preferences.home_radius:
+            if self.framework.utils.calculate_distance ( ( player.pos_x, player.pos_y ),
+                                                         player.home ) < self.preferences.home_radius:
                 msg += ", inside"
             else:
                 msg += ", outside"
