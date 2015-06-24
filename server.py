@@ -14,8 +14,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.3.10'
+        self.__version__ = '0.3.11'
         self.changelog = {
+            '0.3.11' : "Adapted for pm sent from events. Fixed /status bug.",
             '0.3.10' : "Made backend lp more useful. Added +1 karma every 1h. Added karma to /me.",
             '0.3.9' : "Disabled old prison system.",
             '0.3.8' : "Fixed 'lp storm' by only calling lp if needed, not every interval.",
@@ -370,8 +371,8 @@ class server ( threading.Thread ):
 
     def mod_status ( self, msg_origin, msg_content ):
         self.greet ( )
-        for mod in self.framework.mods:
-            mod.greet ( )
+        for key in self.framework.mods.keys ( ):
+            self.framework.mods [ key ] [ 'reference'].greet ( )
 
     def offline_player ( self, server_log ):
         self.log.info ( "%s" % server_log )
@@ -679,12 +680,12 @@ class server ( threading.Thread ):
         msg += "."
         self.say ( msg )
 
-    def pm ( self, destiny, message ):
-        destiny_player = self.get_player ( destiny )
+    def pm ( self, player_id = None, msg = None ):
+        destiny_player = self.get_player ( player_id )
         if destiny_player == None:
-            self.log.error ( "pm '%s' failed because destiny player invalid." % message )
+            self.log.error ( "pm '%s' failed because destiny player invalid." % msg )
             return
-        self.console ( 'pm %s "%s"' % ( destiny.playerid, message ) )
+        self.console ( 'pm %s "%s"' % ( destiny_player.playerid, msg ) )
         
     def print_players_info ( self, msg_origin, msg_content ):
         for key in self.players_info.keys ( ):

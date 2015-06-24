@@ -8,8 +8,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = "0.1.0"
+        self.__version__ = "0.1.1"
         self.changelog = {
+            '0.1.1' : "Karma gain now PMs player.",
             '0.1.0' : "Initial version." }
         
         self.framework = framework
@@ -18,7 +19,9 @@ class game_events ( threading.Thread ):
 
         self.registered_callbacks = {
             'player_played_one_hour' : [ ( self.framework.server.give_player_karma,
-                                           { 'amount' : 1 } ) ],
+                                           { 'amount' : 1 } ),
+                                         ( self.framework.server.pm,
+                                           { 'msg' : "You gained +1 karma for being 1h online!" } ) ],
             }
 
     def __del__ ( self ):
