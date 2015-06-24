@@ -14,8 +14,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.3.13'
+        self.__version__ = '0.3.14'
         self.changelog = {
+            '0.3.14' : "Changed tele to preteleports for map limits and home invasion.",
             '0.3.13' : "Added zombie accountability for giving cash for zombie kills.",
             '0.3.12' : "Fixed error on parsing messages containing colons.",
             '0.3.11' : "Adapted for pm sent from events. Fixed /status bug.",
@@ -216,7 +217,7 @@ class server ( threading.Thread ):
                                 self.console ( 'pm %s "[FF0000]%s[FFFFFF] is near ([FF0000]%dm[FFFFFF]) your base!"' % ( other.playerid, player.name_sane, int ( distance ) ) )
                             if player.home_invasion_beacon == None:
                                 self.console ( 'pm %s "You are too near %s base! Teleport position saved."' % ( player.playerid, other.name_sane ) )
-                                player.home_invasion_beacon = ( player.pos_x, player.pos_y, player.pos_z + self.framework.preferences.teleport_lag_cushion )
+                                player.home_invasion_beacon = ( player.pos_x, player.pos_y, player.pos_z )
                                 return
                             beacon_distance = self.calculate_distance ( player.home_invasion_beacon,
                                                                         other.home )
@@ -224,12 +225,13 @@ class server ( threading.Thread ):
                                 self.say ( "%s invaded %s's base! [0000FF]Teleporting away...[FFFFFF]" % ( player.name_sane, self.players_info [ key ].name_sane ) )
                                 if beacon_distance < self.preferences.home_radius * 1.5:
                                     self.say ( "%s teleport destination is too near %s's base, changing it to starterbase." % ( player.name_sane, other.name_sane ) )
-                                    player.home_invasion_beacon = ( 1500, 350, 67 + self.framework.preferences.teleport_lag_cushion )
-                                self.teleport ( player, player.home_invasion_beacon )
+                                    player.home_invasion_beacon = ( 1500, 350, 67 )
+                                self.preteleport ( player, player.home_invasion_beacon )
                                 return
-                            self.console ( 'pm %s "You are still near ([880000]%dm[FFFFFF]) %s base!"' % ( player.playerid,
-                                                                                                           int ( distance ),
-                                                                                                           other.name_sane ) )
+                            self.console ( 'pm %s "You are still near ([880000]%dm[FFFFFF]) %s base!"' % (
+                                player.playerid,
+                                int ( distance ),
+                                other.name_sane ) )
                             return
         player.home_invasion_beacon = None
                 
@@ -628,7 +630,7 @@ class server ( threading.Thread ):
                     self.players_info [ playerid ].accounted_zombies += 100
             except Exception as e:
                 self.log.error ( "While parsing player {:s}: {:s}.".format (
-                    self.players_info [ playerid ].name_sane, e ) )
+                    self.players_info [ playerid ].name_sane, str ( e ) ) )
                 unaccounted_zombies = 0
                 self.players_info [ playerid ].accounted_zombies = zombies
                 
@@ -648,9 +650,9 @@ class server ( threading.Thread ):
                     if ( abs ( self.players_info [ playerid ].map_limit_beacon [ 0 ] ) > 4500 or
                          abs ( self.players_info [ playerid ].map_limit_beacon [ 1 ] ) > 4500 ):
                         self.say ( "Saved position also beyond hard limit; teleporting to starter base." )
-                        self.players_info [ playerid ].map_limit_beacon = ( 1500, 350, 67 + 1 )                    
-                    self.teleport ( name,
-                                    self.players_info [ playerid ].map_limit_beacon )
+                        self.players_info [ playerid ].map_limit_beacon = ( 1500, 350, 67 )                    
+                    self.preteleport ( name,
+                                       self.players_info [ playerid ].map_limit_beacon )
                     return
             else:
                 self.players_info [ playerid ].map_limit_beacon = None
