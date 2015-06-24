@@ -14,8 +14,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.3.11'
+        self.__version__ = '0.3.12'
         self.changelog = {
+            '0.3.12' : "Fixed error on parsing messages containing colons.",
             '0.3.11' : "Adapted for pm sent from events. Fixed /status bug.",
             '0.3.10' : "Made backend lp more useful. Added +1 karma every 1h. Added karma to /me.",
             '0.3.9' : "Disabled old prison system.",
@@ -357,6 +358,7 @@ class server ( threading.Thread ):
     def list_online_players ( self ):
         print ( "%-10s | %-10s | %-6s | %-3s | %-3s | %-6s" %
                 ( "name_sane", "playerid", "time", "pks", "kar", "cash" ) )
+        print ( "-----------+------------+--------+-----+-----+-----" )
         for key in self.players_info.keys ( ):
             player = self.players_info [ key ]
             if player.online == True:
@@ -407,8 +409,8 @@ class server ( threading.Thread ):
             self.players_info [ key ].online = False
 
     def output_starter_base ( self, msg_origin, msg_content ):
-        self.say ( "The starterbase is at 1500 E, 350 N. Password is 'noob'." )
-        self.say ( "To teleport there, type /gostart." )
+        #self.say ( "The starterbase is at 1500 E, 350 N. Password is 'noob'." )
+        self.say ( "To teleport to the starterbase, type /gostart." )
         self.say ( "- Replant what you harvest." )
         self.say ( "- Take what you need, and repay with work around the base." )
         #self.say ( "- Stop all fires and be silent during nights." )
@@ -443,7 +445,7 @@ class server ( threading.Thread ):
                 msg_content = ""
                 for item in range ( 1, len ( msg_splitted ) - 1 ):
                     msg_content += msg_splitted [ item ] + ": "
-                    msg_content += msg_splitted [ -1 ] [ : -1 ]
+                msg_content += msg_splitted [ -1 ] [ : -1 ]
             else:
                 msg_content = msg_splitted [ 1 ] [ : -1 ]
             self.log.info ( "CHAT %s: %s" % ( msg_origin, msg_content ) )
@@ -625,12 +627,6 @@ class server ( threading.Thread ):
             if int ( players ) > self.players_info [ playerid ].players:
                 self.log.info ( "Player %s has killed another player!" %
                                 self.players_info [ playerid ].name_sane )
-                #self.say ( "%s is imprisoned for killing another player." %
-                #           self.players_info [ playerid ].name_sane )
-                #self.players_info [ playerid ].players = int ( players )
-                #prison_mod = self.framework.mods [ 'prison' ] [ 'reference' ]
-                #prison_mod.named_prisoners.append ( playerid )
-                #prison_mod.save_prisoners ( )
                 
         else:
             new_player_info = player_info ( health = health,
