@@ -13,6 +13,7 @@ class orchestrator ( threading.Thread ):
         self.daemon = True
         self.__version__ = '0.3.5'
         self.changelog = {
+            '0.3.6' : "Extended with utils module.",
             '0.3.5' : "Linked with game events.",
             '0.3.4' : "Only call lp if needed.",
             '0.3.3' : "Do not call module when module reload fails.",
@@ -60,6 +61,8 @@ class orchestrator ( threading.Thread ):
 
         self.game_events = framework.game_events ( framework = self )
         self.game_events.start ( )
+
+        self.utils = framework.utils ( )
 
         self.framework_state [ 'telnet' ] = { 'version' : self.telnet.__version__,
                                               'changelog' : self.telnet.changelog [ self.telnet.__version__ ] }

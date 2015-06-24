@@ -18,7 +18,7 @@ class game_events ( threading.Thread ):
         self.shutdown = False
 
         self.registered_callbacks = {
-            'player_played_one_hour' : [ ( self.framework.server.give_player_karma,
+            'player_played_one_hour' : [ ( self.framework.server.give_karma,
                                            { 'amount' : 1 } ),
                                          ( self.framework.server.pm,
                                            { 'msg' : "You gained +1 karma for being 1h online!" } ) ],

@@ -304,7 +304,7 @@ class server ( threading.Thread ):
         self.log.error ( "No player with identifier %s." % str ( player ) )
         return None
 
-    def give_player_karma ( self, amount = 0, player_id = None ):
+    def give_karma ( self, player_id = None, amount = 0 ):
         if amount == 0:
             return
         player = self.get_player ( player_id )
@@ -361,7 +361,7 @@ class server ( threading.Thread ):
             player = self.players_info [ key ]
             if player.online == True:
                 player_line = "{:<10s} | {:<10d} | {:<6.1f} | {:<3d} | {:<3d} | {:<6d}" .format (
-                    player.name_sane [ : 9 ],
+                    str ( player.name_sane [ : 9 ] ),
                     player.playerid,
                     player.online_time / 3600,
                     player.players,
