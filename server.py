@@ -16,6 +16,7 @@ class server ( threading.Thread ):
         self.log = logging.getLogger ( __name__ )
         self.__version__ = '0.3.9'
         self.changelog = {
+            '0.3.10' : "Made backend lp more useful.",
             '0.3.9' : "Disabled old prison system.",
             '0.3.8' : "Fixed 'lp storm' by only calling lp if needed, not every interval.",
             '0.3.7' : "Preventively change player position after teleport.",
@@ -317,11 +318,42 @@ class server ( threading.Thread ):
     def list_players ( self ):
         for key in self.players_info.keys ( ):
             print ( self.players_info [ key ].name )
+
+    def list_nearby_tracks ( self, position ):
+        result = [ ]
+        for playerid in self.players_info.keys ( ):
+            player = self.players_info [ playerid ]
+            now = time.time ( )
+            if not isinstance ( player.timestamp_latest_update, float ):
+                continue
+            if ( now - player.timestamp_latest_update ) > ( 24 * 3600 ):
+                continue
+            if not isinstance ( player.positions, list ):
+                continue
+            for track in player.positions:
+                #self.log.debug ( "distance between %s and %s is < 5?" % (
+                #    str ( track ), str ( position ) ) )
+                if ( abs ( position [ 0 ] - track [ 0 ] ) < 5 and
+                     abs ( position [ 1 ] - track [ 1 ] ) < 5 and
+                     abs ( position [ 2 ] - track [ 2 ] ) < 5 ):
+                    result.append ( player.playerid )
+                    break
+        return result
             
     def list_online_players ( self ):
+        print ( "%-10s | %-10s | %-6s | %-3s | %-3s | %-6s" %
+                ( "name_sane", "playerid", "time", "pks", "kar", "cash" ) )
         for key in self.players_info.keys ( ):
-            if self.players_info [ key ].online == True:
-                print ( self.players_info [ key ].name )
+            player = self.players_info [ key ]
+            if player.online == True:
+                player_line = "%-10s | %-10d | %-06.1f | %-3d | %-3d | %-6d" % (
+                    player.name_sane,
+                    player.playerid,
+                    player.online_time / 3600,
+                    player.players,
+                    player.karma,
+                    player.cash ) 
+                print ( player_line )
 
     def mod_status ( self, msg_origin, msg_content ):
         self.greet ( )
@@ -496,6 +528,12 @@ class server ( threading.Thread ):
         if playerid in self.players_info.keys ( ):
             now = time.time ( )
             
+            # fixing some Nones
+            if self.players_info [ playerid ].cash == None:
+                self.players_info [ playerid ].cash = 0
+            if self.players_info [ playerid ].karma == None:
+                self.players_info [ playerid ].karma = 0    
+            
             # event
             if self.players_info [ playerid ].online == False:
                 self.log.debug ( "%s is online." % name )
@@ -504,7 +542,7 @@ class server ( threading.Thread ):
                 if isinstance ( last_time, float ):
                     added_time = 0
                     time_difference = now - last_time
-                    if time_difference < self.framework.preferences.loop_wait + 1:
+                    if time_difference < self.framework.preferences.loop_wait * 10:
                         added_time = time_difference
                     total_time = self.players_info [ playerid ].online_time
                     if isinstance ( total_time, float ):
@@ -514,8 +552,8 @@ class server ( threading.Thread ):
                     self.players_info [ playerid ].online_time = new_total_time
 
                     # event
-                    old_minutes = round ( total_time / 3600 )
-                    new_minutes = round ( new_total_time / 3600 )
+                    old_minutes = math.floor ( total_time / 3600 )
+                    new_minutes = math.floor ( new_total_time / 3600 )
                     if ( new_minutes > old_minutes ):
                         self.log.info ( "%s played for %d hours." %
                                         ( self.players_info [ playerid ].name_sane,
@@ -627,7 +665,6 @@ class server ( threading.Thread ):
         self.say ( msg )
 
     def pm ( self, destiny, message ):
-        return
         destiny_player = self.get_player ( destiny )
         if destiny_player == None:
             self.log.error ( "pm '%s' failed because destiny player invalid." % message )
