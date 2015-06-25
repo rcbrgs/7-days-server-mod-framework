@@ -1,4 +1,5 @@
 from .console          import console
+from .entity_info      import entity_info
 from .game_events      import game_events
 from .orchestrator     import orchestrator
 from .player_info      import player_info
@@ -14,7 +15,11 @@ import sys
 import threading
 import time
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
+changelog = {
+    '0.2.1' : "Added entity_info module.",
+    }
+
 log = logging.getLogger ( __name__ )
 log.setLevel ( logging.INFO )
 

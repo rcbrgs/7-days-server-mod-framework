@@ -227,6 +227,8 @@ class player_info_v5 ( player_info_v4 ):
 
         # Attributes received from mods:
         self.home_invasions = None
+        self.latest_teleport = None
+        self.new_since_last_update = None
         
         # Extensible attributes dictionary:
 

@@ -9,8 +9,9 @@ class telnet_connect ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( telnet_connect, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = '0.1.4'
+        self.__version__ = '0.1.5'
         self.changelog = {
+            '0.1.6' : "Added partial parse of le.",
             '0.1.5' : "Refactored telnet parsing using re.",
             '0.1.4' : "Added catching memory information output from server.",
             '0.1.3' : "Catching exception during unicode decode.",
@@ -62,6 +63,7 @@ class telnet_connect ( threading.Thread ):
             self.log.debug ( linetest.decode('ascii') )
             self.connected = True
             self.log.info ( "Telnet connected successfully." )
+            self.write ( "loglevel ALL true\n".encode ( 'utf-8') )
         else:
             self.log.error ("Logon failed.")
 
@@ -115,12 +117,41 @@ class telnet_connect ( threading.Thread ):
                 continue
             
             # 2015-06-25T07:59:35 10591.364 INF Executing command '' by Telnet from 143.107.45.13:47641
-            cmd_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ INF Executing command \'([a-zA-Z0-9]+)\' by Telnet from [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+' )
+            cmd_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ INF Executing command \'([\w]+[\s]*[\w]*)\' by Telnet from [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+' )
             cmd_match = cmd_matcher.search ( line_string )
             if cmd_match:
                 self.log.debug ( "cmd executed: {:s}".format ( cmd_match.group ( 1 ) ) )
                 continue
 
+            # 7. id=1629100, st.devil666, pos=(1969.3, 57.1, 1230.7), rot=(5.6, -54.8, 0.0), remote=True, health=68, deaths=2, zombies=21, players=0, score=16, level=1, steamid=76561198136543707, ip=91.105.156.207, ping=90\r\n
+            id_matcher = re.compile ( r'[\d]+\. id=([\d]+), (.*), pos=\((.[\d]*\.[\d]), (.[\d]*\.[\d]), (.[\d]*\.[\d])\), rot=\((.[\d]*\.[\d]), (.[\d]*\.[\d]), (.[\d]*\.[\d])\), remote=([\w]+), health=([\d]+), deaths=([\d]+), zombies=([\d]+), players=([\d]+), score=([\d]+), level=(1), steamid=([\d]+), ip=([\d]+\.[\d]+\.[\d]+\.[\d]+), ping=([\d]+)' )
+            id_match = id_matcher.search ( line_string )
+            if id_match:
+                self.log.debug ( "id: {:s}".format ( line_string ) )
+                self.log.debug ( "id_match = {:s}".format ( str ( id_match ) ) )
+                self.framework.server.update_id ( id_match.groups ( ) )
+                continue
+
+            item_matcher = re.compile ( r'[\d]+\. id=([\d]+), Item_[\d]+ \(EntityItem\), pos=\((.[\d]*\.[\d]), (.[\d]*\.[\d]), (.[\d]*\.[\d])\), rot=\((.[\d]*\.[\d]), (.[\d]*\.[\d]), (.[\d]*\.[\d])\), lifetime=(.*), remote=([\w]+), dead=([\w]+),.*' )
+            item_match = item_matcher.match ( line_string )
+            if item_match:
+                self.log.debug ( "item_match" )
+                #self.framework.server.update_item ( item_match.groups ( ) )
+                continue
+            
+            # 1. id=1753441, Item_1753441 (EntityItem), pos=(2944.5, 53.2, -1242.5), rot=(0.0, 22.0, 0.0), lifetime=59.5, remote=False, dead=False,
+            # 4. id=1750471, [type=EntityZombie, name=zombie04, id=1750471], pos=(2209.0, 65.8, 3226.8), rot=(0.0, 207.0, 0.0), lifetime=float.Max, remote=False, dead=False, health=100
+            # 15. id=1746939, [type=EntityZombieCrawl, name=zombiecrawler, id=1746939], pos=(-349.1, 64.1, 426.4), rot=(0.0, 300.0, 0.0), lifetime=float.Max, remote=False, dead=False, health=100
+            # 54. id=395425, [type=EntityCar, name=car_Orange, id=395425], pos=(2234.3, 64.2, 3266.8), rot=(180.0, 90.0, 0.0), lifetime=float.Max, remote=False, dead=False, health=1000
+            # 55. id=1458851, [type=EntityPlayer, name=sakis2011, id=1458851], pos=(2944.4, 54.0, -1241.2), rot=(-7.0, 168.8, 0.0), lifetime=float.Max, remote=True, dead=False, health=108
+            # 1. id=1753579, [type=EntityZombie, name=zombiegal02, id=1753579], pos=(2167.7, 64.0, 3301.1), rot=(0.0, 240.8, 0.0), lifetime=float.Max, remote=False, dead=False, health=100
+            le_matcher = re.compile ( r'[\d]+\. id=([\d]+), (.*), pos=\((.[\d]*\.[\d]), (.[\d]*\.[\d]), (.[\d]*\.[\d])\), rot=\((.[\d]*\.[\d]), (.[\d]*\.[\d]), (.[\d]*\.[\d])\), lifetime=(.*), remote=([\w]+), dead=([\w]+), health=([\d]+).*' )
+            le_match = le_matcher.match ( line_string )
+            if le_match:
+                self.log.debug ( "le_match" )
+                self.framework.server.update_le ( le_match.groups ( ) )
+                continue
+            
             mem_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.* INF Time: [0-9]+.[0-9]+m FPS: [0-9]+.[0-9]+ Heap: [0-9]+.[0-9]+MB Max: [0-9]+.[0-9]+MB Chunks: [0-9]+ CGO: [0-9]+ Ply: [0-9]+ Zom: .* Ent: .* Items: [0-9]+' )
             mem_match = mem_matcher.match ( line_string )
             if mem_match:
@@ -128,26 +159,54 @@ class telnet_connect ( threading.Thread ):
                 self.framework.server.update_mem ( line_string )
                 continue
 
+            sent_matcher = re.compile ( r'Message to player ".*" sent with sender "Server"' )
+            sent_match = sent_matcher.match ( line_string )
+            if sent_match:
+                continue
+            
+            total_matcher = re.compile ( r'Total of [\d]+ in the game' )
+            total_match = total_matcher.match ( line_string )
+            if total_match:
+                continue
 
             
-            #pm_matcher = re.compile ( r'' )
-            #if ( " INF Executing command 'pm " in line_string ):
-            #    self.log.debug ( "pm " + line_string.split ( "'pm " ) [ 1 ] )
-            #    continue
-            
-            #if (                 " INF [EAC] FreeUser (" in line_string or
-            #     " INF Removing observed entity " in line_string ):
-            #    continue
+            # 2015-06-25T13:41:05 1361.451 INF Spawned [type=En.ityZombieCop, name=fatzombiecop, id=1747605] at (1431.5, 66.7, 264.5) Day=1429 TotalInWave=5 CurrentWave=1
 
-            if ( #" INF [EAC] UserStatusHandler callback. Status: Authenticated GUID: " in line_string  or
+            # 2015-06-25T15:43:32 8708.114 INF Kicking player: .ing
+            
+            if ( " INF [EAC] UserStatusHandler callback. Status: Authenticated GUID: " in line_string  or
+                 " INF [EAC] FreeUser (" in line_string or
+                 " INF [EAC] UserStatus" in line_string or
+                 " INF Kicking player" in line_string or
+                 "disconnected after " in line_string or
+                 " INF Executing command " in line_string or
+                 " INF AIDirector: scout" in line_string or
+                 "INF AIDirector" in line_string or
+                 " INF Player set to offline" in line_string or
+                 " INF Start a new wave" in line_string or
+                 " INF Spawned [type=" in line_string or
+                 " INF [NET] PlayerDisconnect" in line_string or
+                 " INF [Steamworks.NET]" in line_string or
+                 " ping too high " in line_string or
+                 " INF Telnet connection " in line_string or
+                 " INF Exited thread " in line_string or
+                 " INF Created new play" in line_string or
+                 " INF Started thread " in line_string or
+                 ' INF Executing command say "' in line_string or
+                 " An established connection was aborted by the software in your host" in line_string or
+                 " INF Spawning Wandering Horde" in line_string or
+                 " INF Spawning this wave" in line_string or
                  " INF Player set to online: " in line_string  or
                  " INF Player connected, entityid=" in line_string  or
                  " INF Adding observed entity: " in line_string  or
+                 " INF Removing observed entity" in line_string  or
                  " INF Created player with id=" in line_string  or
                  " INF RequestToSpawnPlayer: " in line_string  or
                  " INF [Steamworks.NET] Authentication callback. ID: " in line_string  or
                  " INF RequestToEnterGame: " in line_string  or
                  " INF Allowing player with id " in line_string  or
+                 " Playername or entity/steamid id not found." in line_string or
+                 " INF Spawned [type=" in line_string or
                  " INF [EAC] Registering user: id=" in line_string  or
                  " INF [Steamworks.NET] Authenticating player: " in line_string  or
                  " INF [Steamworks.NET] Auth.AuthenticateUser()" in line_string  or
@@ -156,45 +215,10 @@ class telnet_connect ( threading.Thread ):
                  " INF [NET] PlayerConnected EntityID=-1, PlayerID='', OwnerID='', PlayerName=''" in line_string ):
                 continue
             
-            #if ( "Total of " == line_string [ : 9 ] and
-            #     " in the game" in line_string ):
-            #    continue
-            
             if " INF GMSG: " in line_string:
                 self.framework.server.parse_gmsg ( line )
                 continue
-
             
-            
-            if ( 'Message to player "' in line_string and
-                 ' sent with sender "' in line_string ):
-                continue
-
-            if ( b', [type=EntityZombie' in line or
-                 b', [type=EntityHornet' in line ):
-                #self.framework.zombie_cleanup.parse_le ( line )
-                continue
-
-            if ( b', [type=EntityAnimal' in line or
-                 b', [type=EntityCar' in line or
-                 b', [type=EntitySupplyCrate' in line or
-                 b'(EntityItem)' in line or
-                 b'(EntityFallingBlock)' in line ):
-                continue
-            
-            if ( ( b'. id=' in line )  and ( b'remote=True' in line ) ):
-                self.log.debug ( "calling parse_id ( '%s' )" % line )
-                self.framework.server.parse_id ( line )
-                continue
-            
-            if ( " INF Exited thread TelnetClientSend_" in line_string or
-                 " INF Telnet connection closed: " in line_string or
-                 " INF Exited thread TelnetClientReceive_" or
-                 " INF Telnet connection from: " or
-                 " INF Started thread TelnetClientReceive_" or
-                 " INF Started thread TelnetClientSend_" ):
-                continue
-
             self.log.warning ( "Unparsed output: {:s}.".format ( line_string ) )
 
         self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )

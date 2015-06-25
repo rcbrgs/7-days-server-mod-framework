@@ -11,6 +11,7 @@ class game_events ( threading.Thread ):
         self.log = framework.log
         self.__version__ = "0.2.2"
         self.changelog = {
+            '0.2.3' : "Added hook for player connection.",
             '0.2.2' : "Added hook for triggering on player position change.",
             '0.2.1' : "Refactored time accounting to be more efficient.",
             '0.2.0' : "Killing 100 zombies gives some cash to player.",
@@ -22,6 +23,7 @@ class game_events ( threading.Thread ):
         self.shutdown = False
 
         self.registered_callbacks = {
+            'player_connected'           : [ ],
             'player_killed_100_zombies'  : [ ( self.framework.server.give_cash,
                                                { 'amount' : random.randint ( 50, 150 ) } ),
                                              ( self.framework.server.pm,
@@ -31,7 +33,7 @@ class game_events ( threading.Thread ):
                                              ( self.framework.server.pm,
                                                { 'msg' : "You gained 1 karma for being 1h online!" } ) ],
             'player_position_changed'    : [ ( self.check_position_triggers,
-                                               { } ) ]
+                                               { } ) ],
             }
 
     def __del__ ( self ):
@@ -49,13 +51,36 @@ class game_events ( threading.Thread ):
         self.shutdown = True
 
     def check_position_triggers ( self, player = None ):
+        self.framework.get_db_lock ( )
+        if not player:
+            self.log.error ( "player None" )
+        # map borders
+        if ( ( abs ( player.pos_x ) > 4400 ) or
+             ( abs ( player.pos_y ) > 4400 ) ):
+            if player.map_limit_beacon == None:
+                self.framework.console.pm ( player,
+                                            "You are beyond the 4.4km soft limit. Teleport destination saved." )
+                player.map_limit_beacon = self.framework.utils.get_coordinates ( player )
+            if ( ( abs ( player.pos_x ) > 4500 ) or
+                 ( abs ( player.pos_y ) > 4500 ) ):
+                msg = '%s is beyond the 4.5km hard limit. Teleporting back to saved position."'
+                self.log.info ( msg % ( player.name_sane ) )
+                if ( abs ( player.map_limit_beacon [ 0 ] ) > 4500 or
+                     abs ( player.map_limit_beacon [ 1 ] ) > 4500 ):
+                    self.framework.console.pm ( player, "Your saved position also beyond hard limit; teleporting to starter base." )
+                    player.map_limit_beacon = ( 1500, 350, 67 )                    
+                self.framework.server.preteleport ( player,
+                                                    player.map_limit_beacon )
+            else:
+                player.map_limit_beacon = None
+        self.framework.let_db_lock ( )
+
         if 'sethome' not in self.framework.mods.keys ( ):
             return
         if not self.framework.mods [ 'sethome' ] [ 'reference' ].enabled:
             return
 
         self.framework.mods [ 'sethome' ] [ 'reference' ].enforce_home ( player )
-        return    
         
     def day_changed ( self, previous_day ):
         pass
@@ -66,9 +91,19 @@ class game_events ( threading.Thread ):
         minute = self.framework.server.game_server.minute
         self.log.info ( ">>>>>  day %d, %02dh%02d  <<<<<" % ( day, hour, minute ) )
 
+    def player_connected ( self, player ):
+        for callback in self.registered_callbacks [ 'player_connected' ]:
+            function = callback [ 0 ]
+            kwargs   = callback [ 1 ]
+            kwargs [ 'player' ] = player
+            function ( **kwargs )
+
+        #self.framework.console.pm ( player, "Welcome back {}!".format ( player.name_sane ) )
+        self.log.info ( "{} connected.".format ( player.name_sane ) )
+
     def player_disconnected ( self, player ):
         player.online = False
-        self.log.info ( "Player {:s} disconnected.".format ( player.name_sane ) )
+        self.log.info ( "{:s} disconnected.".format ( player.name_sane ) )
         
     def player_killed_100_zombies ( self, player_id ):
         player = self.framework.server.get_player ( player_id )
@@ -96,3 +131,4 @@ class game_events ( threading.Thread ):
             kwargs   = callback [ 1 ]
             kwargs [ 'player' ] = player
             function ( **kwargs )
+

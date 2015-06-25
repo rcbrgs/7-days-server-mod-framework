@@ -23,8 +23,10 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.1'
+        self.__version__ = '0.4.2'
         self.changelog = {
+            '0.4.3'  : "Added le.",
+            '0.4.2'  : "Increased preteleport lag 2 -> 3s. Refactored id update.",
             '0.4.1'  : "Removed enforce_home_radii, moved to sethome.",
             '0.4.0'  : "Make backups of player db every hour.",
             '0.3.16' : "Added display server info functionality. Refactored some parsing using RE.",
@@ -50,6 +52,7 @@ class server ( threading.Thread ):
         self.log.info ( "Server module initializing." )
 
         self.chat = None
+        self.entities = { }
         # Other programs might have /keywords that we want to ignore. Put those here.
         self.external_commands = [ 'restart' ]
         self.framework = framework
@@ -139,6 +142,35 @@ class server ( threading.Thread ):
         
         self.say ( help_message )
             
+    def command_me ( self, player_identifier, message ):
+        player = self.get_player ( player_identifier )
+        if player == None:
+            self.say ( "No such player: %s" % str ( player_identifier ) )
+            return
+        msg = "%s: " % player.name_sane
+        msg += self.geoip.country_code_by_addr ( player.ip )
+        if player.home != None:
+            msg += ", home at %s" % ( self.framework.utils.get_map_coordinates ( player.home ) )
+            if self.framework.utils.calculate_distance ( self.framework.utils.get_coordinates ( player ),
+                                                         player.home ) < self.preferences.home_radius:
+                msg += ", inside"
+            else:
+                msg += ", outside"
+        if player.languages_spoken:
+            msg += ", speaks"
+            for language in player.languages_spoken:
+                msg += " " + language
+        if player.language_preferred:
+            msg += ', translation to %s' % player.language_preferred
+        msg += ', played %dh' % ( round ( player.online_time / 3600 ) )
+        if isinstance ( player.player_kills_explanations, list ):
+            msg += ", pkills (total/explained): %d/%d" % (
+                player.players, len ( player.player_kills_explanations ) )
+        msg += ", karma {:d}".format ( player.karma )
+        msg += ", cash {:d}".format ( player.cash )
+        msg += "."
+        self.say ( msg )
+
     def command_rules ( self, origin, message ):
         self.say ( "rules are: 1. [FF0000]PVE[FFFFFF] only." )
         self.say ( "                2. No base raping or looting." )
@@ -185,6 +217,25 @@ class server ( threading.Thread ):
         else:
             self.say ( "I would never curse such a nice person!" )
 
+    def display_entities ( self ):
+        print ( "stal | entty_id | entity_type | lifetime  | remot | dead  | heal | pos" )
+        self.wait_entities ( )
+        self.framework.get_ent_lock ( )
+        for key in self.entities.keys ( ):
+            entity = self.entities [ key ]
+            self.log.debug ( str ( entity ) )
+            print ( "{: 2.1f} | {: <8d} | {: <11s} | {} | {:5s} | {:5s} | {:4d} | {: 5.1f},{: 5.1f},{: 5.1f}".format (
+                time.time ( ) - entity.timestamp,
+                entity.entity_id,
+                entity.entity_type [ : 11 ],
+                entity.lifetime,
+                entity.remote,
+                entity.dead,
+                entity.health,
+                entity.pos_x, entity.pos_y, entity.pos_z,
+            ) )
+        self.framework.let_ent_lock ( )
+            
     def display_game_server ( self ):
         mi = self.game_server.mem [ 0 ]
         if 'time' not in mi.keys ( ):
@@ -224,13 +275,43 @@ class server ( threading.Thread ):
             if player_distances [ key ] == min_distance:
                 return ( key, min_distance, player_inverted_directions [ key ] )
 
+    def get_nearest_entity ( self, player ):
+        self.wait_entities ( )
+        self.framework.get_ent_lock ( )
+        min_distance = None
+        min_entity_id = None
+        for key in self.entities.keys ( ):
+            if self.entities [ key ].dead == "True":
+                continue
+            distance = self.framework.utils.calculate_distance ( ( self.entities [ key ].pos_x,
+                                                                   self.entities [ key ].pos_y,
+                                                                   self.entities [ key ].pos_z ),
+                                                                 self.framework.utils.get_coordinates ( player ) )
+            self.log.debug ( "distance: {}".format ( distance ) )
+            if not min_distance:
+                min_distance = distance
+            min_distance = min ( min_distance, distance )
+            if min_distance == distance:
+                min_entity_id = key
+        self.log.debug ( "nearest: {}".format ( min_distance ) )
+
+        if min_entity_id not in self.entities.keys ( ):
+            self.framework.let_ent_lock ( )
+            time.sleep ( 1 )
+            self.log.warning ( "Recursively trying to find a near entity." )
+            return self.get_nearest_entity ( player )
+        
+        min_type = self.entities [ min_entity_id ].entity_type
+        self.framework.let_ent_lock ( )
+        return min_entity_id, min_type
+            
     def get_online_players ( self ):
         result = [ ]
         for key in self.players_info.keys ( ):
             if self.players_info [ key ].online == True:
                 result.append ( key )
         return result
-            
+
     def get_player ( self, player ):
         if isinstance ( player, player_info ):
             self.log.debug ( "get_player called with player_info argument by %s" %
@@ -271,6 +352,14 @@ class server ( threading.Thread ):
         self.log.error ( "No player with identifier %s." % str ( player ) )
         return None
 
+    def get_random_entity ( self ):
+        self.wait_entities ( )
+        self.framework.get_ent_lock ( )
+        random_index = random.choice ( list ( self.entities.keys ( ) ) )
+        random_type = self.entities [ random_index ].entity_type
+        self.framework.let_ent_lock ( )
+        return random_index, random_type
+    
     def give_cash ( self, player_id = None, amount = 0 ):
         if amount == 0:
             return
@@ -325,8 +414,8 @@ class server ( threading.Thread ):
             if not isinstance ( player.positions, list ):
                 continue
             for track in player.positions:
-                #self.log.debug ( "distance between %s and %s is < 5?" % (
-                #    str ( track ), str ( position ) ) )
+                self.log.debug ( "distance between %s and %s is < 5?" % (
+                    str ( track ), str ( position ) ) )
                 if ( abs ( position [ 0 ] - track [ 0 ] ) < 5 and
                      abs ( position [ 1 ] - track [ 1 ] ) < 5 and
                      abs ( position [ 2 ] - track [ 2 ] ) < 5 ):
@@ -337,7 +426,7 @@ class server ( threading.Thread ):
     def list_online_players ( self ):
         print ( "%-4s | %-10s | %-10s | %-6s | %-5s | %-3s | %-6s | uzed | zeds" %
                 ( "stal", "name_sane", "playerid", "time", "pks", "kar", "cash" ) )
-        print ( "------+-----------+------------+--------+-------+-----+--------+------+------" )
+        print ( "-----+------------+------------+--------+-------+-----+--------+------+------" )
         now = time.time ( )
         for key in self.players_info.keys ( ):
             player = self.players_info [ key ]
@@ -396,11 +485,9 @@ class server ( threading.Thread ):
             self.players_info [ key ].online = False
 
     def output_starter_base ( self, msg_origin, msg_content ):
-        #self.say ( "The starterbase is at 1500 E, 350 N. Password is 'noob'." )
         self.say ( "To teleport to the starterbase, type /gostart." )
         self.say ( "- Replant what you harvest." )
         self.say ( "- Take what you need, and repay with work around the base." )
-        #self.say ( "- Stop all fires and be silent during nights." )
         
     def parse_gmsg ( self,
                      msg = None ):
@@ -441,64 +528,6 @@ class server ( threading.Thread ):
                         if mod.__class__.__name__ == "translator":
                             mod.translate ( msg_origin, msg_content [ : -1 ] )
 
-    def parse_id ( self,
-                   msg = None ):
-        #self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
-        self.latest_id_parse_call = time.time ( )
-        
-        if b"[type=" in msg:
-            return
-        current_parse = player_info ( )
-        text = msg.decode ('utf-8')
-
-        try:
-            # 3. id=1560, rc, pos=(513.8, 101.1, 0.2), rot=(-2.8, 87.2, 0.0), remote=True, health=100, deaths=0, zombies=4502, players=0, score=4502, level=1, steamid=76561198029613876, ip=85.170.46.222, ping=35
-            splitted = text.split ( " id=" )
-            playerid = int ( splitted [ 1 ].split ( "," ) [ 0 ] )
-            playername = text.split ( str ( playerid ) + ", " ) [ 1 ].split ( ", pos=(" ) [ 0 ]
-            splitted = text.split ( playername ) [ 1 ].split ( "=" )
-            playerposition_x = float ( splitted [ 1 ].split ( "," ) [ 0 ] [ 1: ] )
-            playerposition_z = float ( splitted [ 1 ].split ( "," ) [ 1 ] [ 1: ] )
-            playerposition_y = float ( splitted [ 1 ].split ( "," ) [ 2 ] [ : -1 ] )
-            #rot_x = float ( splitted [ 3 ].split ( "," ) [ 0 ] [ 1: ] )
-            #rot_z = float ( splitted [ 3 ].split ( "," ) [ 1 ] [ 1: ] )
-            #rot_y = float ( splitted [ 3 ].split ( "," ) [ 2 ] [ : -1 ] )
-            playerhealth = int ( splitted [ 4 ].split ( "," ) [ 0 ] )
-            playerdeaths = int ( splitted [ 5 ].split ( "," ) [ 0 ] )
-            playerzombies = int ( splitted [ 6 ].split ( "," ) [ 0 ] )
-            playerkills = int ( splitted [ 7 ].split ( "," ) [ 0 ] )
-            playerscore = int ( splitted [ 8 ].split ( "," ) [ 0 ] )
-            playersteamid = int ( splitted [ 10 ].split ( "," ) [ 0 ] )
-            player_ip = splitted [ 11 ].split ( "," ) [ 0 ]
-            country = self.geoip.country_code_by_addr ( player_ip )
-        except:
-            self.log.error ( "Error during parse_id." )
-            return
-        
-        self.player_info_update ( level = 1,
-                                  name = playername,
-                                  online = True,
-                                  playerid = playerid,
-                                  pos_x = playerposition_x,
-                                  pos_y = playerposition_y,
-                                  pos_z = playerposition_z,
-                                  health = playerhealth,
-                                  ip = player_ip,
-                                  deaths = int ( playerdeaths ),
-                                  zombies = int ( playerzombies ),
-                                  players = int ( playerkills ),
-                                  score = int ( playerscore ),
-                                  steamid = playersteamid )
-
-        pickle_file = open ( self.player_info_file, 'wb' )
-        pickle.dump ( self.players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
-        now = time.time ( )
-        if ( now - self.latest_player_db_backup > 3600 ):
-            self.latest_player_db_backup = now
-            backup_file_name = self.player_info_file + "_" + time.strftime ( "%Y-%m-%d_%Hh%M.pickle" )
-            backup_file = open ( backup_file_name, 'wb' )
-            pickle.dump ( self.players_info, backup_file, pickle.HIGHEST_PROTOCOL )
-        
     def player_info_update ( self,
                              level,
                              online,
@@ -514,113 +543,111 @@ class server ( threading.Thread ):
                              players,
                              score,
                              steamid ):
+
+        events = [ ]
         
+        self.framework.get_db_lock ( )
         if playerid in self.players_info.keys ( ):
             now = time.time ( )
             player = self.players_info [ playerid ]
-            
+
+            # old
             # fixing some Nones
-            if self.players_info [ playerid ].cash == None:
-                self.players_info [ playerid ].cash = 0
-            if self.players_info [ playerid ].karma == None:
-                self.players_info [ playerid ].karma = 0    
-            
-            # event
-            if self.players_info [ playerid ].online == False:
-                self.log.debug ( "%s is online." % name )
-            else:
-                last_time = self.players_info [ playerid ].timestamp_latest_update
-                if isinstance ( last_time, float ):
-                    added_time = 0
-                    time_difference = now - last_time
-                    if time_difference < self.framework.preferences.loop_wait * 10:
-                        added_time = time_difference
-                    total_time = self.players_info [ playerid ].online_time
-                    if isinstance ( total_time, float ):
-                        new_total_time = total_time + added_time
-                    else:
-                        new_total_time = added_time
-                    self.players_info [ playerid ].online_time = new_total_time
-
-                    # event
-                    old_minutes = math.floor ( total_time / 3600 )
-                    new_minutes = math.floor ( new_total_time / 3600 )
-                    if ( new_minutes > old_minutes ):
-                        self.log.info ( "%s played for %d hours." %
-                                        ( self.players_info [ playerid ].name_sane,
-                                          new_minutes ) )
-                        self.framework.game_events.player_played_one_hour ( playerid )
-                    
-                else:
-                    self.players_info [ playerid ].online_time = 0
-
-            self.players_info [ playerid ].deaths = int ( deaths )
-            self.players_info [ playerid ].health = health
-            self.players_info [ playerid ].ip = ip
-            self.players_info [ playerid ].level = level
-            self.players_info [ playerid ].name = name
-            self.players_info [ playerid ].name_sane = self.sanitize ( name )
-            self.players_info [ playerid ].online = online
+            if player.cash == None:
+                player.cash = 0
+            if player.karma == None:
+                player.karma = 0    
+            old_level = player.level
+            old_online = player.online
+            old_playerid = player.playerid
+            old_name = player.name
             old_pos_x = player.pos_x
             old_pos_y = player.pos_y
             old_pos_z = player.pos_z
-            self.players_info [ playerid ].pos_x = pos_x
-            self.players_info [ playerid ].pos_y = pos_y
-            self.players_info [ playerid ].pos_z = pos_z
-            player_positions = self.players_info [ playerid ].positions
+            old_health = player.health
+            old_ip = player.ip
+            old_deaths = player.deaths
+            old_zombies = player.zombies
+            old_players = player.players
+            old_score = player.score
+            old_steamid = player.steamid
+            old_timestamp = player.timestamp_latest_update
+            old_online_time = player.online_time
+            old_zombies = player.zombies
+            
+            if isinstance ( old_timestamp, float ):
+                added_time = 0
+                time_difference = now - old_timestamp
+                if time_difference < self.framework.preferences.loop_wait * 10:
+                    added_time = time_difference
+                total_time = player.online_time
+                if isinstance ( total_time, float ):
+                    new_total_time = total_time + added_time
+                else:
+                    new_total_time = added_time
+                player.online_time = new_total_time
+
+                # event
+                old_minutes = math.floor ( total_time / 3600 )
+                new_minutes = math.floor ( new_total_time / 3600 )
+                if ( new_minutes > old_minutes ):
+                    self.log.info ( "%s played for %d hours." %
+                                    ( player.name_sane,
+                                      new_minutes ) )
+                    self.framework.game_events.player_played_one_hour ( playerid )
+                    
+            else:
+                player.online_time = 0
+
+            player.deaths = deaths
+            player.health = health
+            player.ip = ip
+            player.level = level
+            player.name = name
+            player.name_sane = self.sanitize ( name )
+            player.online = online
+            player.pos_x = pos_x
+            player.pos_y = pos_y
+            player.pos_z = pos_z
+            player_positions = player.positions
             if not isinstance ( player_positions, list ):
                 player_positions = [ ]
             player_positions.append ( ( pos_x, pos_y, pos_z ) )
             if len ( player_positions ) > 24 * 60 * 60 / self.framework.preferences.loop_wait:
                 del ( player_positions [ 0 ] )
-            self.players_info [ playerid ].positions = player_positions
-            #self.players_info [ playerid ].rot = rot
-            #self.players_info [ playerid ].remote = remote
-            self.players_info [ playerid ].timestamp_latest_update = now
-            self.players_info [ playerid ].score = int ( score )
+            player.positions = player_positions
+            #player.rot = rot
+            #player.remote = remote
+            player.timestamp_latest_update = now
+            player.score = int ( score )
 
             try:
-                unaccounted_zombies = zombies - self.players_info [ playerid ].accounted_zombies
+                unaccounted_zombies = zombies - player.accounted_zombies
                 if unaccounted_zombies > 100:
                     self.framework.game_events.player_killed_100_zombies ( playerid )
-                    self.players_info [ playerid ].accounted_zombies += 100
+                    player.accounted_zombies += 100
             except Exception as e:
                 self.log.error ( "While parsing player {:s}: {:s}.".format (
-                    self.players_info [ playerid ].name_sane, str ( e ) ) )
+                    player.name_sane, str ( e ) ) )
                 unaccounted_zombies = 0
-                self.players_info [ playerid ].accounted_zombies = zombies
+                player.accounted_zombies = zombies
                 
-            self.players_info [ playerid ].zombies = int ( zombies )
+            player.zombies = zombies
                 
             if ( old_pos_x != pos_x or
                  old_pos_y != pos_y or
                  old_pos_z != pos_z ):
-                self.framework.game_events.player_position_changed ( player )                
-            
-            if ( ( abs ( float ( pos_x ) ) > 4400 ) or
-                 ( abs ( float ( pos_y ) ) > 4400 ) ):
-                if self.players_info [ playerid ].map_limit_beacon == None:
-                    self.console ( 'pm %s "you are beyond the 4.4km soft limit. Teleport destination saved."' % ( playerid ) )
-                    self.players_info [ playerid ].map_limit_beacon = ( pos_x, pos_y, pos_z + 1 )
-                if ( ( abs ( float ( pos_x ) ) > 4500 ) or
-                     ( abs ( float ( pos_y ) ) > 4500 ) ):
-                    msg = '%s is beyond the 4.5km hard limit. Teleporting back to saved position."'
-                    self.say ( msg % ( self.players_info [ playerid ].name_sane ) )
-                    if ( abs ( self.players_info [ playerid ].map_limit_beacon [ 0 ] ) > 4500 or
-                         abs ( self.players_info [ playerid ].map_limit_beacon [ 1 ] ) > 4500 ):
-                        self.say ( "Saved position also beyond hard limit; teleporting to starter base." )
-                        self.players_info [ playerid ].map_limit_beacon = ( 1500, 350, 67 )                    
-                    self.preteleport ( name,
-                                       self.players_info [ playerid ].map_limit_beacon )
-                    return
-            else:
-                self.players_info [ playerid ].map_limit_beacon = None
-            
-            #todo: event
-            if int ( players ) > self.players_info [ playerid ].players:
-                self.log.info ( "Player %s has killed another player!" %
-                                self.players_info [ playerid ].name_sane )
+                events.append ( self.framework.game_events.player_position_changed )
+
+            if ( not old_online ) and online:
+                events.append ( self.framework.game_events.player_connected )
                 
+            #todo: event
+            player.players = players
+            if old_players < player.players:
+                self.log.info ( "Player %s has killed another player!" %
+                                player.name_sane )
+
         else:
             new_player_info = player_info ( health = health,
                                             ip = ip,
@@ -647,36 +674,12 @@ class server ( threading.Thread ):
             new_player_info.positions = [ ( pos_x, pos_y, pos_z ) ]
             new_player_info.timestamp_latest_update = time.time ( )
             
-            self.players_info [ playerid ] = new_player_info
+            player = new_player_info
+            
+        self.framework.let_db_lock ( )
 
-    def command_me ( self, player_identifier, message ):
-        player = self.get_player ( player_identifier )
-        if player == None:
-            self.say ( "No such player: %s" % str ( player_identifier ) )
-            return
-        msg = "%s: " % player.name_sane
-        msg += self.geoip.country_code_by_addr ( player.ip )
-        if player.home != None:
-            msg += ", home at %s" % ( self.framework.utils.get_map_coordinates ( player.home ) )
-            if self.framework.utils.calculate_distance ( self.framework.utils.get_coordinates ( player ),
-                                                         player.home ) < self.preferences.home_radius:
-                msg += ", inside"
-            else:
-                msg += ", outside"
-        if player.languages_spoken:
-            msg += ", speaks"
-            for language in player.languages_spoken:
-                msg += " " + language
-        if player.language_preferred:
-            msg += ', translation to %s' % player.language_preferred
-        msg += ', played %dh' % ( round ( player.online_time / 3600 ) )
-        if isinstance ( player.player_kills_explanations, list ):
-            msg += ", pkills (total/explained): %d/%d" % (
-                player.players, len ( player.player_kills_explanations ) )
-        msg += ", karma {:d}".format ( player.karma )
-        msg += ", cash {:d}".format ( player.cash )
-        msg += "."
-        self.say ( msg )
+        for event_function in events:
+            event_function ( player )
 
     def pm ( self, player_id = None, msg = None ):
         destiny_player = self.get_player ( player_id )
@@ -728,6 +731,34 @@ class server ( threading.Thread ):
         else:    
             self.log.info ( "(silenced) %s" % outputmsg )
 
+    def scout_distance ( self, player, entity_id ):
+        """
+        Will indicate to player how far he is from entity.
+        """
+        ent_position = None
+        self.wait_entities ( )
+        self.framework.get_ent_lock ( )
+        if entity_id in self.entities.keys ( ):
+            ent_position = ( self.entities [ entity_id ].pos_x,
+                             self.entities [ entity_id ].pos_y,
+                             self.entities [ entity_id ].pos_z )
+        self.framework.let_ent_lock ( )
+        if not ent_position:
+            return -1
+        distance = self.framework.utils.calculate_distance ( self.framework.utils.get_coordinates ( player ),
+                                                             ent_position )
+        bearing = self.framework.utils.calculate_bearings ( ( player.pos_x, player.pos_y ),
+                                                            ( ent_position [ 0 ], ent_position [ 1 ] ) )
+        self.framework.console.pm ( player, "{:.1f}m {} (height: {:.1f}m)".format ( distance,
+                                                                                    bearing,
+                                                                                    player.pos_z - ent_position [ 2 ] ) )
+        #self.framework.console.pm ( player, "{}".format ( self.framework.utils.get_map_coordinates ( ent_position ) ) )
+        return distance
+            
+    def show_inventory ( self, player ):
+        msg = "showinventory " + str ( player )
+        self.console ( msg )
+        
     def sos ( self, msg_origin, msg_contents ):
         origin = self.get_player ( msg_origin )
         for key in self.players_info.keys ( ):
@@ -741,10 +772,6 @@ class server ( threading.Thread ):
                                        bearings [ 1 ],
                                        origin.name_sane ) )
 
-    def show_inventory ( self, player ):
-        msg = "showinventory " + str ( player )
-        self.console ( msg )
-        
     def spawn_player_stuff ( self,
                              playerid,
                              stuff ):
@@ -801,7 +828,7 @@ class server ( threading.Thread ):
                       str ( int ( where_to [ 2 ] ) - 5000 ) + " " + \
                       str ( int ( where_to [ 1 ] ) )
         self.console ( premsg )
-        time.sleep ( 2 )
+        time.sleep ( 3 )
         self.console ( msg )
         player.pos_x = where_to [ 0 ]
         player.pos_y = where_to [ 1 ]
@@ -838,6 +865,133 @@ class server ( threading.Thread ):
                 self.framework.game_events.hour_changed ( previous_hour )
 
         self.game_server.gt = ( new_gt, now )
+        
+    def update_id ( self, id_fields ):
+        self.latest_id_parse_call = time.time ( )
+
+        playerid = int ( id_fields [ 0 ] )
+        playername =     id_fields [ 1 ]
+        pos_x  = float ( id_fields [ 2 ] )
+        pos_y  = float ( id_fields [ 4 ] )
+        pos_z  = float ( id_fields [ 3 ] )
+        rot_x  = float ( id_fields [ 5 ] )
+        rot_y  = float ( id_fields [ 7 ] )
+        rot_z  = float ( id_fields [ 6 ] )
+        remote   =       id_fields [ 8 ]
+        health   = int ( id_fields [ 9 ] )
+        deaths   = int ( id_fields [ 10 ] )
+        zombies  = int ( id_fields [ 11 ] )
+        players  = int ( id_fields [ 12 ] )
+        score    = int ( id_fields [ 13 ] )
+        level    = int ( id_fields [ 14 ] )
+        steamid  = int ( id_fields [ 15 ] )
+        ip       =       id_fields [ 16 ]
+        ping     = int ( id_fields [ 17 ] )
+        
+        country = self.geoip.country_code_by_addr ( ip ) #todo: move this to a conn event
+
+        self.player_info_update ( level = level,
+                                  name = playername,
+                                  online = True,
+                                  playerid = playerid,
+                                  pos_x = pos_x,
+                                  pos_y = pos_y,
+                                  pos_z = pos_z,
+                                  health = health,
+                                  ip = ip,
+                                  deaths = deaths,
+                                  zombies = zombies,
+                                  players = players,
+                                  score = score,
+                                  steamid = steamid )
+
+        pickle_file = open ( self.player_info_file, 'wb' )
+        pickle.dump ( self.players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
+        now = time.time ( )
+        if ( now - self.latest_player_db_backup > 24 * 3600 ):
+            self.latest_player_db_backup = now
+            backup_file_name = self.player_info_file + "_" + time.strftime ( "%Y-%m-%d_%Hh%M.pickle" )
+            backup_file = open ( backup_file_name, 'wb' )
+            pickle.dump ( self.players_info, backup_file, pickle.HIGHEST_PROTOCOL )
+
+    def update_le ( self, matches ):
+        le_id = int ( matches [ 0 ] )
+        raw_type = matches [ 1 ]
+        
+        known_types = [
+            'animalPig',
+            'animalRabbit',
+            'animalStag',
+            'car_Blue',
+            'car_Orange',
+            'car_Red',
+            'car_White',
+            'EntityPlayer',
+            'EntitySupplyPlane',
+            'fatzombie',
+            'hornet',
+            'sc_General',
+            'spiderzombie',
+            'zombiecrawler',
+            'zombiedog',
+            'zombie04',
+            'zombie05',
+            'zombie06',
+            'zombie07',
+            'zombiegal01',
+            'zombiegal02',
+            'zombiegal03',
+            'zombiegal04',
+            ]
+        le_type = None
+        for known in known_types:
+            if known in raw_type:
+                le_type = known
+                break
+        if not le_type:
+            self.log.warning ( "Unknown entity found: {}." . format ( matches [ 1 ] ) )
+            le_type = matches [ 1 ]
+
+        if ( le_type == "EntityPlayer" or
+             le_type == 'EntitySupplyPlane' or
+             le_type == "car_Blue" or
+             le_type == "car_Orange" or
+             le_type == "car_Red" or             
+             le_type == "car_White" ):
+            return
+            
+        pos_x  = float ( matches [ 2 ] )
+        pos_y  = float ( matches [ 4 ] )
+        pos_z  = float ( matches [ 3 ] )
+        rot_x  = float ( matches [ 5 ] )
+        rot_y  = float ( matches [ 7 ] )
+        rot_z  = float ( matches [ 6 ] )
+        lifetime = matches [ 8 ]
+        remote = matches [ 9 ]
+        dead = matches [ 10 ]
+        health = int ( matches [ 11 ] )
+
+        self.framework.get_ent_lock ( ) 
+        if le_id in self.framework.server.entities.keys ( ):
+            entity = self.framework.server.entities [ le_id ]
+        else:
+            entity = framework.entity_info ( )
+        entity.entity_id = le_id
+        entity.entity_type = le_type
+        entity.pos_x = pos_x
+        entity.pos_y = pos_y
+        entity.pos_z = pos_z
+        entity.rot_x = rot_x
+        entity.rot_z = rot_z
+        entity.lifetime = lifetime
+        entity.remote = remote
+        entity.dead = dead
+        entity.health = health
+
+        entity.timestamp = time.time ( )
+        
+        self.framework.server.entities [ le_id ] = entity
+        self.framework.let_ent_lock ( ) 
         
     def update_mem ( self, line_string ):
         now =  time.time ( )
@@ -1031,3 +1185,10 @@ class server ( threading.Thread ):
         pickle.dump ( new_players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
         self.log.info ( "Resetting pointer." )
         self.players_info = new_players_info
+
+    def wait_entities ( self ):
+        for counter in range ( 100 ):
+            if self.entities == { }:
+                time.sleep ( self.framework.preferences.loop_wait / 10 )
+                continue
+            break

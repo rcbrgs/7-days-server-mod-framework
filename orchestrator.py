@@ -27,6 +27,8 @@ class orchestrator ( threading.Thread ):
 
     def config ( self, preferences_file_name ):
         self.db_lock = None
+        self.ent_lock = None
+        self.items_lock = None
         
         self.silence = False
         self.shutdown = False
@@ -97,18 +99,34 @@ class orchestrator ( threading.Thread ):
                                     str ( self.framework_state [ component ] [ 'changelog' ] ) ) )
             
     def get_db_lock ( self ):
+        callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         while self.db_lock:
-            self.log.info ( "{:s} wants lock from {:s}.".format ( callee,
-                                                                  self.db_lock ) )
-            time.sleep ( 0.1 )
-        self.db_lock = callee
+            self.log.info ( "{:s} wants ply lock from {:s}.{:s}.".format (
+                callee_class, callee, self.db_lock ) )
+            time.sleep ( 0.5 )
+        self.db_lock = callee_class + "." + callee
+        self.log.debug ( "{:s} get lock.".format ( callee ) )
+
+    def get_ent_lock ( self ):
+        callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
+        callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        while self.ent_lock:
+            self.log.info ( "{:s} wants ent lock from {:s}.{:s}.".format (
+                callee_class, callee, self.ent_lock ) )
+            time.sleep ( 0.5 )
+        self.ent_lock = callee_class + "." + callee
         self.log.debug ( "{:s} get lock.".format ( callee ) )
 
     def let_db_lock ( self ):
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         self.db_lock = None
-        self.log.debug ( "{:s} let lock.".format ( callee ) )
+        self.log.debug ( "{:s} let ply lock.".format ( callee ) )
+
+    def let_ent_lock ( self ):
+        callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        self.ent_lock = None
+        self.log.debug ( "{:s} let ent lock.".format ( callee ) )
 
     def load_mod ( self, module_name ):
         full_module_name = module_name + "." + module_name
@@ -169,12 +187,14 @@ class orchestrator ( threading.Thread ):
                 self.server.console ( "gt" )
                 self.log.debug ( "After gt" )
                 
-                if count % 100 == 0:
-                    self.server.offline_players ( )
+                #if count % 100 == 0:
+                #    self.server.offline_players ( )
 
                 if ( time.time ( ) - self.server.latest_id_parse_call ) > self.preferences.loop_wait:
                     self.log.debug ( "Too long since last update, doing lp." )
                     self.server.console ( "lp" )
+                    self.server.entities = { }
+                    self.server.console ( "le" )
             
                 time.sleep ( self.preferences.loop_wait )
                 count += 1
