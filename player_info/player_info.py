@@ -205,3 +205,28 @@ class player_info_v4 ( object ):
         
         # Extensible attributes dictionary:
         self.attributes = { }
+
+class player_info_v5 ( player_info_v4 ):
+    def __init__ ( self,
+                   deaths = None,
+                   health = None,
+                   home = None,
+                   ip = None,
+                   level = None,
+                   name = None,
+                   online = None,
+                   playerid = None,
+                   players = None,
+                   pos_x = None,
+                   pos_y = None,
+                   pos_z = None,
+                   score = None,
+                   steamid = None,
+                   zombies = None ):
+        super ( self.__class__, self ).__init__ ( )
+
+        # Attributes received from mods:
+        self.home_invasions = None
+        
+        # Extensible attributes dictionary:
+

@@ -1,5 +1,6 @@
 import framework
 import importlib
+import inspect
 import logging
 import pickle
 import sys
@@ -11,9 +12,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.3.5'
+        self.__version__ = '0.3.6'
         self.changelog = {
-            '0.3.6' : "Extended with utils module.",
+            '0.3.6' : "Extended with utils module. Added db_lock functionality.",
             '0.3.5' : "Linked with game events.",
             '0.3.4' : "Only call lp if needed.",
             '0.3.3' : "Do not call module when module reload fails.",
@@ -25,6 +26,8 @@ class orchestrator ( threading.Thread ):
             '0.2.0' : "Changed self.mods to be a dict, and output changelog during updates." }
 
     def config ( self, preferences_file_name ):
+        self.db_lock = None
+        
         self.silence = False
         self.shutdown = False
         self.preferences = framework.preferences ( preferences_file_name )
@@ -93,6 +96,20 @@ class orchestrator ( threading.Thread ):
                                   ( str ( component ), str ( new_version ),
                                     str ( self.framework_state [ component ] [ 'changelog' ] ) ) )
             
+    def get_db_lock ( self ):
+        callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        while self.db_lock:
+            self.log.info ( "{:s} wants lock from {:s}.".format ( callee,
+                                                                  self.db_lock ) )
+            time.sleep ( 0.1 )
+        self.db_lock = callee
+        self.log.debug ( "{:s} get lock.".format ( callee ) )
+
+    def let_db_lock ( self ):
+        callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        self.db_lock = None
+        self.log.debug ( "{:s} let lock.".format ( callee ) )
+
     def load_mod ( self, module_name ):
         full_module_name = module_name + "." + module_name
         
@@ -147,9 +164,6 @@ class orchestrator ( threading.Thread ):
                             self.server.say ( "Mod %s updated to v%s. Changelog: %s" %
                                               ( mod_key, old_version, new_version,
                                                 mod_instance.changelog [ new_version ] ) )
-                        #while not mod_instance.is_alive ( ):
-                        #    self.log.warning ( "Sleeping 1 second to wait mod to run." )
-                        #    time.sleep ( 1 )
 
                 self.log.debug ( "Before gt" )
                 self.server.console ( "gt" )

@@ -23,8 +23,10 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.3.16'
+        self.__version__ = '0.4.1'
         self.changelog = {
+            '0.4.1'  : "Removed enforce_home_radii, moved to sethome.",
+            '0.4.0'  : "Make backups of player db every hour.",
             '0.3.16' : "Added display server info functionality. Refactored some parsing using RE.",
             '0.3.15' : "Fixed attributes not being set on new players. Moved some functions to utils.",
             '0.3.14' : "Changed tele to preteleports for map limits and home invasion.",
@@ -53,6 +55,7 @@ class server ( threading.Thread ):
         self.framework = framework
         self.game_server = game_server_info ( )
         self.latest_id_parse_call = time.time ( )
+        self.latest_player_db_backup = 0
         self.shutdown = False
 
         self.preferences = self.framework.preferences
@@ -148,27 +151,12 @@ class server ( threading.Thread ):
         
     def console ( self, message ):
         self.log.debug ( message )
-        if ( message != "gt" and
-             message != "lp" ):
-            if message [ : 3 ] == "pm ":
-                splitted = message.split ( " " )
-                try:
-                    destiny = self.get_player ( int ( splitted [ 1 ] ) ).name
-                except ValueError:
-                    self.log.info ( message )
-                    return
-                loggable = "pm %s" % destiny
-                for substring in splitted [ 2 : ]:
-                    loggable += " " + substring
-                self.log.info ( loggable )
-            else:
-                self.log.info ( message )
             
-        if isinstance ( message, str ) == True:
+        if isinstance ( message, str ):
             inputmsg = message + "\n"
             outputmsg = inputmsg.encode ( 'utf-8' )
         else:
-            inputmsg = messagge.decode('ascii')
+            inputmsg = messagge.decode ( 'ascii' )
             inputmsg = inputmsg + "\n"
             outputmsg = inputmsg.encode ( 'utf-8' )
                 
@@ -199,49 +187,16 @@ class server ( threading.Thread ):
 
     def display_game_server ( self ):
         mi = self.game_server.mem [ 0 ]
+        if 'time' not in mi.keys ( ):
+            return
         staleness = time.time ( ) - self.game_server.mem [ 1 ]
-        msg = "ti{:.1f}s me: {:s} mem: {:s}h/{:s}m chunks: {:s} cgo: {:s} objects: {:s}p/{:s}z/{:s}i/{:s}({:s})e.".format (
+        msg = "stale: {:.1f}s time: {:s} mem: {:s}h/{:s}m chunks: {:s} cgo: {:s} objects: {:s}p/{:s}z/{:s}i/{:s}({:s})e.".format (
             staleness,
             str ( mi [ 'time' ] ), str ( mi [ 'heap' ] ), str ( mi [ 'max' ] ), str ( mi [ 'chunks' ] ),
             str ( mi [ 'cgo' ] ), str ( mi [ 'players' ] ), str ( mi [ 'zombies' ] ), str ( mi [ 'items' ] ),
             str ( mi [ 'entities_1' ] ), str ( mi [ 'entities_2' ] ) ) 
 
-        #for key in self.memory_info.keys ( ):
-        #    msg += " {:s} = {:s}".format ( key, str ( self.memory_info [ key ] ) )
-        print ( msg )
-            
-    def enforce_home_radii ( self, playerid ):
-        player = self.get_player ( playerid )
-        for key in self.players_info.keys ( ):
-            other = self.get_player ( key )
-            if other.playerid != player.playerid:
-                if other.home != None:
-                    if ( other.home_invitees != None and
-                         not player.playerid in other.home_invitees ):
-                        distance = self.framework.utils.calculate_distance ( ( player.pos_x, player.pos_y ),
-                                                                             other.home )
-                        if  distance < self.preferences.home_radius * 2:
-                            if other.online == True:
-                                self.console ( 'pm %s "[FF0000]%s[FFFFFF] is near ([FF0000]%dm[FFFFFF]) your base!"' % ( other.playerid, player.name_sane, int ( distance ) ) )
-                            if player.home_invasion_beacon == None:
-                                self.console ( 'pm %s "You are too near %s base! Teleport position saved."' % ( player.playerid, other.name_sane ) )
-                                player.home_invasion_beacon = ( player.pos_x, player.pos_y, player.pos_z )
-                                return
-                            beacon_distance = self.framework.utils.calculate_distance ( player.home_invasion_beacon,
-                                                                                        other.home )
-                            if distance < self.preferences.home_radius:
-                                self.say ( "%s invaded %s's base! [0000FF]Teleporting away...[FFFFFF]" % ( player.name_sane, self.players_info [ key ].name_sane ) )
-                                if beacon_distance < self.preferences.home_radius * 1.5:
-                                    self.say ( "%s teleport destination is too near %s's base, changing it to starterbase." % ( player.name_sane, other.name_sane ) )
-                                    player.home_invasion_beacon = ( 1500, 350, 67 )
-                                self.preteleport ( player, player.home_invasion_beacon )
-                                return
-                            self.console ( 'pm %s "You are still near ([880000]%dm[FFFFFF]) %s base!"' % (
-                                player.playerid,
-                                int ( distance ),
-                                other.name_sane ) )
-                            return
-        player.home_invasion_beacon = None
+        print ( msg )            
                 
     def find_nearest_player ( self, playerid ):
         player_distances = { }
@@ -380,16 +335,17 @@ class server ( threading.Thread ):
         return result
             
     def list_online_players ( self ):
-        print ( "%-10s | %-10s | %-6s | %-3s | %-3s | %-6s | uzed | zeds" %
-                ( "name_sane", "playerid", "time", "pks", "kar", "cash" ) )
-        print ( "-----------+------------+--------+-------+-----+--------+------+------" )
+        print ( "%-4s | %-10s | %-10s | %-6s | %-5s | %-3s | %-6s | uzed | zeds" %
+                ( "stal", "name_sane", "playerid", "time", "pks", "kar", "cash" ) )
+        print ( "------+-----------+------------+--------+-------+-----+--------+------+------" )
+        now = time.time ( )
         for key in self.players_info.keys ( ):
             player = self.players_info [ key ]
             if not player.player_kills_explanations:
                 player.player_kills_explanations = [ ]
             if player.online == True:
-                #player_line = "{:<10s} | {:<10d} | {:<6.1f} | {:<3d} | {:<3d} | {:<6d}" .format (
-                player_line = "{:<10s} | {:<10d} | {:<6.1f} | {:<2d}/{:<2d} | {:<3d} | {:<6d} | {:<4d} | {:<4d}" .format (
+                player_line = "{: 2.1f} | {:<10s} | {:<10d} | {:<6.1f} | {:>2d}/{:<2d} | {:<3d} | {:<6d} | {:<4d} | {:<4d}" .format (
+                    now - player.timestamp_latest_update,
                     str ( player.name_sane [ : 9 ] ),
                     player.playerid,
                     player.online_time / 3600,
@@ -536,6 +492,12 @@ class server ( threading.Thread ):
 
         pickle_file = open ( self.player_info_file, 'wb' )
         pickle.dump ( self.players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
+        now = time.time ( )
+        if ( now - self.latest_player_db_backup > 3600 ):
+            self.latest_player_db_backup = now
+            backup_file_name = self.player_info_file + "_" + time.strftime ( "%Y-%m-%d_%Hh%M.pickle" )
+            backup_file = open ( backup_file_name, 'wb' )
+            pickle.dump ( self.players_info, backup_file, pickle.HIGHEST_PROTOCOL )
         
     def player_info_update ( self,
                              level,
@@ -555,6 +517,7 @@ class server ( threading.Thread ):
         
         if playerid in self.players_info.keys ( ):
             now = time.time ( )
+            player = self.players_info [ playerid ]
             
             # fixing some Nones
             if self.players_info [ playerid ].cash == None:
@@ -598,6 +561,9 @@ class server ( threading.Thread ):
             self.players_info [ playerid ].name = name
             self.players_info [ playerid ].name_sane = self.sanitize ( name )
             self.players_info [ playerid ].online = online
+            old_pos_x = player.pos_x
+            old_pos_y = player.pos_y
+            old_pos_z = player.pos_z
             self.players_info [ playerid ].pos_x = pos_x
             self.players_info [ playerid ].pos_y = pos_y
             self.players_info [ playerid ].pos_z = pos_z
@@ -626,7 +592,10 @@ class server ( threading.Thread ):
                 
             self.players_info [ playerid ].zombies = int ( zombies )
                 
-            self.enforce_home_radii ( playerid ) #todo event
+            if ( old_pos_x != pos_x or
+                 old_pos_y != pos_y or
+                 old_pos_z != pos_z ):
+                self.framework.game_events.player_position_changed ( player )                
             
             if ( ( abs ( float ( pos_x ) ) > 4400 ) or
                  ( abs ( float ( pos_y ) ) > 4400 ) ):
@@ -689,7 +658,7 @@ class server ( threading.Thread ):
         msg += self.geoip.country_code_by_addr ( player.ip )
         if player.home != None:
             msg += ", home at %s" % ( self.framework.utils.get_map_coordinates ( player.home ) )
-            if self.framework.utils.calculate_distance ( ( player.pos_x, player.pos_y ),
+            if self.framework.utils.calculate_distance ( self.framework.utils.get_coordinates ( player ),
                                                          player.home ) < self.preferences.home_radius:
                 msg += ", inside"
             else:
@@ -1015,6 +984,40 @@ class server ( threading.Thread ):
 
                     #new
                     new_player.accounted_zombies = player.zombies
+
+                if self.players_info [ a_key ].__class__.__name__ == 'player_info_v4':
+                    new_player = framework.player_info.player_info_v5 ( deaths = player.deaths,
+                                                                        health = player.health,
+                                                                        home = player.home,
+                                                                        ip = player.ip,
+                                                                        level = player.level,
+                                                                        name = player.name,
+                                                                        online = player.online,
+                                                                        playerid = player.playerid,
+                                                                        players = player.players,
+                                                                        pos_x = player.pos_x,
+                                                                        pos_y = player.pos_y,
+                                                                        pos_z = player.pos_z,
+                                                                        score = player.score,
+                                                                        steamid = player.steamid,
+                                                                        zombies = player.zombies )
+                    new_player.accounted_zombies = player.zombies
+                    new_player.attributes = player.attributes
+                    new_player.camp = player.camp
+                    new_player.cash = player.cash
+                    new_player.home_invasion_beacon = player.home_invasion_beacon
+                    new_player.home_invitees = player.home_invitees
+                    new_player.karma = player.karma
+                    new_player.language_preferred = player.language_preferred
+                    new_player.languages_spoken = player.languages_spoken
+                    new_player.map_limit_beacon = player.map_limit_beacon
+                    new_player.name_sane = self.sanitize ( player.name )
+                    new_player.online_time = player.online_time
+                    new_player.player_kills_explanations = player.player_kills_exaplanations
+                    new_player.timestamp_latest_update = player.timestamp_latest_update
+
+                    # new
+                    new_player.home_invasions = [ ]
 
                 if new_player == None:
                     self.log.error ( "new_player == None!" )

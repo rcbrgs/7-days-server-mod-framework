@@ -11,6 +11,7 @@ class telnet_connect ( threading.Thread ):
         self.log = framework.log
         self.__version__ = '0.1.4'
         self.changelog = {
+            '0.1.5' : "Refactored telnet parsing using re.",
             '0.1.4' : "Added catching memory information output from server.",
             '0.1.3' : "Catching exception during unicode decode.",
             '0.1.2' : "Added changelog." }
@@ -94,13 +95,32 @@ class telnet_connect ( threading.Thread ):
                 self.framework.server.update_gt ( line_string )
                 continue
 
-            # 2015-06-25T07:59:35 10591.364 INF Executing command 'gt' by Telnet from 143.107.45.13:47641
-            gt_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ INF Executing command \'gt\' by Telnet from [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+' )
-            gt_match = gt_matcher.match ( line_string )
-            if gt_match:
-                self.log.debug ( "gt output: {:s}".format ( line_string ) )
+            # 2015-06-25T09:26:33 1046.729 INF Player disconnected: EntityID=-1, PlayerID='76561198201780147', OwnerID='76561198201780147', PlayerName='ak5843171
+            dconn_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ INF Player disconnected: EntityID=.[0-9]*, PlayerID=\'[0-9]+\', OwnerID=\'[0-9]+\', PlayerName=\'(.*)\'' )
+            dconn_match = dconn_matcher.search ( line_string )
+            if dconn_match:
+                self.log.debug ( "dconn_match {:s}".format ( line_string ) )
+                player_name = dconn_match.group ( 1 )
+                player = self.framework.server.get_player ( player_name )
+                if player:
+                    self.framework.game_events.player_disconnected ( player )
                 continue
-                
+
+            #2015-06-25T10:36:35 5247.946 INF Executing command 'pm 1580623 "[FF0000]st.devil666[FFFFFF] is near ([FF0000]77m[FFFFFF]) your base!"' by Telnet from 143.107.45.13:48590
+            pm_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ INF Executing command \'pm (.+) "(.*)"\' by Telnet from [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+' )
+            pm_match = pm_matcher.search ( line_string )
+            if pm_match:
+                self.log.debug ( "pm executed: to {:s}, {:s}".format ( pm_match.group ( 1 ),
+                                                                       pm_match.group ( 2 ) ) )
+                continue
+            
+            # 2015-06-25T07:59:35 10591.364 INF Executing command '' by Telnet from 143.107.45.13:47641
+            cmd_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ INF Executing command \'([a-zA-Z0-9]+)\' by Telnet from [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+' )
+            cmd_match = cmd_matcher.search ( line_string )
+            if cmd_match:
+                self.log.debug ( "cmd executed: {:s}".format ( cmd_match.group ( 1 ) ) )
+                continue
+
             mem_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.* INF Time: [0-9]+.[0-9]+m FPS: [0-9]+.[0-9]+ Heap: [0-9]+.[0-9]+MB Max: [0-9]+.[0-9]+MB Chunks: [0-9]+ CGO: [0-9]+ Ply: [0-9]+ Zom: .* Ent: .* Items: [0-9]+' )
             mem_match = mem_matcher.match ( line_string )
             if mem_match:
@@ -108,24 +128,18 @@ class telnet_connect ( threading.Thread ):
                 self.framework.server.update_mem ( line_string )
                 continue
 
-            if ( " INF Executing command 'le' by Telnet from " in line_string or
-                 " INF Executing command 'lp' by Telnet from " in line_string or
-                 " INF Executing command 'saveworld' by Telnet from " in line_string or
-                 " INF Executing command 'say " in line_string ):
-                continue
 
-            if ( ( " INF Player " in line_string and
-                   " disconnected after " in line_string and
-                   "minutes" in line_string ) or
-                 " INF Player disconnected: EntityID=" in line_string ):
-                self.framework.server.offline_player ( line_string )
-                continue
-            if ( " INF Player set to offline: " in line_string or
-                 " INF [EAC] FreeUser (" in line_string or
-                 " INF Removing observed entity " in line_string ):
-                continue
+            
+            #pm_matcher = re.compile ( r'' )
+            #if ( " INF Executing command 'pm " in line_string ):
+            #    self.log.debug ( "pm " + line_string.split ( "'pm " ) [ 1 ] )
+            #    continue
+            
+            #if (                 " INF [EAC] FreeUser (" in line_string or
+            #     " INF Removing observed entity " in line_string ):
+            #    continue
 
-            if ( " INF [EAC] UserStatusHandler callback. Status: Authenticated GUID: " in line_string  or
+            if ( #" INF [EAC] UserStatusHandler callback. Status: Authenticated GUID: " in line_string  or
                  " INF Player set to online: " in line_string  or
                  " INF Player connected, entityid=" in line_string  or
                  " INF Adding observed entity: " in line_string  or
@@ -142,17 +156,15 @@ class telnet_connect ( threading.Thread ):
                  " INF [NET] PlayerConnected EntityID=-1, PlayerID='', OwnerID='', PlayerName=''" in line_string ):
                 continue
             
-            if ( "Total of " == line_string [ : 9 ] and
-                 " in the game" in line_string ):
-                continue
+            #if ( "Total of " == line_string [ : 9 ] and
+            #     " in the game" in line_string ):
+            #    continue
             
             if " INF GMSG: " in line_string:
                 self.framework.server.parse_gmsg ( line )
                 continue
 
-            if ( " INF Executing command 'pm " in line_string ):
-                self.log.debug ( "pm " + line_string.split ( "'pm " ) [ 1 ] )
-                continue
+            
             
             if ( 'Message to player "' in line_string and
                  ' sent with sender "' in line_string ):
