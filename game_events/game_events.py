@@ -9,8 +9,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = "0.2.0"
+        self.__version__ = "0.2.1"
         self.changelog = {
+            '0.2.1' : "Refactored time accounting to be more efficient.",
             '0.2.0' : "Killing 100 zombies gives some cash to player.",
             '0.1.1' : "Karma gain now PMs player.",
             '0.1.0' : "Initial version." }
@@ -44,6 +45,15 @@ class game_events ( threading.Thread ):
     def stop ( self ):
         self.shutdown = True
 
+    def day_changed ( self, previous_day ):
+        pass
+    
+    def hour_changed ( self, previous_hour ):
+        day = self.framework.server.game_server.day
+        hour = self.framework.server.game_server.hour
+        minute = self.framework.server.game_server.minute
+        self.log.info ( ">>>>>  day %d, %02dh%02d  <<<<<" % ( day, hour, minute ) )
+        
     def player_killed_100_zombies ( self, player_id ):
         player = self.framework.server.get_player ( player_id )
         if player == None:

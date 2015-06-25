@@ -10,14 +10,22 @@ import sys
 import threading
 import time
 
+class game_server_info ( object ):
+    def __init__ ( self ):
+        self.day = 0
+        self.hour = 0
+        self.mem = ( { }, 0 )
+        self.minute = 0
+        self.time = ( 0, 0, 0 )
+
 class server ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.3.15'
+        self.__version__ = '0.3.16'
         self.changelog = {
-            '0.3.16' : "Added display memory info functionality.",
+            '0.3.16' : "Added display server info functionality. Refactored some parsing using RE.",
             '0.3.15' : "Fixed attributes not being set on new players. Moved some functions to utils.",
             '0.3.14' : "Changed tele to preteleports for map limits and home invasion.",
             '0.3.13' : "Added zombie accountability for giving cash for zombie kills.",
@@ -42,9 +50,9 @@ class server ( threading.Thread ):
         self.chat = None
         # Other programs might have /keywords that we want to ignore. Put those here.
         self.external_commands = [ 'restart' ]
-        self.framework = framework        
+        self.framework = framework
+        self.game_server = game_server_info ( )
         self.latest_id_parse_call = time.time ( )
-        self.memory_info = { }
         self.shutdown = False
 
         self.preferences = self.framework.preferences
@@ -128,6 +136,16 @@ class server ( threading.Thread ):
         
         self.say ( help_message )
             
+    def command_rules ( self, origin, message ):
+        self.say ( "rules are: 1. [FF0000]PVE[FFFFFF] only." )
+        self.say ( "                2. No base raping or looting." )
+        self.say ( "                3. Do not build / claim inside cities or POIs." )
+        self.say ( "All offenses are punishable by permabans, admins judge fairly." )
+        self.say ( "Admins are: [400000]Schabracke[FFFFFF], Launchpad, AzoSento, and [FFAAAA]Sitting Duck[FFFFFF]." )
+        self.say ( " /sethome sets a 50m radius where only people you invite can stay." )
+        self.say ( "Drop on death: everything. Drop on exit: nothing." )
+        self.say ( "Player killers are automatically imprisoned." )
+        
     def console ( self, message ):
         self.log.debug ( message )
         if ( message != "gt" and
@@ -156,16 +174,6 @@ class server ( threading.Thread ):
                 
         self.telnet_connection.write ( outputmsg )
 
-    def command_rules ( self, origin, message ):
-        self.say ( "rules are: 1. [FF0000]PVE[FFFFFF] only." )
-        self.say ( "                2. No base raping or looting." )
-        self.say ( "                3. Do not build / claim inside cities or POIs." )
-        self.say ( "All offenses are punishable by permabans, admins judge fairly." )
-        self.say ( "Admins are: [400000]Schabracke[FFFFFF], Launchpad, AzoSento, and [FFAAAA]Sitting Duck[FFFFFF]." )
-        self.say ( " /sethome sets a 50m radius where only people you invite can stay." )
-        self.say ( "Drop on death: everything. Drop on exit: nothing." )
-        self.say ( "Player killers are automatically imprisoned." )
-        
     def curse_player ( self, msg_origin, msg_content ):
         target = self.get_player ( msg_content [ 7 : -1 ] )
         if target != None:
@@ -189,10 +197,17 @@ class server ( threading.Thread ):
         else:
             self.say ( "I would never curse such a nice person!" )
 
-    def display_memory_info ( self ):
-        msg = ""
-        for key in self.memory_info.keys ( ):
-            msg += " {:s} = {:s}".format ( key, str ( self.memory_info [ key ] ) )
+    def display_game_server ( self ):
+        mi = self.game_server.mem [ 0 ]
+        staleness = time.time ( ) - self.game_server.mem [ 1 ]
+        msg = "ti{:.1f}s me: {:s} mem: {:s}h/{:s}m chunks: {:s} cgo: {:s} objects: {:s}p/{:s}z/{:s}i/{:s}({:s})e.".format (
+            staleness,
+            str ( mi [ 'time' ] ), str ( mi [ 'heap' ] ), str ( mi [ 'max' ] ), str ( mi [ 'chunks' ] ),
+            str ( mi [ 'cgo' ] ), str ( mi [ 'players' ] ), str ( mi [ 'zombies' ] ), str ( mi [ 'items' ] ),
+            str ( mi [ 'entities_1' ] ), str ( mi [ 'entities_2' ] ) ) 
+
+        #for key in self.memory_info.keys ( ):
+        #    msg += " {:s} = {:s}".format ( key, str ( self.memory_info [ key ] ) )
         print ( msg )
             
     def enforce_home_radii ( self, playerid ):
@@ -365,20 +380,21 @@ class server ( threading.Thread ):
         return result
             
     def list_online_players ( self ):
-        #print ( "%-10s | %-10s | %-6s | %-3s | %-3s | %-6s" %
-        #        ( "name_sane", "playerid", "time", "pks", "kar", "cash" ) )
         print ( "%-10s | %-10s | %-6s | %-3s | %-3s | %-6s | uzed | zeds" %
                 ( "name_sane", "playerid", "time", "pks", "kar", "cash" ) )
-        print ( "-----------+------------+--------+-----+-----+--------+------+------" )
+        print ( "-----------+------------+--------+-------+-----+--------+------+------" )
         for key in self.players_info.keys ( ):
             player = self.players_info [ key ]
+            if not player.player_kills_explanations:
+                player.player_kills_explanations = [ ]
             if player.online == True:
                 #player_line = "{:<10s} | {:<10d} | {:<6.1f} | {:<3d} | {:<3d} | {:<6d}" .format (
-                player_line = "{:<10s} | {:<10d} | {:<6.1f} | {:<3d} | {:<3d} | {:<6d} | {:<4d} | {:<4d}" .format (
+                player_line = "{:<10s} | {:<10d} | {:<6.1f} | {:<2d}/{:<2d} | {:<3d} | {:<6d} | {:<4d} | {:<4d}" .format (
                     str ( player.name_sane [ : 9 ] ),
                     player.playerid,
                     player.online_time / 3600,
                     player.players,
+                    len ( player.player_kills_explanations ),
                     player.karma,
                     player.cash,
                     player.zombies - player.accounted_zombies,
@@ -430,25 +446,6 @@ class server ( threading.Thread ):
         self.say ( "- Take what you need, and repay with work around the base." )
         #self.say ( "- Stop all fires and be silent during nights." )
         
-    def parse_get_time ( self,
-                         msg = None ):
-        line = msg
-        try:
-            day    = int ( line.split ( b", " ) [ 0 ].split ( b"Day " ) [ 1 ] )
-            hour   = int ( line.split ( b", " ) [ 1 ].split ( b":"    ) [ 0 ] )
-            minute = int ( line.split ( b", " ) [ 1 ].split ( b":"    ) [ 1 ] )
-            if ( day != self.day or
-                 hour != self.hour ):
-                self.log.info ( ">>>>>  day %d, %02dh%02d  <<<<<" % ( day, hour, minute ) )
-            self.day    = day
-            self.hour   = hour
-            self.minute = minute
-            self.time   = ( self.day, self.hour, self.minute )
-
-        except IndexError as e:
-            self.log.error ( e )
-            self.log.error ( line )
-
     def parse_gmsg ( self,
                      msg = None ):
         decoded_msg = msg.decode ( 'utf-8' )
@@ -841,54 +838,87 @@ class server ( threading.Thread ):
         player.pos_y = where_to [ 1 ]
         player.pos_z = where_to [ 2 ]
 
-    def update_memory_info ( self, line_string ):
+    def update_gt ( self, line_string ):
+        now = time.time ( )
+        new_gt = { }
+
+        previous_day = self.game_server.day
+        previous_hour = self.game_server.hour
+        previous_minute = self.game_server.minute
+        
+        day_matcher = re.compile ( r'Day ([0-9]+), ([0-9]{2}):([0-9]{2})' )
+        day_match = day_matcher.search ( line_string )
+        if day_match:
+            try:
+                day    = int ( day_match.group ( 1 ) )
+                hour   = int ( day_match.group ( 2 ) )
+                minute = int ( day_match.group ( 3 ) )
+            except IndexError as e:
+                self.log.error ( "update_gt ( {:s} ): {:s}.".format (
+                    str ( line_string ), str ( e ) ) )
+                return
+            
+            self.game_server.time   = ( day, hour, minute )
+            self.game_server.day    = day
+            self.game_server.hour   = hour
+            self.game_server.minute = minute
+
+            if ( previous_day != self.game_server.day ):
+                self.framework.game_events.day_changed ( previous_day )
+            if ( previous_hour != self.game_server.hour ):
+                self.framework.game_events.hour_changed ( previous_hour )
+
+        self.game_server.gt = ( new_gt, now )
+        
+    def update_mem ( self, line_string ):
+        now =  time.time ( )
         new_mem_info = { } 
         time_matcher = re.compile ( r'Time: ([0-9]+.[0-9]+)m' )
         time_match = time_matcher.search ( line_string )
         if time_match:
-            new_mem_info [ 'time' ] = time_match.group ( 0 )
+            new_mem_info [ 'time' ] = time_match.group ( 1 )
         fps_matcher = re.compile ( r'FPS: ([0-9]+.[0-9]+)' )
         fps_match = fps_matcher.search ( line_string )
         if fps_match:
-            new_mem_info [ 'fps' ] = fps_match.group ( 0 )
+            new_mem_info [ 'fps' ] = fps_match.group ( 1 )
         heap_matcher = re.compile ( r'Heap: ([0-9]+.[0-9]+)MB' )
         heap_match = heap_matcher.search ( line_string )
         if heap_match:
-            new_mem_info [ 'heap' ] = heap_match.group ( 0 )
+            new_mem_info [ 'heap' ] = heap_match.group ( 1 )
         max_matcher = re.compile ( r'Max: ([0-9]+.[0-9]+)MB' )
         max_match = max_matcher.search ( line_string )
         if max_match:
-            new_mem_info [ 'max' ] = max_match.group ( 0 )
+            new_mem_info [ 'max' ] = max_match.group ( 1 )
         chunks_matcher = re.compile ( r'Chunks: ([0-9]+)' )
         chunks_match = chunks_matcher.search ( line_string )
         if chunks_match:
-            new_mem_info [ 'chunks' ] = chunks_match.group ( 0 )
+            new_mem_info [ 'chunks' ] = chunks_match.group ( 1 )
         cgo_matcher = re.compile ( r'CGO: ([0-9]+)' )
         cgo_match = cgo_matcher.search ( line_string )
         if cgo_match:
-            new_mem_info [ 'cgo' ] = cgo_match.group ( 0 )
+            new_mem_info [ 'cgo' ] = cgo_match.group ( 1 )
         players_matcher = re.compile ( r'Ply: ([0-9]+)' )
         players_match = players_matcher.search ( line_string )
         if players_match:
-            new_mem_info [ 'players' ] = players_match.group ( 0 )
+            new_mem_info [ 'players' ] = players_match.group ( 1 )
         zombies_matcher = re.compile ( r'Zom: ([0-9]+)' )
         zombies_match = zombies_matcher.search ( line_string )
         if zombies_match:
-            new_mem_info [ 'zombies' ] = zombies_match.group ( 0 )
+            new_mem_info [ 'zombies' ] = zombies_match.group ( 1 )
         entities_1_matcher = re.compile ( r'Ent: ([0-9]+)' )
         entities_1_match = entities_1_matcher.search ( line_string )
         if entities_1_match:
-            new_mem_info [ 'entities_1' ] = entities_1_match.group ( 0 )
+            new_mem_info [ 'entities_1' ] = entities_1_match.group ( 1 )
         entities_2_matcher = re.compile ( r'Ent: [0-9]+ \(([0-9]+)\)' )
         entities_2_match = entities_2_matcher.search ( line_string )
         if entities_2_match:
-            new_mem_info [ 'entities_2' ] = entities_2_match.group ( 0 )
+            new_mem_info [ 'entities_2' ] = entities_2_match.group ( 1 )
         items_matcher = re.compile ( r'Items: ([0-9]+)' )
         items_match = items_matcher.search ( line_string )
         if items_match:
-            new_mem_info [ 'items' ] = items_match.group ( 0 )
+            new_mem_info [ 'items' ] = items_match.group ( 1 )
             
-        self.memory_info = new_mem_info
+        self.game_server.mem = ( new_mem_info, now )
         
     def update_players_pickle ( self ):
         import framework

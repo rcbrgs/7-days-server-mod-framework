@@ -86,15 +86,29 @@ class telnet_connect ( threading.Thread ):
                 
             self.log.debug ( line_string )
 
-            mem_output = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.* INF Time: [0-9]+.[0-9]+m FPS: [0-9]+.[0-9]+ Heap: [0-9]+.[0-9]+MB Max: [0-9]+.[0-9]+MB Chunks: [0-9]+ CGO: [0-9]+ Ply: [0-9]+ Zom: .* Ent: .* Items: [0-9]+' )
-            mem_match = mem_output.match ( line_string )
-            if mem_match:
-                self.log.debug ( "memory info: {:s}".format ( line_string ) )
-                self.framework.server.update_memory_info ( line_string )
+            # Day 1424, 08:52
+            day_matcher = re.compile ( r'Day [0-9]+, [0-9]{2}:[0-9]{2}' )
+            day_match = day_matcher.match ( line_string )
+            if day_match:
+                self.log.debug ( "day output: {:s}".format ( line_string ) )
+                self.framework.server.update_gt ( line_string )
                 continue
-            
-            if ( " INF Executing command 'gt' by Telnet from " in line_string or
-                 " INF Executing command 'le' by Telnet from " in line_string or
+
+            # 2015-06-25T07:59:35 10591.364 INF Executing command 'gt' by Telnet from 143.107.45.13:47641
+            gt_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ INF Executing command \'gt\' by Telnet from [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+' )
+            gt_match = gt_matcher.match ( line_string )
+            if gt_match:
+                self.log.debug ( "gt output: {:s}".format ( line_string ) )
+                continue
+                
+            mem_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.* INF Time: [0-9]+.[0-9]+m FPS: [0-9]+.[0-9]+ Heap: [0-9]+.[0-9]+MB Max: [0-9]+.[0-9]+MB Chunks: [0-9]+ CGO: [0-9]+ Ply: [0-9]+ Zom: .* Ent: .* Items: [0-9]+' )
+            mem_match = mem_matcher.match ( line_string )
+            if mem_match:
+                self.log.debug ( "mem output: {:s}".format ( line_string ) )
+                self.framework.server.update_mem ( line_string )
+                continue
+
+            if ( " INF Executing command 'le' by Telnet from " in line_string or
                  " INF Executing command 'lp' by Telnet from " in line_string or
                  " INF Executing command 'saveworld' by Telnet from " in line_string or
                  " INF Executing command 'say " in line_string ):
@@ -161,11 +175,6 @@ class telnet_connect ( threading.Thread ):
                 self.framework.server.parse_id ( line )
                 continue
             
-            if ( b"Day " in line ):
-                self.log.debug ( "calling parse_gt" )
-                self.framework.server.parse_get_time ( line )
-                continue
-
             if ( " INF Exited thread TelnetClientSend_" in line_string or
                  " INF Telnet connection closed: " in line_string or
                  " INF Exited thread TelnetClientReceive_" or
@@ -174,7 +183,7 @@ class telnet_connect ( threading.Thread ):
                  " INF Started thread TelnetClientSend_" ):
                 continue
 
-            self.log.info ( line_string )
+            self.log.warning ( "Unparsed output: {:s}.".format ( line_string ) )
 
         self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
