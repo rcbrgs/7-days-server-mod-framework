@@ -84,16 +84,23 @@ class game_events ( threading.Thread ):
         self.framework.mods [ 'sethome' ] [ 'reference' ].enforce_home ( player )
         
     def day_changed ( self, previous_day ):
+        # do not continue if mod just came up:
+        if ( time.time ( ) - self.framework.load_time ) < 60:
+            return
         self.framework.console.say ( "If you like this server, vote for it on Steam!" )
     
     def hour_changed ( self, previous_hour ):
+        # do not continue if mod just came up:
+        if ( time.time ( ) - self.framework.load_time ) < 60:
+            return
+
         day = self.framework.server.game_server.day
         hour = self.framework.server.game_server.hour
         minute = self.framework.server.game_server.minute
         self.log.info ( ">>>>>  day %d, %02dh%02d  <<<<<" % ( day, hour, minute ) )
         for player in self.framework.server.get_online_players ( ):
             self.log.info ( self.framework.server.get_player_summary ( player ) )
-            self.log.info ( self.framework.server.get_game_server_summary ( ) )
+        self.log.info ( self.framework.server.get_game_server_summary ( ) )
 
     def player_connected ( self, player ):
         for callback in self.registered_callbacks [ 'player_connected' ]:

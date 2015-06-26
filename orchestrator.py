@@ -14,6 +14,7 @@ class orchestrator ( threading.Thread ):
         self.daemon = True
         self.__version__ = '0.3.7'
         self.changelog = {
+            '0.3.8' : "Added load_time ppty.",
             '0.3.7' : "Reverted to reliable non-self-healing version.",
             '0.3.6' : "Extended with utils module. Added db_lock functionality.",
             '0.3.5' : "Linked with game events.",
@@ -25,6 +26,7 @@ class orchestrator ( threading.Thread ):
             '0.2.2' : "Increased interval between offline_all_players calls, because everything is racing this.",
             '0.2.1' : "Fixing errors regarding self.mods change.",
             '0.2.0' : "Changed self.mods to be a dict, and output changelog during updates." }
+        self.load_time = time.time ( )
 
     def config ( self, preferences_file_name ):
         self.db_lock = None
@@ -158,7 +160,7 @@ class orchestrator ( threading.Thread ):
     def run ( self ):            
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
-        self.server.say ( "Mods up." )
+        #self.server.say ( "Mods up." )
         self.server.offline_players ( )
         count = 1
 
@@ -224,7 +226,7 @@ class orchestrator ( threading.Thread ):
 
     def stop ( self ):
         self.log.info ( "<framework>.stop" )
-        self.server.say ( "Mods down." )
+        #self.server.say ( "Mods down." )
         pickle_file = open ( self.preferences.framework_state_file, 'wb' )
         pickle.dump ( self.framework_state, pickle_file, pickle.HIGHEST_PROTOCOL )
 
