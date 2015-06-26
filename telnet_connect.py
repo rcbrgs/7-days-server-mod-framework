@@ -98,7 +98,7 @@ class telnet_connect ( threading.Thread ):
 
             date_prefix = r'[0-9]{4}-[0-9]{2}-[0-9]{2}.+[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ '
             
-            chunk_matcher = re.compile ( date_prefix + r'INF Saving ([\d]+) of chunks took ([\d])ms' )
+            chunk_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.+[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ INF Saving ([\d]+) of chunks took ([\d])ms' )
             chunk_match = chunk_matcher.search ( line_string )
             if chunk_match:
                 self.log.info ( "Chunk save took {}ms.".format (
@@ -187,11 +187,7 @@ class telnet_connect ( threading.Thread ):
             if total_match:
                 continue
 
-            
-            # 2015-06-25T13:41:05 1361.451 INF Spawned [type=En.ityZombieCop, name=fatzombiecop, id=1747605] at (1431.5, 66.7, 264.5) Day=1429 TotalInWave=5 CurrentWave=1
-
-            # 2015-06-25T15:43:32 8708.114 INF Kicking player: .ing
-            
+            # Strings to ignore:            
             if ( " INF [EAC] UserStatusHandler callback. Status: Authenticated GUID: " in line_string  or
                  " INF [EAC] FreeUser (" in line_string or
                  " INF [EAC] UserStatus" in line_string or
@@ -221,7 +217,7 @@ class telnet_connect ( threading.Thread ):
                  " INF Spawning Night Horde for day " in line_string or
                  " INF Spawning this wave" in line_string or
                  " INF Player set to online: " in line_string  or
-                 " INF Player connected, entityid=" in line_string  or
+                 #" INF Player connected, entityid=" in line_string  or #enabling cuz autobanned players not showing up anywhere on logs
                  " INF Adding observed entity: " in line_string  or
                  " INF Removing observed entity" in line_string  or
                  " INF Created player with id=" in line_string  or

@@ -11,7 +11,7 @@ class game_events ( threading.Thread ):
         self.log = framework.log
         self.__version__ = "0.2.3"
         self.changelog = {
-            '0.2.4' : "Log player info every game hour.",
+            '0.2.4' : "Log player and gameserver info every game hour.",
             '0.2.3' : "Added hook for player connection. Added daily vote message.",
             '0.2.2' : "Added hook for triggering on player position change.",
             '0.2.1' : "Refactored time accounting to be more efficient.",
@@ -93,6 +93,7 @@ class game_events ( threading.Thread ):
         self.log.info ( ">>>>>  day %d, %02dh%02d  <<<<<" % ( day, hour, minute ) )
         for player in self.framework.server.get_online_players ( ):
             self.log.info ( self.framework.server.get_player_summary ( player ) )
+            self.log.info ( self.framework.server.get_game_server_summary ( ) )
 
     def player_connected ( self, player ):
         for callback in self.registered_callbacks [ 'player_connected' ]:

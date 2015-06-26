@@ -25,6 +25,7 @@ class server ( threading.Thread ):
         self.log = logging.getLogger ( __name__ )
         self.__version__ = '0.4.4'
         self.changelog = {
+            '0.4.5'  : "+get_game_server_summary.",
             '0.4.4'  : "+get_player_summary, refactor for it.",
             '0.4.3'  : "Added le. Fixed new player info not being saved.",
             '0.4.2'  : "Increased preteleport lag 2 -> 3s. Refactored id update.",
@@ -236,8 +237,11 @@ class server ( threading.Thread ):
                 entity.pos_x, entity.pos_y, entity.pos_z,
             ) )
         self.framework.let_ent_lock ( )
-            
+
     def display_game_server ( self ):
+        print ( self.get_game_server_summary ( ) )
+        
+    def get_game_server_summary ( self ):
         mi = self.game_server.mem [ 0 ]
         if 'time' not in mi.keys ( ):
             return
@@ -248,7 +252,7 @@ class server ( threading.Thread ):
             str ( mi [ 'cgo' ] ), str ( mi [ 'players' ] ), str ( mi [ 'zombies' ] ), str ( mi [ 'items' ] ),
             str ( mi [ 'entities_1' ] ), str ( mi [ 'entities_2' ] ) ) 
 
-        print ( msg )            
+        return msg
                 
     def find_nearest_player ( self, playerid ):
         player_distances = { }
