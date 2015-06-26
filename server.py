@@ -25,7 +25,7 @@ class server ( threading.Thread ):
         self.log = logging.getLogger ( __name__ )
         self.__version__ = '0.4.4'
         self.changelog = {
-            '0.4.5'  : "+get_game_server_summary.",
+            '0.4.5'  : "+get_game_server_summary. Detection of burntzombies",
             '0.4.4'  : "+get_player_summary, refactor for it.",
             '0.4.3'  : "Added le. Fixed new player info not being saved.",
             '0.4.2'  : "Increased preteleport lag 2 -> 3s. Refactored id update.",
@@ -930,6 +930,7 @@ class server ( threading.Thread ):
             'animalPig',
             'animalRabbit',
             'animalStag',
+            'burntzombie',
             'car_Blue',
             'car_Orange',
             'car_Red',
