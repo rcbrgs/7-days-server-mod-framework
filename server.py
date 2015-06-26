@@ -1,5 +1,6 @@
+import copy
 import framework
-from framework.player_info import player_info_v4 as player_info
+from framework.player_info import player_info_v5 as player_info
 import logging
 import math
 import pickle
@@ -23,9 +24,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.5'
+        self.__version__ = '0.4.6'
         self.changelog = {
-            '0.4.6'  : "Refactor give_stuff.",
+            '0.4.6'  : "Refactor give_stuff. Reindexed players by steamid.",
             '0.4.5'  : "+get_game_server_summary. Detection of burntzombies, zombieferals.",
             '0.4.4'  : "+get_player_summary, refactor for it.",
             '0.4.3'  : "Added le. Fixed new player info not being saved.",
@@ -255,14 +256,14 @@ class server ( threading.Thread ):
 
         return msg
                 
-    def find_nearest_player ( self, playerid ):
+    def find_nearest_player ( self, steamid ):
         player_distances = { }
         player_inverted_directions = { }
         distances = [ ]
-        origin_x = self.players_info [ playerid ].pos_x
-        origin_y = self.players_info [ playerid ].pos_y
+        origin_x = self.players_info [ steamid ].pos_x
+        origin_y = self.players_info [ steamid ].pos_y
         for key in self.players_info.keys ( ):
-            if key != playerid:
+            if key != steamid:
                 if self.players_info [ key ].online == True:
                     helper_x = self.players_info [ key ].pos_x
                     helper_y = self.players_info [ key ].pos_y
@@ -321,23 +322,34 @@ class server ( threading.Thread ):
         self.framework.let_db_lock ( )
         return result
 
-    def get_player ( self, player ):
-        if isinstance ( player, player_info ):
+    def get_player ( self, player_id ):
+        if isinstance ( player_id, player_info ):
             self.log.debug ( "get_player called with player_info argument by %s" %
                              str ( sys._getframe ( ).f_code.co_name ) )
-            return player
-        if isinstance ( player, int ):
-            if player in self.players_info.keys ( ):
-                return self.players_info [ player ]
+            return player_id
+        if isinstance ( player_id, int ):
+            if player_id in self.players_info.keys ( ):
+                return self.players_info [ player_id ]
             else:
                 return None
-        if not isinstance ( player, str ):
+        if isinstance ( player_id, tuple ):
+            try:
+                steamid = int ( player_id [ 2 ] )
+                self.log.debug ( "Player steamid = {}.".format ( steamid ) )
+                if steamid in self.players_info.keys ( ):
+                    self.log.debug ( "Player name = {}".format ( self.players_info [ steamid ].name_sane ) )
+                    return self.players_info [ steamid ]
+                return None
+            except:
+                self.log.error ( "isinstance ( player, tuple ) with tuple = {}".format ( player_id ) )
+                return None
+        if not isinstance ( player_id, str ):
             return None
         possibilities = [ ]
         for key in self.players_info.keys ( ):
-            if player == self.players_info [ key ].name:
+            if player_id == self.players_info [ key ].name:
                 return self.players_info [ key ]
-            if player.lower ( ) in self.players_info [ key ].name.lower ( ):
+            if player_id.lower ( ) in self.players_info [ key ].name.lower ( ):
                 possibilities.append ( key )
         if len ( possibilities ) == 1:
             return self.players_info [ possibilities [ 0 ] ]
@@ -358,22 +370,19 @@ class server ( threading.Thread ):
             self.say ( msg )
             return None
         
-        self.log.error ( "No player with identifier %s." % str ( player ) )
+        self.log.error ( "No player with identifier %s." % str ( player_id ) )
         return None
 
     def get_player_summary ( self, player ):
-        if not player.player_kills_explanations:
-            player.player_kills_explanations = [ ]
-        player_line = "{: 2.1f} | {:<10s} | {:<10d} | {:<6.1f} | {:>2d}/{:<2d} | {:<3d} | {:<6d} | {:<4d} | {:<4d}" .format (
+        player_line = "{: 2.1f} {:<10s} {:<10d} {:<6.1f} {:>2d}/{:<2d} {:<3d} {:<6d} {:<4d}" .format (
             time.time ( ) - player.timestamp_latest_update,
             str ( player.name_sane [ : 9 ] ),
-            player.playerid,
+            player.steamid,
             player.online_time / 3600,
             player.players,
             len ( player.player_kills_explanations ),
             player.karma,
             player.cash,
-            player.zombies - player.accounted_zombies,
             player.zombies, )
         return player_line
         
@@ -426,8 +435,8 @@ class server ( threading.Thread ):
 
     def list_nearby_tracks ( self, position ):
         result = [ ]
-        for playerid in self.players_info.keys ( ):
-            player = self.players_info [ playerid ]
+        for steamid in self.players_info.keys ( ):
+            player = self.players_info [ steamid ]
             now = time.time ( )
             if not isinstance ( player.timestamp_latest_update, float ):
                 continue
@@ -441,13 +450,13 @@ class server ( threading.Thread ):
                 if ( abs ( position [ 0 ] - track [ 0 ] ) < 5 and
                      abs ( position [ 1 ] - track [ 1 ] ) < 5 and
                      abs ( position [ 2 ] - track [ 2 ] ) < 5 ):
-                    result.append ( player.playerid )
+                    result.append ( player.steamid )
                     break
         return result
             
     def list_online_players ( self ):
         print ( "%-4s | %-10s | %-10s | %-6s | %-5s | %-3s | %-6s | uzed | zeds" %
-                ( "stal", "name_sane", "playerid", "time", "pks", "kar", "cash" ) )
+                ( "stal", "name_sane", "steamid", "time", "pks", "kar", "cash" ) )
         print ( "-----+------------+------------+--------+-------+-----+--------+------+------" )
         for player in self.get_online_players ( ):
             print ( self.get_player_summary ( player ) )
@@ -552,9 +561,9 @@ class server ( threading.Thread ):
         events = [ ]
         
         self.framework.get_db_lock ( )
-        if playerid in self.players_info.keys ( ):
+        if steamid in self.players_info.keys ( ):
             now = time.time ( )
-            player = self.players_info [ playerid ]
+            player = self.players_info [ steamid ]
 
             # old
             # fixing some Nones
@@ -599,7 +608,7 @@ class server ( threading.Thread ):
                     self.log.info ( "%s played for %d hours." %
                                     ( player.name_sane,
                                       new_minutes ) )
-                    self.framework.game_events.player_played_one_hour ( playerid )
+                    self.framework.game_events.player_played_one_hour ( steamid )
                     
             else:
                 player.online_time = 0
@@ -629,7 +638,7 @@ class server ( threading.Thread ):
             try:
                 unaccounted_zombies = zombies - player.accounted_zombies
                 if unaccounted_zombies > 100:
-                    self.framework.game_events.player_killed_100_zombies ( playerid )
+                    self.framework.game_events.player_killed_100_zombies ( steamid )
                     player.accounted_zombies += 100
             except Exception as e:
                 self.log.error ( "While parsing player {:s}: {:s}.".format (
@@ -645,7 +654,7 @@ class server ( threading.Thread ):
                 events.append ( self.framework.game_events.player_position_changed )
 
             if ( not old_online ) and online:
-                events.append ( self.framework.game_events.player_connected )
+                events.append ( self.framework.game_events.player_detected )
                 
             #todo: event
             player.players = players
@@ -680,7 +689,7 @@ class server ( threading.Thread ):
             new_player_info.timestamp_latest_update = time.time ( )
             
             player = new_player_info
-            self.players_info [ playerid ] = player
+            self.players_info [ steamid ] = player
             
         self.framework.let_db_lock ( )
 
@@ -692,7 +701,7 @@ class server ( threading.Thread ):
         if destiny_player == None:
             self.log.error ( "pm '%s' failed because destiny player invalid." % msg )
             return
-        self.console ( 'pm %s "%s"' % ( destiny_player.playerid, msg ) )
+        self.console ( 'pm %s "%s"' % ( destiny_player.steamid, msg ) )
         
     def print_players_info ( self, msg_origin, msg_content ):
         for key in self.players_info.keys ( ):
@@ -720,22 +729,8 @@ class server ( threading.Thread ):
         return result
                 
     def say ( self, msg = None ):
-        """
-        TELNET MESSAGING String-Conversion Check for Ascii/Bytes and Send-Message Function
-        Because Casting Byte to Byte will fail.
-        """
-        if isinstance ( msg, str ) == True:
-            inputmsg = 'say "' + msg.replace ( '"', ' ' ) + '"' + "\n"
-            outputmsg = inputmsg.encode ( 'utf-8' )
-        else:
-            inputmsg = msg.decode('ascii')
-            inputmsg = 'say "' + inputmsg.replace ( '"', ' ' ) + '"' + "\n"
-            outputmsg = inputmsg.encode ( 'utf-8' )
-        self.log.debug ( outputmsg )
-        if not self.framework.silence:
-            self.telnet_connection.write ( outputmsg )
-        else:    
-            self.log.info ( "(silenced) %s" % outputmsg )
+        self.log.warning ( "deprecated call to server.say" )
+        self.framework.console.say ( msg )
 
     def scout_distance ( self, player, entity_id ):
         """
@@ -769,7 +764,7 @@ class server ( threading.Thread ):
         origin = self.get_player ( msg_origin )
         for key in self.players_info.keys ( ):
             if ( self.players_info [ key ].online == True and
-                 key != origin.playerid ):
+                 key != origin.steamid ):
                 helper = self.get_player ( key )
                 bearings = self.calculate_bearings ( origin, helper )
                 msg = 'pm %s "Go %.1fm in direction %d degrees (N is zero ) to help %s if you can!"'
@@ -779,9 +774,9 @@ class server ( threading.Thread ):
                                        origin.name_sane ) )
 
     def spawn_player_stuff ( self,
-                             playerid,
+                             steamid,
                              stuff ):
-        msg = 'se ' + playerid + ' ' + str ( stuff )
+        msg = 'se ' + steamid + ' ' + str ( stuff )
         self.log.debug ( msg )
         self.console ( msg )
 
@@ -798,7 +793,7 @@ class server ( threading.Thread ):
             return
         
         if player != None:
-            msg = 'teleportplayer ' + str ( player.playerid ) + ' '
+            msg = 'teleportplayer ' + str ( player.steamid ) + ' '
         else:
             msg = 'teleportplayer ' + str ( player_info ) + ' '
         if isinstance ( where_to, str ):
@@ -822,7 +817,7 @@ class server ( threading.Thread ):
             return
         
         if player != None:
-            msg = 'teleportplayer ' + str ( player.playerid ) + ' '
+            msg = 'teleportplayer ' + str ( player.steamid ) + ' '
         else:
             msg = 'teleportplayer ' + str ( player_info ) + ' '
         premsg = msg
@@ -938,6 +933,9 @@ class server ( threading.Thread ):
             'fatzombie',
             'hornet',
             'sc_General',
+            'snowzombie01',
+            'snowzombie02',
+            'snowzombie03',
             'spiderzombie',
             'zombie04',
             'zombie05',
@@ -1169,24 +1167,29 @@ class server ( threading.Thread ):
                     new_player.cash = player.cash
                     new_player.home_invasion_beacon = player.home_invasion_beacon
                     new_player.home_invitees = player.home_invitees
+                    new_player.inventory_tracker = copy.copy ( player.inventory_tracker )
                     new_player.karma = player.karma
                     new_player.language_preferred = player.language_preferred
                     new_player.languages_spoken = player.languages_spoken
                     new_player.map_limit_beacon = player.map_limit_beacon
                     new_player.name_sane = self.sanitize ( player.name )
                     new_player.online_time = player.online_time
-                    new_player.player_kills_explanations = player.player_kills_exaplanations
+                    new_player.permissions = player.permissions
+                    new_player.player_kills_explanations = copy.copy ( player.player_kills_explanations )
+                    new_player.positions = copy.copy ( player.positions )
                     new_player.timestamp_latest_update = player.timestamp_latest_update
 
                     # new
-                    new_player.home_invasions = [ ]
+                    new_player.home_invasions = { }
+                    new_player.latest_teleport = { }
+                    new_player.new_since_last_update = { }
 
                 if new_player == None:
                     self.log.error ( "new_player == None!" )
                     self.log.info ( "self.players_info [ a_key ].__class__.__name__ = %s." %
                                     self.players_info.__class__.__name__ )
                     return
-                new_players_info [ key ] = new_player
+                new_players_info [ new_player.steamid ] = new_player
 
         self.log.info ( "Creating new player info file." )
         pickle_file = open ( self.player_info_file, 'wb' )
@@ -1200,3 +1203,12 @@ class server ( threading.Thread ):
                 time.sleep ( self.framework.preferences.loop_wait / 10 )
                 continue
             break
+
+    def fix_db ( self ):
+        self.framework.get_db_lock()
+        pinfo = {}
+        for key in self.players_info.keys():
+            if self.players_info [ key ].steamid == key:
+                pinfo [ key ] = self.players_info [ key ]
+        self.players_info = pinfo
+        self.framework.let_db_lock()

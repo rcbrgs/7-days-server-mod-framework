@@ -37,4 +37,19 @@ class console ( threading.Thread ):
         self.framework.server.pm ( player_id, msg )
 
     def say ( self, msg ):
-        self.framework.server.say ( msg )
+        """
+        TELNET MESSAGING String-Conversion Check for Ascii/Bytes and Send-Message Function
+        Because Casting Byte to Byte will fail.
+        """
+        if isinstance ( msg, str ):
+            inputmsg = 'say "' + msg.replace ( '"', ' ' ) + '"' + "\n"
+            outputmsg = inputmsg.encode ( 'utf-8' )
+        else:
+            inputmsg = msg.decode('ascii')
+            inputmsg = 'say "' + inputmsg.replace ( '"', ' ' ) + '"' + "\n"
+            outputmsg = inputmsg.encode ( 'utf-8' )
+        self.log.debug ( outputmsg )
+        if not self.framework.silence:
+            self.framework.server.telnet_connection.write ( outputmsg )
+        else:    
+            self.log.info ( "(silenced) %s" % outputmsg )

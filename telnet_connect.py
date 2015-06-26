@@ -89,8 +89,9 @@ class telnet_connect ( threading.Thread ):
                 while ( line [ -1 ] == '\r' or
                         line [ -1 ] == '\n' ):
                     line = line [ : -1 ]
-                #line_string = line [:-1].decode ( 'utf-8' )
                 line_string = line.decode ( 'utf-8' )
+                line_string = line_string.strip ( )
+
             except UnicodeDecodeError as e:
                 self.log.error ( "Error %s while processing line.decode (%s)" %
                                  ( e, line [:-1] ) )
@@ -101,28 +102,27 @@ class telnet_connect ( threading.Thread ):
             ip_match_string   = r'([\d]+\.[\d]+\.[\d]+\.[\d]+)'
 
             telnet_output_matches = {
-                #'player connection' : date_match_string + r' INF Player connecter, entityid=([\d]+), name=(.*) steamid=([\d]+), ip=' + ip_match_string,
-                'player connection' : r'.*INF Player connected, entityid=(.*), name=(.*) steamid=(.*), ip=.*'
+                'chunks saved' : { 'to_match' : r'.* INF Saving (.*) of chunks took (.*)ms',
+                                   'to_call' : [ ] },
+                'player connection' : { 'to_match' : r'.*INF Player connected, entityid=(.*), name=(.*), steamid=(.*), ip=(.*)',
+                                        'to_call' : [ self.framework.server.get_player ] },
                 }
 
             if self.matchers == { }:
                 for key in telnet_output_matches.keys ( ):
-                    self.matchers [ key ] = re.compile ( telnet_output_matches [ key ] )
+                    self.matchers [ key ] = { 'matcher' : re.compile (
+                        telnet_output_matches [ key ] [ 'to_match' ] ),
+                                              'callers'  : telnet_output_matches [ key ] [ 'to_call' ] }
                     
-            for key in self.matchers.keys ( ):
-                match = self.matchers [ key ].search ( line_string )
-                if match:
-                    self.log.info ( "{} groups = {}.".format ( key, match.groups ( ) ) )
+            #for key in self.matchers.keys ( ):
+            #    match = self.matchers [ key ] [ 'matcher' ].search ( line_string )
+            #    if match:
+            #        self.log.info ( "{} groups = {}.".format ( key, match.groups ( ) ) )
+            #        for caller in self.matchers [ key ] [ 'callers' ]:
+            #            self.log.info ( "{} calls {}.".format ( key, caller ) )
+            #            #caller ( match.groups ( ) )
+            #        return
             
-            #chunk_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.+[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ INF Saving [\d]+ of chunks took [\d]ms' )
-            chunk_matcher = re.compile ( r'.* INF Saving (.*) of chunks took (.*)ms' )
-            chunk_match = chunk_matcher.match ( line_string )
-            if chunk_match:
-                #self.log.info ( "Chunk save took {}ms.".format (
-                #    chunk_match.group ( 1 ) ) )
-                self.log.info ( "Chunk match" )
-                continue
-
             # Day 1424, 08:52
             day_matcher = re.compile ( r'Day [0-9]+, [0-9]{2}:[0-9]{2}' )
             day_match = day_matcher.match ( line_string )
@@ -230,7 +230,7 @@ class telnet_connect ( threading.Thread ):
                  " INF [Steamworks.NET]" in line_string or
                  " ping too high " in line_string or
                  " INF Telnet connection " in line_string or
-                 "SocketException: An existing connection was forcibly closed by the remote host." == line_string or
+                 "SocketException: An existing connection was forcibly closed by the remote host." in line_string or
                  " ERR Could not save file " in line_string or
                  " ERR Error in TelnetClientSend_ " in line_string or
                  " INF Exited thread " in line_string or
@@ -241,7 +241,6 @@ class telnet_connect ( threading.Thread ):
                  " INF Spawning Wandering Horde" in line_string or
                  " INF Spawning Night Horde for day " in line_string or
                  " INF Spawning this wave" in line_string or
-                 #" INF Player set to online: " in line_string  or
                  " ERR Buff attach(particleeffects/p_onfire, @impact) action wants to be attached to an impact point but none were provided!" in line_string or
                  "IOException: Sharing violation on path " in line_string or
                  " INF Adding observed entity: " in line_string  or
@@ -272,7 +271,7 @@ class telnet_connect ( threading.Thread ):
                  "Game name:   " in line_string or
                  "Difficulty:  " in line_string or
                  "Press 'help' to get a list of all commands. Press 'exit' to end session." in line_string or
-                 "Enabling all loglevels on this connection." == line_string or
+                 "Enabling all loglevels on this connection." in line_string or
                  " INF [NET] PlayerConnected EntityID=-1, PlayerID='', OwnerID='', PlayerName=''" in line_string ):
                 continue
             

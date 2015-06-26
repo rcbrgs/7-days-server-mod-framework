@@ -58,16 +58,16 @@ class orchestrator ( threading.Thread ):
 
         self.framework_state = { 'orchestrator' : { 'version' : self.__version__,
                                                     'changelog' : self.changelog [ self.__version__ ] } }
-        
+
         self.telnet = framework.telnet_connect ( framework = self )
         self.telnet.open_connection ( )
 
         self.server = framework.server ( framework = self )
-
+        
+        self.game_events = framework.game_events ( framework = self )
+        
         self.server.start ( )
         self.telnet.start ( )
-
-        self.game_events = framework.game_events ( framework = self )
         self.game_events.start ( )
 
         self.utils = framework.utils ( )
@@ -105,7 +105,7 @@ class orchestrator ( threading.Thread ):
         callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         while self.db_lock:
-            self.log.info ( "{:s} wants player db lock from {:s}.{:s}.".format (
+            self.log.info ( "{}.{} wants player db lock from {}.".format (
                 callee_class, callee, self.db_lock ) )
             time.sleep ( 0.5 )
         self.db_lock = callee_class + "." + callee
@@ -115,7 +115,7 @@ class orchestrator ( threading.Thread ):
         callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         while self.ent_lock:
-            self.log.info ( "{:s} wants entities db lock from {:s}.{:s}.".format (
+            self.log.info ( "{}.{} wants entities db lock from {}.".format (
                 callee_class, callee, self.ent_lock ) )
             time.sleep ( 0.5 )
         self.ent_lock = callee_class + "." + callee
