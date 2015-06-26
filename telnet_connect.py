@@ -87,8 +87,8 @@ class telnet_connect ( threading.Thread ):
                 continue
             try:
                 line_string = line [:-1].decode ( 'utf-8' )
-            if line_string [ -1 ] == '\r':
-                line_string = line_string [ : -1 ]
+                if ( line_string [ -1 ] ) == '\r':
+                    line_string = line_string [ : -1 ]
             except UnicodeDecodeError as e:
                 self.log.error ( "Error %s while processing line.decode (%s)" %
                                  ( e, line [:-1] ) )
