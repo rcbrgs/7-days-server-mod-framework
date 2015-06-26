@@ -23,8 +23,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.4'
+        self.__version__ = '0.4.5'
         self.changelog = {
+            '0.4.6'  : "Refactor give_stuff"
             '0.4.5'  : "+get_game_server_summary. Detection of burntzombies, zombieferals.",
             '0.4.4'  : "+get_player_summary, refactor for it.",
             '0.4.3'  : "Added le. Fixed new player info not being saved.",
@@ -410,12 +411,9 @@ class server ( threading.Thread ):
         except Exception as e:
             self.log.error ( e )
     
-    def give_player_stuff ( self,
-                            player_input,
-                            stuff,
-                            quantity ):
-        player = self.get_player ( player_input )
+    def give_player_stuff ( self, player, stuff, quantity ):
         msg = 'give ' + player.name_sane + ' ' + stuff + ' ' + str ( quantity )
+        self.log.info ( msg )
         self.console ( msg )
 
     def greet ( self ):
