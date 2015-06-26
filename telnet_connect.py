@@ -218,6 +218,7 @@ class telnet_connect ( threading.Thread ):
                  " INF Spawning this wave" in line_string or
                  " INF Player set to online: " in line_string  or
                  #" INF Player connected, entityid=" in line_string  or #enabling cuz autobanned players not showing up anywhere on logs
+                 " ERR Buff attach(particleeffects/p_onfire, @impact) action wants to be attached to an impact point but none were provided!" in line_string or
                  " INF Adding observed entity: " in line_string  or
                  " INF Removing observed entity" in line_string  or
                  " INF Created player with id=" in line_string  or
