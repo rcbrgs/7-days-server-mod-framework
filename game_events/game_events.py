@@ -9,9 +9,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = "0.2.2"
+        self.__version__ = "0.2.3"
         self.changelog = {
-            '0.2.3' : "Added hook for player connection.",
+            '0.2.3' : "Added hook for player connection. Added daily vote message.",
             '0.2.2' : "Added hook for triggering on player position change.",
             '0.2.1' : "Refactored time accounting to be more efficient.",
             '0.2.0' : "Killing 100 zombies gives some cash to player.",
@@ -83,7 +83,7 @@ class game_events ( threading.Thread ):
         self.framework.mods [ 'sethome' ] [ 'reference' ].enforce_home ( player )
         
     def day_changed ( self, previous_day ):
-        pass
+        self.framework.console.say ( "If you like this server, vote for it on Steam!" )
     
     def hour_changed ( self, previous_hour ):
         day = self.framework.server.game_server.day
