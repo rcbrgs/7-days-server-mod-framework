@@ -87,14 +87,17 @@ class telnet_connect ( threading.Thread ):
                 continue
             try:
                 line_string = line [:-1].decode ( 'utf-8' )
+            if line_string [ -1 ] == '\r':
+                line_string = line_string [ : -1 ]
             except UnicodeDecodeError as e:
                 self.log.error ( "Error %s while processing line.decode (%s)" %
                                  ( e, line [:-1] ) )
                 
             self.log.debug ( line_string )
 
-            date_prefix = r'[0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ '
-            chunk_matcher = re.compile ( date_prefix + r'INF Saving ([\d]+) of chunks took ([\d])ms.' )
+            date_prefix = r'[0-9]{4}-[0-9]{2}-[0-9]{2}.+[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ '
+            
+            chunk_matcher = re.compile ( date_prefix + r'INF Saving ([\d]+) of chunks took ([\d])ms' )
             chunk_match = chunk_matcher.search ( line_string )
             if chunk_match:
                 self.log.info ( "Chunk save took {}ms.".format (
@@ -241,7 +244,7 @@ class telnet_connect ( threading.Thread ):
             if line_string.strip ( ) == "":
                 continue
             
-            self.log.warning ( "Unparsed output: {:s}.".format ( line_string.strip ( ) ) )
+            self.log.warning ( "Unparsed output: '{:s}'.".format ( line_string.strip ( ) ) )
 
         self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
