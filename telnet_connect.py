@@ -11,7 +11,7 @@ class telnet_connect ( threading.Thread ):
         self.log = framework.log
         self.__version__ = '0.1.6'
         self.changelog = {
-            '0.1.7' : "Ignoring some output.",
+            '0.1.7' : "Ignoring some output. Parser for chunk save info.",
             '0.1.6' : "Added partial parse of le. Reverted to non-healing code.",
             '0.1.5' : "Refactored telnet parsing using re.",
             '0.1.4' : "Added catching memory information output from server.",
@@ -93,6 +93,14 @@ class telnet_connect ( threading.Thread ):
                 
             self.log.debug ( line_string )
 
+            date_prefix = r'[0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ '
+            chunk_matcher = re.compile ( date_prefix + r'INF Saving ([\d]+) of chunks took ([\d])ms.' )
+            chunk_match = chunk_matcher.search ( line_string )
+            if chunk_match:
+                self.log.info ( "Chunk save took {}ms.".format (
+                    chunk_match.group ( 1 ) ) )
+                continue
+            
             # Day 1424, 08:52
             day_matcher = re.compile ( r'Day [0-9]+, [0-9]{2}:[0-9]{2}' )
             day_match = day_matcher.match ( line_string )
@@ -143,12 +151,7 @@ class telnet_connect ( threading.Thread ):
                 #self.framework.server.update_item ( item_match.groups ( ) )
                 continue
             
-            # 1. id=1753441, Item_1753441 (EntityItem), pos=(2944.5, 53.2, -1242.5), rot=(0.0, 22.0, 0.0), lifetime=59.5, remote=False, dead=False,
-            # 4. id=1750471, [type=EntityZombie, name=zombie04, id=1750471], pos=(2209.0, 65.8, 3226.8), rot=(0.0, 207.0, 0.0), lifetime=float.Max, remote=False, dead=False, health=100
             # 15. id=1746939, [type=EntityZombieCrawl, name=zombiecrawler, id=1746939], pos=(-349.1, 64.1, 426.4), rot=(0.0, 300.0, 0.0), lifetime=float.Max, remote=False, dead=False, health=100
-            # 54. id=395425, [type=EntityCar, name=car_Orange, id=395425], pos=(2234.3, 64.2, 3266.8), rot=(180.0, 90.0, 0.0), lifetime=float.Max, remote=False, dead=False, health=1000
-            # 55. id=1458851, [type=EntityPlayer, name=sakis2011, id=1458851], pos=(2944.4, 54.0, -1241.2), rot=(-7.0, 168.8, 0.0), lifetime=float.Max, remote=True, dead=False, health=108
-            # 1. id=1753579, [type=EntityZombie, name=zombiegal02, id=1753579], pos=(2167.7, 64.0, 3301.1), rot=(0.0, 240.8, 0.0), lifetime=float.Max, remote=False, dead=False, health=100
             le_matcher = re.compile ( r'[\d]+\. id=([\d]+), (.*), pos=\((.[\d]*\.[\d]), (.[\d]*\.[\d]), (.[\d]*\.[\d])\), rot=\((.[\d]*\.[\d]), (.[\d]*\.[\d]), (.[\d]*\.[\d])\), lifetime=(.*), remote=([\w]+), dead=([\w]+), health=([\d]+).*' )
             le_match = le_matcher.match ( line_string )
             if le_match:
