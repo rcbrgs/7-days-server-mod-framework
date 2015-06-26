@@ -9,9 +9,9 @@ class telnet_connect ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( telnet_connect, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = '0.1.6'
+        self.__version__ = '0.1.7'
         self.changelog = {
-            '0.1.7' : "Ignoring some output. Parser for chunk save info.",
+            '0.1.7' : "Ignoring some output. Parser for chunk save info and for falling blocks.",
             '0.1.6' : "Added partial parse of le. Reverted to non-healing code.",
             '0.1.5' : "Refactored telnet parsing using re.",
             '0.1.4' : "Added catching memory information output from server.",
@@ -148,6 +148,13 @@ class telnet_connect ( threading.Thread ):
             item_match = item_matcher.match ( line_string )
             if item_match:
                 self.log.debug ( "item_match" )
+                #self.framework.server.update_item ( item_match.groups ( ) )
+                continue
+            
+            falling_block_matcher = re.compile ( r'[\d]+\. id=([\d]+), FallingBlock_[\d]+ \(EntityFallingBlock\), pos=\((.[\d]*\.[\d]), (.[\d]*\.[\d]), (.[\d]*\.[\d])\), rot=\((.[\d]*\.[\d]), (.[\d]*\.[\d]), (.[\d]*\.[\d])\), lifetime=(.*), remote=([\w]+), dead=([\w]+),.*' )
+            falling_block_match = falling_block_matcher.match ( line_string )
+            if falling_block_match:
+                self.log.debug ( "falling_block_match" )
                 #self.framework.server.update_item ( item_match.groups ( ) )
                 continue
             
