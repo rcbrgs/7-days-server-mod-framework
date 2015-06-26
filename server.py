@@ -25,7 +25,7 @@ class server ( threading.Thread ):
         self.log = logging.getLogger ( __name__ )
         self.__version__ = '0.4.5'
         self.changelog = {
-            '0.4.6'  : "Refactor give_stuff"
+            '0.4.6'  : "Refactor give_stuff.",
             '0.4.5'  : "+get_game_server_summary. Detection of burntzombies, zombieferals.",
             '0.4.4'  : "+get_player_summary, refactor for it.",
             '0.4.3'  : "Added le. Fixed new player info not being saved.",
@@ -247,7 +247,7 @@ class server ( threading.Thread ):
         if 'time' not in mi.keys ( ):
             return
         staleness = time.time ( ) - self.game_server.mem [ 1 ]
-        msg = "stale: {:.1f}s time: {:s} mem: {:s}h/{:s}m chunks: {:s} cgo: {:s} objects: {:s}p/{:s}z/{:s}i/{:s}({:s})e.".format (
+        msg = "{:.1f}s {:s}m {:s}/{:s}MB {:s}chu {:s}cgo {:s}p/{:s}z/{:s}i/{:s}({:s})e.".format (
             staleness,
             str ( mi [ 'time' ] ), str ( mi [ 'heap' ] ), str ( mi [ 'max' ] ), str ( mi [ 'chunks' ] ),
             str ( mi [ 'cgo' ] ), str ( mi [ 'players' ] ), str ( mi [ 'zombies' ] ), str ( mi [ 'items' ] ),

@@ -105,31 +105,31 @@ class orchestrator ( threading.Thread ):
         callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         while self.db_lock:
-            self.log.info ( "{:s} wants ply lock from {:s}.{:s}.".format (
+            self.log.info ( "{:s} wants player db lock from {:s}.{:s}.".format (
                 callee_class, callee, self.db_lock ) )
             time.sleep ( 0.5 )
         self.db_lock = callee_class + "." + callee
-        self.log.debug ( "{:s} get lock.".format ( callee ) )
+        self.log.debug ( "{:s} get player db lock.".format ( callee ) )
 
     def get_ent_lock ( self ):
         callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         while self.ent_lock:
-            self.log.info ( "{:s} wants ent lock from {:s}.{:s}.".format (
+            self.log.info ( "{:s} wants entities db lock from {:s}.{:s}.".format (
                 callee_class, callee, self.ent_lock ) )
             time.sleep ( 0.5 )
         self.ent_lock = callee_class + "." + callee
-        self.log.debug ( "{:s} get lock.".format ( callee ) )
+        self.log.debug ( "{:s} get entities db lock.".format ( callee ) )
 
     def let_db_lock ( self ):
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         self.db_lock = None
-        self.log.debug ( "{:s} let ply lock.".format ( callee ) )
+        self.log.debug ( "{:s} let player db lock.".format ( callee ) )
 
     def let_ent_lock ( self ):
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         self.ent_lock = None
-        self.log.debug ( "{:s} let ent lock.".format ( callee ) )
+        self.log.debug ( "{:s} let entities db lock.".format ( callee ) )
 
     def load_mod ( self, module_name ):
         full_module_name = module_name + "." + module_name

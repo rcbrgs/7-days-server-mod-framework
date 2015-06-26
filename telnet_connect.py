@@ -19,8 +19,7 @@ class telnet_connect ( threading.Thread ):
             '0.1.3' : "Catching exception during unicode decode.",
             '0.1.2' : "Added changelog." }
 
-        self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
-        
+        self.matchers = { }
         self.shutdown = False
         self.connected = False
         self.framework = framework
@@ -87,24 +86,43 @@ class telnet_connect ( threading.Thread ):
                 self.open_connection ( )
                 continue
             try:
-                line_string = line [:-1].decode ( 'utf-8' )
-                if ( line_string [ -1 ] ) == '\r':
-                    line_string = line_string [ : -1 ]
+                while ( line [ -1 ] == '\r' or
+                        line [ -1 ] == '\n' ):
+                    line = line [ : -1 ]
+                #line_string = line [:-1].decode ( 'utf-8' )
+                line_string = line.decode ( 'utf-8' )
             except UnicodeDecodeError as e:
                 self.log.error ( "Error %s while processing line.decode (%s)" %
                                  ( e, line [:-1] ) )
                 
             self.log.debug ( line_string )
 
-            date_prefix = r'[0-9]{4}-[0-9]{2}-[0-9]{2}.+[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ '
+            date_match_string = r'[0-9]{4}-[0-9]{2}-[0-9]{2}.+[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ '
+            ip_match_string   = r'([\d]+\.[\d]+\.[\d]+\.[\d]+)'
+
+            telnet_output_matches = {
+                #'player connection' : date_match_string + r' INF Player connecter, entityid=([\d]+), name=(.*) steamid=([\d]+), ip=' + ip_match_string,
+                'player connection' : r'.*INF Player connected, entityid=(.*), name=(.*) steamid=(.*), ip=.*'
+                }
+
+            if self.matchers == { }:
+                for key in telnet_output_matches.keys ( ):
+                    self.matchers [ key ] = re.compile ( telnet_output_matches [ key ] )
+                    
+            for key in self.matchers.keys ( ):
+                match = self.matchers [ key ].search ( line_string )
+                if match:
+                    self.log.info ( "{} groups = {}.".format ( key, match.groups ( ) ) )
             
-            chunk_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.+[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ INF Saving ([\d]+) of chunks took ([\d])ms' )
-            chunk_match = chunk_matcher.search ( line_string )
+            #chunk_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.+[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ INF Saving [\d]+ of chunks took [\d]ms' )
+            chunk_matcher = re.compile ( r'.* INF Saving (.*) of chunks took (.*)ms' )
+            chunk_match = chunk_matcher.match ( line_string )
             if chunk_match:
-                self.log.info ( "Chunk save took {}ms.".format (
-                    chunk_match.group ( 1 ) ) )
+                #self.log.info ( "Chunk save took {}ms.".format (
+                #    chunk_match.group ( 1 ) ) )
+                self.log.info ( "Chunk match" )
                 continue
-            
+
             # Day 1424, 08:52
             day_matcher = re.compile ( r'Day [0-9]+, [0-9]{2}:[0-9]{2}' )
             day_match = day_matcher.match ( line_string )
@@ -122,6 +140,12 @@ class telnet_connect ( threading.Thread ):
                 player = self.framework.server.get_player ( player_name )
                 if player:
                     self.framework.game_events.player_disconnected ( player )
+                continue
+
+            deny_matcher = re.compile ( r'.* INF Player (.*) denied: .* has been banned until .*' )
+            deny_match = deny_matcher.search ( line_string )
+            if deny_match:
+                self.log.info ( "deny_match: {}".format ( deny_match.groups ( ) ) )
                 continue
 
             #2015-06-25T10:36:35 5247.946 INF Executing command 'pm 1580623 "[FF0000]st.devil666[FFFFFF] is near ([FF0000]77m[FFFFFF]) your base!"' by Telnet from 143.107.45.13:48590
@@ -207,6 +231,7 @@ class telnet_connect ( threading.Thread ):
                  " ping too high " in line_string or
                  " INF Telnet connection " in line_string or
                  "SocketException: An existing connection was forcibly closed by the remote host." == line_string or
+                 " ERR Could not save file " in line_string or
                  " ERR Error in TelnetClientSend_ " in line_string or
                  " INF Exited thread " in line_string or
                  " INF Created new play" in line_string or
@@ -216,9 +241,9 @@ class telnet_connect ( threading.Thread ):
                  " INF Spawning Wandering Horde" in line_string or
                  " INF Spawning Night Horde for day " in line_string or
                  " INF Spawning this wave" in line_string or
-                 " INF Player set to online: " in line_string  or
-                 #" INF Player connected, entityid=" in line_string  or #enabling cuz autobanned players not showing up anywhere on logs
+                 #" INF Player set to online: " in line_string  or
                  " ERR Buff attach(particleeffects/p_onfire, @impact) action wants to be attached to an impact point but none were provided!" in line_string or
+                 "IOException: Sharing violation on path " in line_string or
                  " INF Adding observed entity: " in line_string  or
                  " INF Removing observed entity" in line_string  or
                  " INF Created player with id=" in line_string  or
@@ -229,13 +254,16 @@ class telnet_connect ( threading.Thread ):
                  " Playername or entity/steamid id not found." in line_string or
                  " INF Spawned [type=" in line_string or
                  " INF [EAC] Registering user: id=" in line_string  or
+                 " ERR [EAC] Log: Unknown use" in line_string or
+                 " INF Player set to online: " in line_string or
+                 "Playername or entity ID not found." == line_string or
                  " INF [Steamworks.NET] Authenticating player: " in line_string  or
                  " INF [Steamworks.NET] Auth.AuthenticateUser()" in line_string  or
                  " INF Token length: " in line_string  or
                  " INF PlayerLogin: " in line_string  or
-                 "*** Connected with 7DTD server." == line_string or
-                 "*** Server version: Alpha 11.6 (b5) Compatibility Version: Alpha 11.6" == line_string or
-                 "*** Dedicated server only build" == line_string or
+                 "*** Connected with 7DTD server" in line_string or
+                 "*** Server version: Alpha 11.6 (b5) Compatibility Version: Alpha 11.6" in line_string or 
+                 "*** Dedicated server only build" in line_string or
                  "Server IP:   " in line_string or
                  "Server port: " in line_string or
                  "Max players: " in line_string or
@@ -243,7 +271,7 @@ class telnet_connect ( threading.Thread ):
                  "World:       " in line_string or
                  "Game name:   " in line_string or
                  "Difficulty:  " in line_string or
-                 "Press 'help' to get a list of all commands. Press 'exit' to end session." == line_string or
+                 "Press 'help' to get a list of all commands. Press 'exit' to end session." in line_string or
                  "Enabling all loglevels on this connection." == line_string or
                  " INF [NET] PlayerConnected EntityID=-1, PlayerID='', OwnerID='', PlayerName=''" in line_string ):
                 continue

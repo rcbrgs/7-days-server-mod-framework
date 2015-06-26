@@ -11,7 +11,7 @@ class game_events ( threading.Thread ):
         self.log = framework.log
         self.__version__ = "0.2.3"
         self.changelog = {
-            '0.2.4' : "Log player and gameserver info every game hour.",
+            '0.2.4' : "Log player and gameserver info every game hour. +player detected.",
             '0.2.3' : "Added hook for player connection. Added daily vote message.",
             '0.2.2' : "Added hook for triggering on player position change.",
             '0.2.1' : "Refactored time accounting to be more efficient.",
@@ -25,6 +25,7 @@ class game_events ( threading.Thread ):
 
         self.registered_callbacks = {
             'player_connected'           : [ ],
+            'player_detected'            : [ ],
             'player_killed_100_zombies'  : [ ( self.framework.server.give_cash,
                                                { 'amount' : random.randint ( 50, 150 ) } ),
                                              ( self.framework.server.pm,
@@ -111,6 +112,16 @@ class game_events ( threading.Thread ):
 
         #self.framework.console.pm ( player, "Welcome back {}!".format ( player.name_sane ) )
         self.log.info ( "{} connected.".format ( player.name_sane ) )
+
+    def player_detected ( self, player ):
+        for callback in self.registered_callbacks [ 'player_detected' ]:
+            function = callback [ 0 ]
+            kwargs   = callback [ 1 ]
+            kwargs [ 'player' ] = player
+            function ( **kwargs )
+
+        #self.framework.console.pm ( player, "Welcome back {}!".format ( player.name_sane ) )
+        self.log.info ( "{} detected.".format ( player.name_sane ) )
 
     def player_disconnected ( self, player ):
         player.online = False
