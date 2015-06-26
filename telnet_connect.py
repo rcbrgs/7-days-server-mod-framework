@@ -199,6 +199,7 @@ class telnet_connect ( threading.Thread ):
                  " INF [Steamworks.NET]" in line_string or
                  " ping too high " in line_string or
                  " INF Telnet connection " in line_string or
+                 " ERR Error in TelnetClientSend_ " in line_string or
                  " INF Exited thread " in line_string or
                  " INF Created new play" in line_string or
                  " INF Started thread " in line_string or
