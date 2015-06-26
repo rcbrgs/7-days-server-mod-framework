@@ -12,8 +12,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.3.6'
+        self.__version__ = '0.3.7'
         self.changelog = {
+            '0.3.7' : "Reverted to reliable non-self-healing version.",
             '0.3.6' : "Extended with utils module. Added db_lock functionality.",
             '0.3.5' : "Linked with game events.",
             '0.3.4' : "Only call lp if needed.",
@@ -169,6 +170,9 @@ class orchestrator ( threading.Thread ):
                     mod = self.mods [ mod_key ] [ 'reference' ]
                     if mod.is_alive ( ) == False:
                         self.log.warning ( "mod %s is dead, restarting." % str ( mod ) )
+                        self.shutdown = True
+                        break
+                    
                         old_version = mod.__version__
                         module_name = mod.__class__.__name__
                         mod.shutdown = True

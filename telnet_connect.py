@@ -9,9 +9,10 @@ class telnet_connect ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( telnet_connect, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = '0.1.5'
+        self.__version__ = '0.1.6'
         self.changelog = {
-            '0.1.6' : "Added partial parse of le.",
+            '0.1.7' : "Ignoring some output.",
+            '0.1.6' : "Added partial parse of le. Reverted to non-healing code.",
             '0.1.5' : "Refactored telnet parsing using re.",
             '0.1.4' : "Added catching memory information output from server.",
             '0.1.3' : "Catching exception during unicode decode.",
@@ -56,6 +57,9 @@ class telnet_connect ( threading.Thread ):
             self.log.error ( "Error while opening connection: %s." % str ( e ) )
             if not self.framework.shutdown:
                 time.sleep ( self.framework.preferences.loop_wait )
+                self.framework.shutdown = True
+                return
+            
                 self.open_connection ( )
                 return
         linetest = self.telnet.read_until ( b'Logon successful.' )
@@ -178,6 +182,9 @@ class telnet_connect ( threading.Thread ):
                  " INF [EAC] FreeUser (" in line_string or
                  " INF [EAC] UserStatus" in line_string or
                  " INF Kicking player" in line_string or
+                 " ERR DisconnectClient: Player " in line_string or
+                 "Playername or entity/steamid id not found." in line_string or
+                 " fell off the world, id=" in line_string or
                  "disconnected after " in line_string or
                  " INF Executing command " in line_string or
                  " INF AIDirector: scout" in line_string or
@@ -195,6 +202,7 @@ class telnet_connect ( threading.Thread ):
                  ' INF Executing command say "' in line_string or
                  " An established connection was aborted by the software in your host" in line_string or
                  " INF Spawning Wandering Horde" in line_string or
+                 " INF Spawning Night Horde for day " in line_string or
                  " INF Spawning this wave" in line_string or
                  " INF Player set to online: " in line_string  or
                  " INF Player connected, entityid=" in line_string  or
@@ -218,8 +226,11 @@ class telnet_connect ( threading.Thread ):
             if " INF GMSG: " in line_string:
                 self.framework.server.parse_gmsg ( line )
                 continue
+
+            if line_string.strip ( ) == "":
+                continue
             
-            self.log.warning ( "Unparsed output: {:s}.".format ( line_string ) )
+            self.log.warning ( "Unparsed output: {:s}.".format ( line_string.strip ( ) ) )
 
         self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )
 

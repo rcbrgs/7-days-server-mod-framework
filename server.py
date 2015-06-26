@@ -23,9 +23,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.2'
+        self.__version__ = '0.4.3'
         self.changelog = {
-            '0.4.3'  : "Added le.",
+            '0.4.3'  : "Added le. Fixed new player info not being saved.",
             '0.4.2'  : "Increased preteleport lag 2 -> 3s. Refactored id update.",
             '0.4.1'  : "Removed enforce_home_radii, moved to sethome.",
             '0.4.0'  : "Make backups of player db every hour.",
@@ -675,6 +675,7 @@ class server ( threading.Thread ):
             new_player_info.timestamp_latest_update = time.time ( )
             
             player = new_player_info
+            self.players_info [ playerid ] = player
             
         self.framework.let_db_lock ( )
 
