@@ -23,8 +23,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.3'
+        self.__version__ = '0.4.4'
         self.changelog = {
+            '0.4.4'  : "+get_player_summary, refactor for it.",
             '0.4.3'  : "Added le. Fixed new player info not being saved.",
             '0.4.2'  : "Increased preteleport lag 2 -> 3s. Refactored id update.",
             '0.4.1'  : "Removed enforce_home_radii, moved to sethome.",
@@ -307,9 +308,12 @@ class server ( threading.Thread ):
             
     def get_online_players ( self ):
         result = [ ]
+        self.framework.get_db_lock ( )
         for key in self.players_info.keys ( ):
-            if self.players_info [ key ].online == True:
-                result.append ( key )
+            player = self.players_info [ key ]
+            if player.online:
+                result.append ( player )
+        self.framework.let_db_lock ( )
         return result
 
     def get_player ( self, player ):
@@ -352,6 +356,22 @@ class server ( threading.Thread ):
         self.log.error ( "No player with identifier %s." % str ( player ) )
         return None
 
+    def get_player_summary ( self, player ):
+        if not player.player_kills_explanations:
+            player.player_kills_explanations = [ ]
+        player_line = "{: 2.1f} | {:<10s} | {:<10d} | {:<6.1f} | {:>2d}/{:<2d} | {:<3d} | {:<6d} | {:<4d} | {:<4d}" .format (
+            time.time ( ) - player.timestamp_latest_update,
+            str ( player.name_sane [ : 9 ] ),
+            player.playerid,
+            player.online_time / 3600,
+            player.players,
+            len ( player.player_kills_explanations ),
+            player.karma,
+            player.cash,
+            player.zombies - player.accounted_zombies,
+            player.zombies, )
+        return player_line
+        
     def get_random_entity ( self ):
         self.wait_entities ( )
         self.framework.get_ent_lock ( )
@@ -427,25 +447,8 @@ class server ( threading.Thread ):
         print ( "%-4s | %-10s | %-10s | %-6s | %-5s | %-3s | %-6s | uzed | zeds" %
                 ( "stal", "name_sane", "playerid", "time", "pks", "kar", "cash" ) )
         print ( "-----+------------+------------+--------+-------+-----+--------+------+------" )
-        now = time.time ( )
-        for key in self.players_info.keys ( ):
-            player = self.players_info [ key ]
-            if not player.player_kills_explanations:
-                player.player_kills_explanations = [ ]
-            if player.online == True:
-                player_line = "{: 2.1f} | {:<10s} | {:<10d} | {:<6.1f} | {:>2d}/{:<2d} | {:<3d} | {:<6d} | {:<4d} | {:<4d}" .format (
-                    now - player.timestamp_latest_update,
-                    str ( player.name_sane [ : 9 ] ),
-                    player.playerid,
-                    player.online_time / 3600,
-                    player.players,
-                    len ( player.player_kills_explanations ),
-                    player.karma,
-                    player.cash,
-                    player.zombies - player.accounted_zombies,
-                    player.zombies, )
-
-                print ( player_line )
+        for player in self.get_online_players ( ):
+            print ( self.get_player_summary ( player ) )
 
     def mod_status ( self, msg_origin, msg_content ):
         self.greet ( )
