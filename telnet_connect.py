@@ -11,6 +11,7 @@ class telnet_connect ( threading.Thread ):
         self.log = framework.log
         self.__version__ = '0.1.7'
         self.changelog = {
+            '0.1.8' : "Ignoring header info.",
             '0.1.7' : "Ignoring some output. Parser for chunk save info and for falling blocks.",
             '0.1.6' : "Added partial parse of le. Reverted to non-healing code.",
             '0.1.5' : "Refactored telnet parsing using re.",
@@ -235,6 +236,18 @@ class telnet_connect ( threading.Thread ):
                  " INF [Steamworks.NET] Auth.AuthenticateUser()" in line_string  or
                  " INF Token length: " in line_string  or
                  " INF PlayerLogin: " in line_string  or
+                 "*** Connected with 7DTD server." == line_string or
+                 "*** Server version: Alpha 11.6 (b5) Compatibility Version: Alpha 11.6" == line_string or
+                 "*** Dedicated server only build" == line_string or
+                 "Server IP:   " in line_string or
+                 "Server port: " in line_string or
+                 "Max players: " in line_string or
+                 "Game mode:   " in line_string or
+                 "World:       " in line_string or
+                 "Game name:   " in line_string or
+                 "Difficulty:  " in line_string or
+                 "Press 'help' to get a list of all commands. Press 'exit' to end session." == line_string or
+                 "Enabling all loglevels on this connection." == line_string or
                  " INF [NET] PlayerConnected EntityID=-1, PlayerID='', OwnerID='', PlayerName=''" in line_string ):
                 continue
             
