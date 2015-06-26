@@ -6,6 +6,7 @@ import pickle
 import sys
 import threading
 import time
+import traceback
 
 class orchestrator ( threading.Thread ):
     def __init__ ( self ):
@@ -59,6 +60,7 @@ class orchestrator ( threading.Thread ):
         self.framework_state = { 'orchestrator' : { 'version' : self.__version__,
                                                     'changelog' : self.changelog [ self.__version__ ] } }
 
+        self.console = framework.console ( framework = self )
         self.telnet = framework.telnet_connect ( framework = self )
         self.telnet.open_connection ( )
 
@@ -71,7 +73,7 @@ class orchestrator ( threading.Thread ):
         self.game_events.start ( )
 
         self.utils = framework.utils ( )
-        self.console = framework.console ( framework = self )
+
 
         self.framework_state [ 'telnet' ] = { 'version' : self.telnet.__version__,
                                               'changelog' : self.telnet.changelog [ self.telnet.__version__ ] }
@@ -190,7 +192,7 @@ class orchestrator ( threading.Thread ):
                                                 mod_instance.changelog [ new_version ] ) )
 
                 self.log.debug ( "Before gt" )
-                self.server.console ( "gt" )
+                self.console.send ( "gt" )
                 self.log.debug ( "After gt" )
                 
                 #if count % 100 == 0:
@@ -198,14 +200,17 @@ class orchestrator ( threading.Thread ):
 
                 if ( time.time ( ) - self.server.latest_id_parse_call ) > self.preferences.loop_wait:
                     self.log.debug ( "Too long since last update, doing lp." )
-                    self.server.console ( "lp" )
+                    #self.console.send ( "lp" )
                     self.server.entities = { }
-                    self.server.console ( "le" )
-            
+                    self.console.send ( "le" )
+
+                self.console.lp ( )
+                    
                 time.sleep ( self.preferences.loop_wait )
                 count += 1
         except Exception as e:
             self.log.critical ( "Shutting down mod framework due to unhandled exception: %s." % str ( e ) )
+            self.log.critical ( traceback.print_tb ( sys.last_traceback ) )
             self.shutdown = True
 
         for mod_key in self.mods.keys ( ):

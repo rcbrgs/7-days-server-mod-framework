@@ -26,6 +26,7 @@ class server ( threading.Thread ):
         self.log = logging.getLogger ( __name__ )
         self.__version__ = '0.4.6'
         self.changelog = {
+            '0.4.7'  : "+db_clean.",
             '0.4.6'  : "Refactor give_stuff. Reindexed players by steamid.",
             '0.4.5'  : "+get_game_server_summary. Detection of burntzombies, zombieferals.",
             '0.4.4'  : "+get_player_summary, refactor for it.",
@@ -186,17 +187,9 @@ class server ( threading.Thread ):
         self.say ( "Player killers are automatically imprisoned." )
         
     def console ( self, message ):
-        self.log.debug ( message )
-            
-        if isinstance ( message, str ):
-            inputmsg = message + "\n"
-            outputmsg = inputmsg.encode ( 'utf-8' )
-        else:
-            inputmsg = messagge.decode ( 'ascii' )
-            inputmsg = inputmsg + "\n"
-            outputmsg = inputmsg.encode ( 'utf-8' )
-                
-        self.telnet_connection.write ( outputmsg )
+        self.log.warning ( "deprecated console call: {}".format ( message ) )
+        self.framework.console.send ( message )
+        return
 
     def curse_player ( self, msg_origin, msg_content ):
         target = self.get_player ( msg_content [ 7 : -1 ] )
@@ -697,11 +690,8 @@ class server ( threading.Thread ):
             event_function ( player )
 
     def pm ( self, player_id = None, msg = None ):
-        destiny_player = self.get_player ( player_id )
-        if destiny_player == None:
-            self.log.error ( "pm '%s' failed because destiny player invalid." % msg )
-            return
-        self.console ( 'pm %s "%s"' % ( destiny_player.steamid, msg ) )
+        self.log.warning ( "deprecated console call: {} {}.".format ( player_id, msg ) )
+        self.framework.console.pm ( self.get_player ( player_id ), msg )
         
     def print_players_info ( self, msg_origin, msg_content ):
         for key in self.players_info.keys ( ):
@@ -748,6 +738,8 @@ class server ( threading.Thread ):
             return -1
         distance = self.framework.utils.calculate_distance ( self.framework.utils.get_coordinates ( player ),
                                                              ent_position )
+        if distance > 500:
+            return -1
         bearing = self.framework.utils.calculate_bearings ( ( player.pos_x, player.pos_y ),
                                                             ( ent_position [ 0 ], ent_position [ 1 ] ) )
         self.framework.console.pm ( player, "{:.1f}m {} (height: {:.1f}m)".format ( distance,
@@ -828,9 +820,9 @@ class server ( threading.Thread ):
             premsg += str ( int ( where_to [ 0 ] ) ) + " " + \
                       str ( int ( where_to [ 2 ] ) - 5000 ) + " " + \
                       str ( int ( where_to [ 1 ] ) )
-        self.console ( premsg )
+        self.framework.console.send ( premsg )
         time.sleep ( 3 )
-        self.console ( msg )
+        self.framework.console.send ( msg )
         player.pos_x = where_to [ 0 ]
         player.pos_y = where_to [ 1 ]
         player.pos_z = where_to [ 2 ]
@@ -1204,11 +1196,24 @@ class server ( threading.Thread ):
                 continue
             break
 
-    def fix_db ( self ):
+    def cleanup_db ( self ):
+        """
+        Remove entries that have non-steamid indexes.
+        Remove "positions" that are older than 24h.
+        """
+        now = time.time ( )
         self.framework.get_db_lock()
         pinfo = {}
         for key in self.players_info.keys():
             if self.players_info [ key ].steamid == key:
                 pinfo [ key ] = self.players_info [ key ]
+                player = pinfo [ key ]
+                if player.timestamp_latest_update:
+                    if now - player.timestamp_latest_update > 24 * 3600:
+                        player.positions = [ ]
+                else:
+                    player.positions = [ ]
+                
         self.players_info = pinfo
+        
         self.framework.let_db_lock()

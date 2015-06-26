@@ -92,20 +92,24 @@ class telnet_connect ( threading.Thread ):
                 line_string = line.decode ( 'utf-8' )
                 line_string = line_string.strip ( )
 
-            except UnicodeDecodeError as e:
+            except Exception as e:
                 self.log.error ( "Error %s while processing line.decode (%s)" %
                                  ( e, line [:-1] ) )
                 
             self.log.debug ( line_string )
 
-            date_match_string = r'[0-9]{4}-[0-9]{2}-[0-9]{2}.+[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ '
-            ip_match_string   = r'([\d]+\.[\d]+\.[\d]+\.[\d]+)'
+            date_match_string = r'([0-9]{4})-([0-9]{2})-([0-9]{2}).+([0-9]{2}):([0-9]{2}):([0-9]{2}) ([0-9]+\.[0-9]+)' # 7 groups
+            ip_match_string   = r'([\d]+\.[\d]+\.[\d]+\.[\d]+)' # 1 group
 
             telnet_output_matches = {
                 'chunks saved' : { 'to_match' : r'.* INF Saving (.*) of chunks took (.*)ms',
                                    'to_call' : [ ] },
-                'player connection' : { 'to_match' : r'.*INF Player connected, entityid=(.*), name=(.*), steamid=(.*), ip=(.*)',
-                                        'to_call' : [ self.framework.server.get_player ] },
+                'lp command executed' : { 'to_match' : date_match_string + r' INF Executing command \'lp\' by Telnet from ' + ip_match_string + ':([\d]+)',
+                                          'to_call'  : [ self.framework.console.wrapper_lp ] },
+                'player connection' : { 'to_match' : date_match_string + r' INF Player connected, entityid=(.*), name=(.*), steamid=(.*), ip=(.*)',
+                                        'to_call' : [ self.framework.game_events.player_connected ] },
+                'pm command executed' : { 'to_match' : '.* INF Executing command \'pm .* by Telnet from (.*):.*',
+                                          'to_call' : [ self.framework.console.wrapper_pm ] },
                 }
 
             if self.matchers == { }:
@@ -114,14 +118,14 @@ class telnet_connect ( threading.Thread ):
                         telnet_output_matches [ key ] [ 'to_match' ] ),
                                               'callers'  : telnet_output_matches [ key ] [ 'to_call' ] }
                     
-            #for key in self.matchers.keys ( ):
-            #    match = self.matchers [ key ] [ 'matcher' ].search ( line_string )
-            #    if match:
-            #        self.log.info ( "{} groups = {}.".format ( key, match.groups ( ) ) )
-            #        for caller in self.matchers [ key ] [ 'callers' ]:
-            #            self.log.info ( "{} calls {}.".format ( key, caller ) )
-            #            #caller ( match.groups ( ) )
-            #        return
+            for key in self.matchers.keys ( ):
+                match = self.matchers [ key ] [ 'matcher' ].search ( line_string )
+                if match:
+                    self.log.debug ( "{} groups = {}.".format ( key, match.groups ( ) ) )
+                    for caller in self.matchers [ key ] [ 'callers' ]:
+                        self.log.debug ( "{} calls {}.".format ( key, caller ) )
+                        caller ( match.groups ( ) )
+                        self.log.debug ( "{} called {} and finished.".format ( key, caller ) )
             
             # Day 1424, 08:52
             day_matcher = re.compile ( r'Day [0-9]+, [0-9]{2}:[0-9]{2}' )

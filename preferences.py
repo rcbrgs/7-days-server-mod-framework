@@ -5,8 +5,9 @@ class preferences ( object ):
     def __init__ ( self, preferences_file_name ):
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.1'
+        self.__version__ = '0.1.2'
         self.changelog = {
+            '0.1.2' : "Added mod_ip attribute.",
             '0.1.1' : "Added support for framework state file." }
         
         
@@ -59,6 +60,10 @@ class preferences ( object ):
             
             if ( left_hand == "loop_wait" ):
                 self.loop_wait = int ( splitted [ 1 ] )
+                continue
+
+            if ( left_hand == "mod_ip" ):
+                self.mod_ip = splitted [ 1 ].strip ( )
                 continue
 
             if ( left_hand == "player_info_file" ):
@@ -133,6 +138,7 @@ class preferences ( object ):
         self.log.info ( "home_radius = %s" % ( self.home_radius ) )
         self.log.info ( "log_file = %s" % ( self.log_file ) )
         self.log.info ( "loop_wait = %d" % ( self.loop_wait ) )
+        self.log.info ( "mod_ip = %s" % str ( self.mod_ip ) )
         self.log.info ( "mods = %s" % str ( self.mods ) )
         self.log.info ( "player_info_file = %s" % ( self.player_info_file ) )
         self.log.info ( "teleport_lag_cushion = %d" % self.teleport_lag_cushion )

@@ -16,6 +16,10 @@ class console ( threading.Thread ):
         self.daemon = True
         self.shutdown = False
 
+        self.pm_executing = False
+        self.timestamp_lp = 0
+        self.timestamp_pm = 0
+
     def __del__ ( self ):
         self.stop ( )
 
@@ -30,11 +34,42 @@ class console ( threading.Thread ):
     def stop ( self ):
         self.shutdown = True
 
-    def input ( self, msg ):
-        self.framework.server.console ( msg )
+    def send ( self, message ):
+        self.log.debug ( message )
+            
+        if isinstance ( message, str ):
+            inputmsg = message + "\n"
+            outputmsg = inputmsg.encode ( 'utf-8' )
+        else:
+            inputmsg = messagge.decode ( 'ascii' )
+            inputmsg = inputmsg + "\n"
+            outputmsg = inputmsg.encode ( 'utf-8' )
+                
+        self.framework.server.telnet_connection.write ( outputmsg )
+
+    def lp ( self ):
+        if ( time.time ( ) - self.timestamp_lp ) < self.framework.preferences.loop_wait:
+            self.log.debug ( "lp timestamp too recent. Ignoring call for lp." )
+            return
+            
+        self.timestamp_lp = time.time ( )
+        self.send ( "lp" )        
         
-    def pm ( self, player_id, msg ):
-        self.framework.server.pm ( player_id, msg )
+    def pm ( self, player, message ):
+        limit = 5
+        begin = time.time ( )
+        while self.pm_executing:
+            self.log.info ( "Waiting for PM to execute." )
+            time.sleep ( 0.1 )
+            if time.time ( ) - begin > limit:
+                self.log.warning ( "Unblocking PM by limit exceeded." )
+                self.pm_executing = False
+                
+        pm_string = 'pm {} "{}"'.format ( player.steamid, message )
+        self.log.info ( pm_string )
+        self.send ( pm_string )
+        self.timestamp_pm = time.time ( )
+        self.pm_executing = True
 
     def say ( self, msg ):
         """
@@ -53,3 +88,15 @@ class console ( threading.Thread ):
             self.framework.server.telnet_connection.write ( outputmsg )
         else:    
             self.log.info ( "(silenced) %s" % outputmsg )
+
+    def wrapper_lp ( self, lp_matcher_groups ):
+        if lp_matcher_groups [ 7 ] == self.framework.preferences.mod_ip:
+            self.log.debug ( "lp matched ip" )
+            self.timestamp_lp = time.time ( )
+        else:
+            self.log.debug ( "lp unmatch ip" )
+
+    def wrapper_pm ( self, pm_matcher_groups ):
+        interval = time.time ( ) - self.timestamp_pm
+        self.log.info ( "ACK ({:.1f}s): pm from Telnet {}".format ( interval, pm_matcher_groups [ 0 ] ) )
+        self.pm_executing = False

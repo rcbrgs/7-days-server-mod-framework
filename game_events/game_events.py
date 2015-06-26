@@ -32,8 +32,8 @@ class game_events ( threading.Thread ):
                                                { 'msg' : "You found some cash on those zombies corpses!" } ) ],
             'player_played_one_hour'     : [ ( self.framework.server.give_karma,
                                                { 'amount' : 1 } ),
-                                             ( self.framework.server.pm,
-                                               { 'msg' : "You gained 1 karma for being 1h online!" } ) ],
+                                             ( self.framework.console.pm,
+                                               { 'message' : "You gained 1 karma for being 1h online!" } ) ],
             'player_position_changed'    : [ ( self.check_position_triggers,
                                                { } ) ],
             }
@@ -88,7 +88,7 @@ class game_events ( threading.Thread ):
         # do not continue if mod just came up:
         if ( time.time ( ) - self.framework.load_time ) < 60:
             return
-        self.framework.console.say ( "If you like this server, vote for it on Steam!" )
+        self.framework.console.say ( "If you like this server, vote for it on http://7daystodie-servers.com/server/14698!" )
     
     def hour_changed ( self, previous_hour ):
         # do not continue if mod just came up:
@@ -103,7 +103,12 @@ class game_events ( threading.Thread ):
             self.log.info ( self.framework.server.get_player_summary ( player ) )
         self.log.info ( self.framework.server.get_game_server_summary ( ) )
 
-    def player_connected ( self, player ):
+    def player_connected ( self, player_connection_match_group ):
+        self.log.info ( "player_connected" )
+        player = self.framework.server.get_player ( player_connection_match_group [ 2 ] )
+        if not player:
+            self.log.info ( "A player new to the mod connected." )
+            return
         for callback in self.registered_callbacks [ 'player_connected' ]:
             function = callback [ 0 ]
             kwargs   = callback [ 1 ]
