@@ -29,7 +29,7 @@ class void_fall_detector ( threading.Thread ):
         self.stop ( )
 
     def greet ( self ):
-        self.framework.server.say ( "%s mod version %s loaded." % ( self.__class__.__name__,
+        self.framework.console.say ( "%s mod version %s loaded." % ( self.__class__.__name__,
                                                                     self.__version__ ) )
 
     def run ( self ):
@@ -67,55 +67,54 @@ class void_fall_detector ( threading.Thread ):
             next_online_players_heights = { }
 
             self.log.debug ( "self.framework.server.get_online_players ( ) = %s" % str ( self.framework.server.get_online_players ( ) ) )
-            for playerid in self.framework.server.get_online_players ( ):
-                self.log.debug ( "playerid = %s" % str ( playerid ) )
-                player = self.framework.server.get_player ( playerid )
-                if player.playerid in online_players_heights.keys ( ):
-                    if len ( online_players_heights [ player.playerid ] [ 'height' ] ) == height_measurements:
-                        online_players_heights [ playerid ] [ 'height' ] = online_players_heights [ playerid ] [ 'height' ] [ 1 : -1 ]
-                        online_players_heights [ playerid ] [ 'x' ] = online_players_heights [ playerid ] [ 'x' ] [ 1 : -1 ]
-                        online_players_heights [ playerid ] [ 'y' ] = online_players_heights [ playerid ] [ 'y' ] [ 1 : -1 ]
+            for player in self.framework.server.get_online_players ( ):
+                self.log.debug ( "player = %s" % str ( player.name_sane ) )
+                if player.steamid in online_players_heights.keys ( ):
+                    if len ( online_players_heights [ player.steamid ] [ 'height' ] ) == height_measurements:
+                        online_players_heights [ player.steamid ] [ 'height' ] = online_players_heights [ player.steamid ] [ 'height' ] [ 1 : -1 ]
+                        online_players_heights [ player.steamid ] [ 'x' ] = online_players_heights [ player.steamid ] [ 'x' ] [ 1 : -1 ]
+                        online_players_heights [ player.steamid ] [ 'y' ] = online_players_heights [ player.steamid ] [ 'y' ] [ 1 : -1 ]
 
-                    online_players_heights [ playerid ] [ 'x' ].append ( round ( player.pos_x ) )
-                    online_players_heights [ playerid ] [ 'y' ].append ( round ( player.pos_y ) )
-                    online_players_heights [ playerid ] [ 'height' ].append ( player.pos_z )
+                    online_players_heights [ player.steamid ] [ 'x' ].append ( round ( player.pos_x ) )
+                    online_players_heights [ player.steamid ] [ 'y' ].append ( round ( player.pos_y ) )
+                    online_players_heights [ player.steamid ] [ 'height' ].append ( player.pos_z )
 
-                    if len ( online_players_heights [ player.playerid ] [ 'height' ] ) == height_measurements:
-                        self.log.debug ( "%s heights = %s." % ( player.name_sane, online_players_heights [ playerid ] [ 'height' ] ) )
-                        if not ( online_players_heights [ player.playerid ] [ 'x' ] [ 0 ] == online_players_heights [ player.playerid ] [ 'x' ] [ 1 ] ):
+                    if len ( online_players_heights [ player.steamid ] [ 'height' ] ) == height_measurements:
+                        self.log.debug ( "%s heights = %s." % ( player.name_sane, online_players_heights [ player.steamid ] [ 'height' ] ) )
+                        if not ( online_players_heights [ player.steamid ] [ 'x' ] [ 0 ] == online_players_heights [ player.steamid ] [ 'x' ] [ 1 ] ):
                             continue
 
-                        if not ( online_players_heights [ player.playerid ] [ 'y' ] [ 0 ] == online_players_heights [ player.playerid ] [ 'y' ] [ 1 ] ):
+                        if not ( online_players_heights [ player.steamid ] [ 'y' ] [ 0 ] == online_players_heights [ player.steamid ] [ 'y' ] [ 1 ] ):
                             continue
-                        self.log.debug ( "%s heights = %s." % ( player.name_sane, online_players_heights [ playerid ] [ 'height' ] ) )
-                        if ( online_players_heights [ player.playerid ] [ 'height' ] [ 0 ] > online_players_heights [ player.playerid ] [ 'height' ] [ 1 ] + speed * custom_wait ):
-                            self.log.info ( "%s heights = %s." % ( player.name_sane, online_players_heights [ playerid ] [ 'height' ] ) )
-                            self.framework.server.say ( "Player %s has been falling the last %d seconds." % ( player.name_sane,
+                        self.log.debug ( "%s heights = %s." % ( player.name_sane, online_players_heights [ player.steamid ] [ 'height' ] ) )
+                        if ( online_players_heights [ player.steamid ] [ 'height' ] [ 0 ] > online_players_heights [ player.steamid ] [ 'height' ] [ 1 ] + speed * custom_wait ):
+                            self.log.info ( "%s heights = %s." % ( player.name_sane, online_players_heights [ player.steamid ] [ 'height' ] ) )
+                            self.framework.console.say ( "Player %s has been falling the last %d seconds." % ( player.name_sane,
                                                                                                               height_measurements * custom_wait ) )
-                            if 'last teleport height' not in online_players_heights [ player.playerid ].keys ( ):
-                                online_players_heights [ player.playerid ] [ 'last teleport height' ] = player.pos_z
-                            destiny_height = max ( ( online_players_heights [ player.playerid ] [ 'last teleport height' ],
-                                                     max ( online_players_heights [ player.playerid ] [ 'height' ] ),
+                            if 'last teleport height' not in online_players_heights [ player.steamid ].keys ( ):
+                                online_players_heights [ player.steamid ] [ 'last teleport height' ] = player.pos_z
+                            destiny_height = max ( ( online_players_heights [ player.steamid ] [ 'last teleport height' ],
+                                                     max ( online_players_heights [ player.steamid ] [ 'height' ] ),
                                                      player.pos_z ) ) + self.framework.preferences.teleport_lag_cushion
-                            online_players_heights [ player.playerid ] [ 'last teleport height' ] = destiny_height
-                            self.framework.server.say ( "Trying to teleport %s to current position at height %.1f." % ( player.name_sane, destiny_height ) )
+                            online_players_heights [ player.steamid ] [ 'last teleport height' ] = destiny_height
+                            self.framework.console.say ( "Trying to teleport %s to current position at height %.1f." % ( player.name_sane, destiny_height ) )
                             self.framework.server.teleport ( player, ( player.pos_x, player.pos_y, destiny_height ) )
                             
                 else:
-                    online_players_heights [ player.playerid ] = { 'x' : [ player.pos_x ],
+                    online_players_heights [ player.steamid ] = { 'x' : [ player.pos_x ],
                                                                    'y' : [ player.pos_y ],
                                                                    'height' : [ player.pos_z ] }
 
             try:
                 new_online_players_heights = { }
-                for playerid in online_players_heights.keys ( ):
-                    player = self.framework.server.get_player ( playerid )
+                for player.steamid in online_players_heights.keys ( ):
+                    player = self.framework.server.get_player ( player.steamid )
                     if player.online:
-                        new_online_players_heights [ player.playerid ] = online_players_heights [ player.playerid ]
+                        new_online_players_heights [ player.steamid ] = online_players_heights [ player.steamid ]
                     else:
                         time.sleep ( self.framework.preferences.loop_wait + 1 )
                         if player.online:
-                            new_online_players_heights [ player.playerid ] = online_players_heights [ player.playerid ]
+                            new_online_players_heights [ player.steamid ] = online_players_heights [ player.steamid ]
                 online_players_heights = new_online_players_heights
             except RuntimeError as e:
                 self.log.error ( "Handling %s." % str ( e ) )

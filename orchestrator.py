@@ -29,11 +29,13 @@ class orchestrator ( threading.Thread ):
             '0.2.0' : "Changed self.mods to be a dict, and output changelog during updates." }
         self.load_time = time.time ( )
 
-    def config ( self, preferences_file_name ):
         self.db_lock = None
         self.ent_lock = None
         self.items_lock = None
+        self.llp_lock = None
+        self.verbose = False
         
+    def config ( self, preferences_file_name ):
         self.silence = False
         self.shutdown = False
         self.preferences = framework.preferences ( preferences_file_name )
@@ -99,17 +101,20 @@ class orchestrator ( threading.Thread ):
                 old_version = 'unknown'
             new_version = self.framework_state [ component ] [ 'version' ]
             if old_version != new_version:
-                self.server.say ( "Mod %s updated to %s: %s" %
-                                  ( str ( component ), str ( new_version ),
-                                    str ( self.framework_state [ component ] [ 'changelog' ] ) ) )
+                self.console.say ( "Mod %s updated to %s: %s" %
+                                   ( str ( component ), str ( new_version ),
+                                     str ( self.framework_state [ component ] [ 'changelog' ] ) ) )
             
     def get_db_lock ( self ):
         callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        begin = time.time ( )
         while self.db_lock:
             self.log.info ( "{}.{} wants player db lock from {}.".format (
                 callee_class, callee, self.db_lock ) )
-            time.sleep ( 0.5 )
+            time.sleep ( 0.6 )
+            if time.time ( ) - begin > 60:
+                break
         self.db_lock = callee_class + "." + callee
         self.log.debug ( "{:s} get player db lock.".format ( callee ) )
 
@@ -119,9 +124,22 @@ class orchestrator ( threading.Thread ):
         while self.ent_lock:
             self.log.info ( "{}.{} wants entities db lock from {}.".format (
                 callee_class, callee, self.ent_lock ) )
-            time.sleep ( 0.5 )
+            time.sleep ( 0.6 )
         self.ent_lock = callee_class + "." + callee
         self.log.debug ( "{:s} get entities db lock.".format ( callee ) )
+
+    def get_llp_lock ( self ):
+        callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
+        callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        begin = time.time ( )
+        while self.ent_lock:
+            self.log.info ( "{}.{} wants llp lock from {}.".format (
+                callee_class, callee, self.llp_lock ) )
+            time.sleep ( 0.6 )
+            if time.time ( ) - begin > 60:
+                break
+        self.llp_lock = callee_class + "." + callee
+        self.log.debug ( "{:s} get llp lock.".format ( callee ) )
 
     def let_db_lock ( self ):
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
@@ -132,6 +150,11 @@ class orchestrator ( threading.Thread ):
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         self.ent_lock = None
         self.log.debug ( "{:s} let entities db lock.".format ( callee ) )
+
+    def let_llp_lock ( self ):
+        callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        self.llp_lock = None
+        self.log.debug ( "{:s} let llp lock.".format ( callee ) )
 
     def load_mod ( self, module_name ):
         full_module_name = module_name + "." + module_name
@@ -162,7 +185,7 @@ class orchestrator ( threading.Thread ):
     def run ( self ):            
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
-        #self.server.say ( "Mods up." )
+        #self.console.say ( "Mods up." )
         self.server.offline_players ( )
         count = 1
 
@@ -187,20 +210,18 @@ class orchestrator ( threading.Thread ):
                         mod_instance.start ( )
                         new_version = mod_instance.__version__
                         if old_version != new_version:
-                            self.server.say ( "Mod %s updated to v%s. Changelog: %s" %
+                            self.console.say ( "Mod %s updated to v%s. Changelog: %s" %
                                               ( mod_key, old_version, new_version,
                                                 mod_instance.changelog [ new_version ] ) )
 
+                if count % 100 == 0:
+                    self.server.offline_players ( )
+                            
                 self.log.debug ( "Before gt" )
-                self.console.send ( "gt" )
+                self.console.gt ( )
                 self.log.debug ( "After gt" )
                 
-                #if count % 100 == 0:
-                #    self.server.offline_players ( )
-
                 if ( time.time ( ) - self.server.latest_id_parse_call ) > self.preferences.loop_wait:
-                    self.log.debug ( "Too long since last update, doing lp." )
-                    #self.console.send ( "lp" )
                     self.server.entities = { }
                     self.console.send ( "le" )
 
@@ -210,7 +231,8 @@ class orchestrator ( threading.Thread ):
                 count += 1
         except Exception as e:
             self.log.critical ( "Shutting down mod framework due to unhandled exception: %s." % str ( e ) )
-            self.log.critical ( traceback.print_tb ( sys.last_traceback ) )
+            exception_info = sys.exc_info ( )
+            self.log.critical ( traceback.print_tb ( exception_info [ 2 ] ) )
             self.shutdown = True
 
         for mod_key in self.mods.keys ( ):
@@ -231,7 +253,7 @@ class orchestrator ( threading.Thread ):
 
     def stop ( self ):
         self.log.info ( "<framework>.stop" )
-        #self.server.say ( "Mods down." )
+        #self.console.say ( "Mods down." )
         pickle_file = open ( self.preferences.framework_state_file, 'wb' )
         pickle.dump ( self.framework_state, pickle_file, pickle.HIGHEST_PROTOCOL )
 

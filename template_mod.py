@@ -30,7 +30,7 @@ class template ( threading.Thread ):
         self.stop ( )
 
     def greet ( self ):
-        self.framework.server.say ( "%s mod version %s loaded." % ( self.__class__.__name__,
+        self.framework.console.say ( "%s mod version %s loaded." % ( self.__class__.__name__,
                                                                     self.__version__ ) )
 
     def run ( self ):

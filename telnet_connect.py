@@ -11,7 +11,7 @@ class telnet_connect ( threading.Thread ):
         self.log = framework.log
         self.__version__ = '0.1.7'
         self.changelog = {
-            '0.1.8' : "Ignoring header info.",
+            '0.1.8' : "Ignoring header info. Added gt parsing.",
             '0.1.7' : "Ignoring some output. Parser for chunk save info and for falling blocks.",
             '0.1.6' : "Added partial parse of le. Reverted to non-healing code.",
             '0.1.5' : "Refactored telnet parsing using re.",
@@ -19,6 +19,9 @@ class telnet_connect ( threading.Thread ):
             '0.1.3' : "Catching exception during unicode decode.",
             '0.1.2' : "Added changelog." }
 
+        self.lag = None
+        self.lag_max = { 'lag' : 0,
+                         'timestamp' : 0 }
         self.matchers = { }
         self.shutdown = False
         self.connected = False
@@ -62,7 +65,11 @@ class telnet_connect ( threading.Thread ):
             
                 self.open_connection ( )
                 return
-        linetest = self.telnet.read_until ( b'Logon successful.' )
+        try:
+            linetest = self.telnet.read_until ( b'Logon successful.' )
+        except Exception as e:
+            self.log.error ( "linetest = telnet.read_until exception: {}.".format ( e ) )
+            
         if b'Logon successful.' in linetest:
             self.log.debug ( linetest.decode('ascii') )
             self.connected = True
@@ -104,10 +111,28 @@ class telnet_connect ( threading.Thread ):
             telnet_output_matches = {
                 'chunks saved' : { 'to_match' : r'.* INF Saving (.*) of chunks took (.*)ms',
                                    'to_call' : [ ] },
+                'claim finished' : { 'to_match' : r'Total of [\d]+ keystones in the game',
+                                     'to_call'  : [ self.framework.server.llp_finished ] },
+                'claim player' : { 'to_match' : r'Player "(.*) \(([\d]+)\)" owns [\d]+ keystones \(protected: [\w]+, current hardness multiplier: [\d]+\)',
+                                   'to_call'  : [ self.framework.server.llp_claim_player ] },
+                'claim stone' : { 'to_match' : r'\(([-+]*[\d]*), ([-+]*[\d]*), ([-+]*[\d]*)\)',
+                                  'to_call'  : [ self.framework.server.llp_claim_stone ] },
+                'date match' : { 'to_match' : date_match_string,
+                                 'to_call'  : [ self.telnet_output_date_wrapper ] },
+                'day match' : { 'to_match' : r'Day ([0-9]+), ([0-9]{2}):([0-9]{2})',
+                                'to_call'  : [ self.framework.server.update_gt ] },
+                'deny match' : { 'to_match' : r'(.*) INF Player (.*) denied: (.*) has been banned until (.*)',
+                                 'to_call'  : [ self.framework.game_events.player_denied ] },
+                'gt command executed' : { 'to_match' : date_match_string + r' INF Executing command \'gt\' by Telnet from ' + ip_match_string + ':([\d]+)',
+                                          'to_call'  : [ self.framework.console.wrapper_gt ] },
                 'lp command executed' : { 'to_match' : date_match_string + r' INF Executing command \'lp\' by Telnet from ' + ip_match_string + ':([\d]+)',
                                           'to_call'  : [ self.framework.console.wrapper_lp ] },
+                'lp command finished' : { 'to_match' : r'Total of ([\d]+) in the game',
+                                          'to_call'  : [ self.framework.console.lp_finished ] },
                 'player connection' : { 'to_match' : date_match_string + r' INF Player connected, entityid=(.*), name=(.*), steamid=(.*), ip=(.*)',
                                         'to_call' : [ self.framework.game_events.player_connected ] },
+                'player disconnection' : { 'to_match' : date_match_string + r' INF Player disconnected: EntityID=(.*), PlayerID=\'[0-9]+\', OwnerID=\'[0-9]+\', PlayerName=\'(.*)\'',
+                                        'to_call' : [ self.framework.game_events.player_disconnected ] },
                 'pm command executed' : { 'to_match' : '.* INF Executing command \'pm .* by Telnet from (.*):.*',
                                           'to_call' : [ self.framework.console.wrapper_pm ] },
                 }
@@ -126,31 +151,6 @@ class telnet_connect ( threading.Thread ):
                         self.log.debug ( "{} calls {}.".format ( key, caller ) )
                         caller ( match.groups ( ) )
                         self.log.debug ( "{} called {} and finished.".format ( key, caller ) )
-            
-            # Day 1424, 08:52
-            day_matcher = re.compile ( r'Day [0-9]+, [0-9]{2}:[0-9]{2}' )
-            day_match = day_matcher.match ( line_string )
-            if day_match:
-                self.log.debug ( "day output: {:s}".format ( line_string ) )
-                self.framework.server.update_gt ( line_string )
-                continue
-
-            # 2015-06-25T09:26:33 1046.729 INF Player disconnected: EntityID=-1, PlayerID='76561198201780147', OwnerID='76561198201780147', PlayerName='ak5843171
-            dconn_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ INF Player disconnected: EntityID=.[0-9]*, PlayerID=\'[0-9]+\', OwnerID=\'[0-9]+\', PlayerName=\'(.*)\'' )
-            dconn_match = dconn_matcher.search ( line_string )
-            if dconn_match:
-                self.log.debug ( "dconn_match {:s}".format ( line_string ) )
-                player_name = dconn_match.group ( 1 )
-                player = self.framework.server.get_player ( player_name )
-                if player:
-                    self.framework.game_events.player_disconnected ( player )
-                continue
-
-            deny_matcher = re.compile ( r'.* INF Player (.*) denied: .* has been banned until .*' )
-            deny_match = deny_matcher.search ( line_string )
-            if deny_match:
-                self.log.info ( "deny_match: {}".format ( deny_match.groups ( ) ) )
-                continue
 
             #2015-06-25T10:36:35 5247.946 INF Executing command 'pm 1580623 "[FF0000]st.devil666[FFFFFF] is near ([FF0000]77m[FFFFFF]) your base!"' by Telnet from 143.107.45.13:48590
             pm_matcher = re.compile ( r'[0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]+\.[0-9]+ INF Executing command \'pm (.+) "(.*)"\' by Telnet from [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+' )
@@ -210,11 +210,6 @@ class telnet_connect ( threading.Thread ):
             if sent_match:
                 continue
             
-            total_matcher = re.compile ( r'Total of [\d]+ in the game' )
-            total_match = total_matcher.match ( line_string )
-            if total_match:
-                continue
-
             # Strings to ignore:            
             if ( " INF [EAC] UserStatusHandler callback. Status: Authenticated GUID: " in line_string  or
                  " INF [EAC] FreeUser (" in line_string or
@@ -286,7 +281,7 @@ class telnet_connect ( threading.Thread ):
             if line_string.strip ( ) == "":
                 continue
             
-            self.log.warning ( "Unparsed output: '{:s}'.".format ( line_string.strip ( ) ) )
+            self.log.debug ( "Unparsed output: '{:s}'.".format ( line_string.strip ( ) ) )
 
         self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
@@ -296,6 +291,38 @@ class telnet_connect ( threading.Thread ):
         self.shutdown = True
 
         self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )
+
+    def telnet_output_date_wrapper ( self, date_matcher_groups ):
+        self.log.debug ( date_matcher_groups )
+        year = date_matcher_groups [ 0 ]
+        month = date_matcher_groups [ 1 ]
+        day = date_matcher_groups [ 2 ]
+        hour = date_matcher_groups [ 3 ]
+        minute = date_matcher_groups [ 4 ]
+        second = date_matcher_groups [ 5 ]
+        server_time = time.strptime ( "{} {} {} {} {} {}".format (
+            year, month, day, hour, minute, second ),
+                                      "%Y %m %d %H %M %S" )
+        now = time.time ( )
+        lag = time.mktime ( server_time ) - now
+        if self.lag is None:
+            self.lag = lag
+        lag_increase = self.lag - lag
+        self.lag = lag
+        if abs ( lag_increase ) > 0.1:
+            self.log.debug ( "lag_change = {:.1f}".format ( lag_increase ) )
+
+        old_max = self.lag_max [ 'lag' ]
+        if now - self.lag_max [ 'timestamp' ] > 60:
+            self.lag_max [ 'lag' ] /= 2
+            self.lag_max [ 'timestamp' ] = now
+            
+        if self.lag_max [ 'lag' ] < lag_increase:
+            self.lag_max [ 'lag' ] = lag_increase
+            self.lag_max [ 'timestamp' ] = now
+
+        if self.lag_max [ 'lag' ] != old_max:
+            self.log.info ( "Max 60-second lag: {:.1f}s".format ( self.lag_max [ 'lag' ] ) )
         
     def write ( self, msg ):
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
