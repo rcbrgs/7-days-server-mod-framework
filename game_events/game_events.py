@@ -88,7 +88,11 @@ class game_events ( threading.Thread ):
         # do not continue if mod just came up:
         if ( time.time ( ) - self.framework.load_time ) < 60:
             return
-        self.framework.console.say ( "If you like this server, vote for it on http://7daystodie-servers.com/server/14698!" )
+        # Which position are we? Save it to pos.txt
+        position_file = open ( "pos.txt", "r" )
+        position = int (position_file.readline ().strip() )
+        self.log.info ( "Rank = {}".format ( position ) )
+        self.framework.console.say ( "If you like this server, vote for it on http://7daystodie-servers.com/server/14698. We are currently # {}!".format ( position ) )
     
     def hour_changed ( self, previous_hour ):
         # do not continue if mod just came up:
@@ -103,6 +107,17 @@ class game_events ( threading.Thread ):
             self.log.info ( self.framework.server.get_player_summary ( player ) )
         self.log.info ( self.framework.server.get_game_server_summary ( ) )
 
+    def player_changed_name ( self, player ):
+        self.log.info ( "Player {} changed name from {}.".format ( player.name_sane,
+                                                                   player.attributes [ 'old names' ] ) )
+        old_names = ""
+        for name in player.attributes [ 'old names' ]:
+            if old_names == "":
+                old_names += name
+            else:
+                old_names += ", or " + name
+        self.framework.console.say ( "[AAAAAA]ATTENTION[FFFFFF] everyone!!!! {} does not want to be called {}, anymore!".format ( player.name_sane, old_names ) )
+        
     def player_connected ( self, player_connection_match_group ):
         self.log.info ( "player_connected" )
         player = self.framework.server.get_player ( player_connection_match_group [ 9 ] )
@@ -118,6 +133,12 @@ class game_events ( threading.Thread ):
         self.framework.console.pm ( player, "Welcome back {}!".format ( player.name_sane ) )
         self.log.info ( "{} connected.".format ( player.name_sane ) )
 
+    def player_died ( self, matches ):
+        player = self.framework.server.get_player ( matches [ 7 ] )
+        if player:
+            self.log.info ( "{} died!".format ( player.name_sane ) )
+            self.framework.console.say ( "{} brainzzzzzzz good but few".format ( player.name_sane ) )
+        
     def player_denied ( self, player_denied_match_group ):
         quoted_player_name = player_denied_match_group [ 1 ]
         sane_player_name = self.framework.server.sanitize ( quoted_player_name [ 1 : -1 ] )
@@ -142,6 +163,11 @@ class game_events ( threading.Thread ):
             return
         player.online = False
         self.log.info ( "{:s} disconnected.".format ( player.name_sane ) )
+
+    def player_kill ( self, matches ):
+        murderer = self.framework.server.get_player ( matches [ 7 ] )
+        victim   = self.framework.server.get_player ( matches [ 8 ] )
+        self.log.info ( "{} killed {}!".format ( murderer.name_sane, victim.name_sane ) )
         
     def player_killed_100_zombies ( self, player ):
         if not isinstance ( player, framework.player_info.player_info_v5 ):
@@ -155,6 +181,12 @@ class game_events ( threading.Thread ):
             function ( **kwargs )
 
         self.framework.console.say ( "{} gained cash for killing zombies!".format ( player.name_sane ) )
+
+    def player_left ( self, matches ):
+        player = self.framework.server.get_player ( matches [ 0 ] )
+        if player:
+            player.online = False
+            self.log.info ( "{} left the game.".format ( player.name ) )
         
     def player_played_one_hour ( self, player ):
         for callback in self.registered_callbacks [ 'player_played_one_hour' ]:
@@ -164,7 +196,7 @@ class game_events ( threading.Thread ):
             function ( **kwargs )
 
         self.framework.server.give_karma ( player, 1 )
-        self.framework.console.say ( "{} gained 1 karma for being online 1h!".format ( player.name_sane ) )
+        self.framework.console.pm ( player, "You gained 1 karma for being online 1h!" )
         
     def player_position_changed ( self, player ):
         for callback in self.registered_callbacks [ 'player_position_changed' ]:

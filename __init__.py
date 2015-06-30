@@ -1,11 +1,14 @@
-from .console          import console
+from .console          import ( console, queued_console )
 from .entity_info      import entity_info
 from .game_events      import game_events
 from .orchestrator     import orchestrator
+from .parser           import ( parser )
 from .player_info      import player_info
 from .preferences      import preferences
 from .server           import server
+from .telnet_client.telnet_client    import telnet_client
 from .telnet_connect   import telnet_connect
+from .telnet_listener  import telnet_listener
 from .utils            import utils
 from .void_fall_detector import void_fall_detector
 

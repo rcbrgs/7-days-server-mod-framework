@@ -12,6 +12,25 @@ class preferences ( object ):
         
         
         self.mods = { }
+        if not preferences_file_name:
+            pass
+            self.chat_log_file = ""
+            self.log_file = ""
+            self.forbidden_countries = ""
+            self.framework_state_file = ""
+            self.geoip_file = ""
+            self.home_radius = 50
+            self.log_file = ""
+            self.loop_wait = 2
+            self.mod_ip = ""
+            self.mods = { }
+            self.player_info_file = ""
+            self.teleport_lag_cushion = 3
+            self.telnet_ip = ""
+            self.telnet_password = ""
+            self.telnet_port = 8081
+            return
+            
         self.preferences_file = open ( preferences_file_name )
         
         for line in self.preferences_file:

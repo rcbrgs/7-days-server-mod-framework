@@ -8,8 +8,9 @@ class console ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = "0.2.0"
+        self.__version__ = "0.3.0"
         self.changelog = {
+            '0.3.0' : "Added specialized le.",
             '0.2.0' : "Added spealized pm, lp, gt and se.",
             '0.1.0' : "Initial version." }
         
@@ -19,6 +20,7 @@ class console ( threading.Thread ):
 
         self.pm_executing = False
         self.timestamp_gt = 0
+        self.timestamp_le = 0
         self.timestamp_lp = 0
         self.timestamp_pm = 0
 
@@ -37,12 +39,31 @@ class console ( threading.Thread ):
         self.shutdown = True
 
     def gt ( self ):
+        self.log.warning ( "DEPRECATED call to gt." )
+        self.framework.queued_console.gt ( )
+        return
         if ( time.time ( ) - self.timestamp_gt ) < self.framework.preferences.loop_wait:
             self.log.debug ( "gt timestamp too recent. Ignoring call for gt." )
             return
             
         self.timestamp_gt = time.time ( )
         self.send ( "gt" )        
+
+    def le ( self ):
+        if ( time.time ( ) - self.timestamp_le ) < self.framework.preferences.loop_wait:
+            self.log.debug ( "le timestamp less than loop_wait recent. Ignoring call for le." )
+            return
+
+        if ( time.time ( ) - self.timestamp_le ) < self.framework.server.telnet_connection.lag_max [ 'lag' ]:
+            self.log.debug ( "le timestamp less older than 60-sec max lag. Ignoring call for le." )
+            return
+        
+        if self.framework.server.clear_online_property:
+            self.framework.server.entities = { }
+        
+        self.timestamp_le = time.time ( )
+        self.send ( "le" )
+
 
     def lp ( self ):
         if ( time.time ( ) - self.timestamp_lp ) < self.framework.preferences.loop_wait:
@@ -55,7 +76,6 @@ class console ( threading.Thread ):
         
         if self.framework.server.clear_online_property:
             self.framework.server.offline_players ( )
-
         
         self.timestamp_lp = time.time ( )
         self.send ( "lp" )
@@ -120,7 +140,7 @@ class console ( threading.Thread ):
                         
             
     def send ( self, message ):
-        self.log.debug ( message )
+        self.log.debug ( "telnet send: {}".format ( message ) )
             
         if isinstance ( message, str ):
             inputmsg = message + "\n"

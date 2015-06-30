@@ -5,38 +5,28 @@ import telnetlib
 import time
 import threading
 
-class telnet_connect ( threading.Thread ):
+class telnet_listener ( threading.Thread ):
     def __init__ ( self, framework ):
-        super ( telnet_connect, self ).__init__ ( )
+        super ( self.__class__, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = '0.1.8'
+        self.__version__ = '0.1.0'
         self.changelog = {
-            '0.1.9' : "Added measure of runtime delay.",
-            '0.1.8' : "Ignoring header info. Added gt parsing. Made lag estimation more dynamic.",
-            '0.1.7' : "Ignoring some output. Parser for chunk save info and for falling blocks.",
-            '0.1.6' : "Added partial parse of le. Reverted to non-healing code.",
-            '0.1.5' : "Refactored telnet parsing using re.",
-            '0.1.4' : "Added catching memory information output from server.",
-            '0.1.3' : "Catching exception during unicode decode.",
-            '0.1.2' : "Added changelog." }
+            '0.1.0' : "Initial version." }
 
+        self.connected = False
+        self.daemon = True
+        self.framework = framework
         self.lag = None
         self.lag_max = { 'lag' : 0,
                          'timestamp' : 0 }
         self.matchers = { }
         self.shutdown = False
-        self.connected = False
-        self.framework = framework
-                
-        self.telnet_ip = self.framework.preferences.telnet_ip
+        self.telnet_ip       = self.framework.preferences.telnet_ip
         self.telnet_password = self.framework.preferences.telnet_password
-        self.telnet_port = self.framework.preferences.telnet_port
-       
+        self.telnet_port     = self.framework.preferences.telnet_port
         self.telnet = telnetlib.Telnet ( timeout = 10 )
         
         self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )
-
-        self.daemon = True
 
     def __del__ ( self ):
         self.stop ( )
@@ -54,7 +44,6 @@ class telnet_connect ( threading.Thread ):
         
         try:
             self.telnet.open ( self.telnet_ip, self.telnet_port, timeout = 5 )
-            self.log.info ( "Entering password." )
             self.telnet.read_until ( b"Please enter password:" )
             passwd = self.telnet_password + '\n'
             self.telnet.write ( passwd.encode ( 'utf-8' ) )
@@ -68,7 +57,6 @@ class telnet_connect ( threading.Thread ):
                 self.open_connection ( )
                 return
         try:
-            self.log.info ( "Waiting logon success confirmation." )
             linetest = self.telnet.read_until ( b'Logon successful.' )
         except Exception as e:
             self.log.error ( "linetest = telnet.read_until exception: {}.".format ( e ) )
@@ -77,7 +65,7 @@ class telnet_connect ( threading.Thread ):
             self.log.debug ( linetest.decode('ascii') )
             self.connected = True
             self.log.info ( "Telnet connected successfully." )
-            self.write ( "loglevel ALL false\n".encode ( 'utf-8') )
+            self.write ( "loglevel ALL true\n".encode ( 'utf-8') )
         else:
             self.log.error ("Logon failed.")
 
@@ -87,7 +75,7 @@ class telnet_connect ( threading.Thread ):
         
         while ( self.shutdown == False ):
             begin = time.time ( )
-            self.log.debug ( "telnet while begin" )
+            self.log.debug ( "telnet listener while begin" )
             if ( not self.connected ):
                 continue
             try:
@@ -98,12 +86,15 @@ class telnet_connect ( threading.Thread ):
                 self.open_connection ( )
                 continue
             try:
+                while ( line [ -1 ] == '\r' or
+                        line [ -1 ] == '\n' ):
+                    line = line [ : -1 ]
                 line_string = line.decode ( 'utf-8' )
                 line_string = line_string.strip ( )
 
             except Exception as e:
-                self.log.error ( "Error %s while processing line.decode ( %s )." %
-                                 ( e, line ) )
+                self.log.error ( "Error %s while processing line.decode (%s)" %
+                                 ( e, line [:-1] ) )
                 
             self.log.debug ( line_string )
 
@@ -215,7 +206,7 @@ class telnet_connect ( threading.Thread ):
             middle = time.time ( )
             idle = middle - begin
             if idle > 0.1:
-                self.log.debug ( "telnet while runtime = {:.2f}".format ( middle - begin ) )
+                self.log.info ( "telnet while runtime = {:.2f}".format ( middle - begin ) )
             
             # Strings to ignore:            
             if ( " INF [EAC] UserStatusHandler callback. Status: Authenticated GUID: " in line_string  or

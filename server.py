@@ -24,9 +24,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.7'
+        self.__version__ = '0.4.8'
         self.changelog = {
-            '0.4.8'  : "Fixed scouts.",
+            '0.4.8'  : "give_player_stuff now using steamid instead of player names. Converting steamid to string.",
             '0.4.7'  : "+db_clean. Preteleport now prevents immediate reteleport to same location.",
             '0.4.6'  : "Refactor give_stuff. Reindexed players by steamid.",
             '0.4.5'  : "+get_game_server_summary. Detection of burntzombies, zombieferals.",
@@ -112,7 +112,6 @@ class server ( threading.Thread ):
 
         self.preferences = self.framework.preferences
         self.chat_log_file = self.preferences.chat_log_file
-        self.telnet_connection = self.framework.telnet
         self.player_info_file = self.preferences.player_info_file
         self.geoip = pygeoip.GeoIP ( self.preferences.geoip_file, pygeoip.MEMORY_CACHE )
         
@@ -287,7 +286,13 @@ class server ( threading.Thread ):
             self.framework.let_llp_lock ( )
             self.claimstones_timestamp = time.time ( )
         return self.claimstones
-        
+
+    def get_game_info_lock ( self ):
+        pass
+    
+    def let_game_info_lock ( self ):
+        pass
+    
     def get_game_server_summary ( self ):
         mi = self.game_server.mem [ 0 ]
         if 'time' not in mi.keys ( ):
@@ -451,7 +456,7 @@ class server ( threading.Thread ):
         return None
 
     def get_player_summary ( self, player ):
-        player_line = "{: 2.1f} {:<10s} {:<10d} {:<6.1f} {:>2d}/{:<2d} {:<3d} {:<6d} {:<4d}" .format (
+        player_line = "{: <2.1f} {:<10s} {:<10d} {: <4.1f} {:>2d}/{:<2d} {:<3d} {:<6d} {:<4d}" .format (
             time.time ( ) - player.timestamp_latest_update,
             str ( player.name_sane [ : 9 ] ),
             player.steamid,
@@ -497,7 +502,7 @@ class server ( threading.Thread ):
             self.log.error ( e )
     
     def give_player_stuff ( self, player, stuff, quantity ):
-        msg = 'give ' + player.name_sane + ' ' + stuff + ' ' + str ( quantity )
+        msg = 'give ' + str ( player.steamid ) + ' ' + stuff + ' ' + str ( quantity )
         self.log.info ( msg )
         self.console ( msg )
 
@@ -532,21 +537,16 @@ class server ( threading.Thread ):
                                                                            float ( matcher [ 2 ] ),
                                                                            float ( matcher [ 1 ] ) ) ]
         else:
-            self.log.info ( "No player attached to this claimstone." )
+            self.log.debug ( "No player attached to this claimstone." )
         
     def llp_finished ( self, matcher ):
         self.llp_total_recently_set = True
         
     def llp_wrapper ( self ):
         self.framework.get_llp_lock ( )
-        
+        now = time.time ( )
         self.llp_total_recently_set = False
         self.framework.console.send ( "llp" )
-        while not self.llp_total_recently_set:
-            self.log.info ( "Waiting for server to return claimblock list." )
-            time.sleep ( max ( self.telnet_connection.lag_max [ 'lag' ],
-                               self.framework.preferences.loop_wait ) )
-            
         self.framework.let_llp_lock ( )
         
     def list_players ( self ):
@@ -575,9 +575,9 @@ class server ( threading.Thread ):
         return result
             
     def list_online_players ( self ):
-        print ( "%-4s | %-10s | %-10s | %-6s | %-5s | %-3s | %-6s | uzed | zeds" %
-                ( "stal", "name_sane", "steamid", "time", "pks", "kar", "cash" ) )
-        print ( "-----+------------+------------+--------+-------+-----+--------+------+------" )
+        print ( "----+----------+-----------------+-----+----+-----+--------+------+------" )
+        while self.framework.lp_info [ 'executing' ] [ 'condition' ]:
+            time.sleep ( 0.1 )
         for player in self.get_online_players ( ):
             print ( self.get_player_summary ( player ) )
 
@@ -627,44 +627,55 @@ class server ( threading.Thread ):
         self.framework.console.say ( "- Replant what you harvest." )
         self.framework.console.say ( "- Take what you need, and repay with work around the base." )
         
-    def parse_gmsg ( self,
-                     msg = None ):
-        decoded_msg = msg.decode ( 'utf-8' )
-        msg_prefixless = decoded_msg.split ( " INF GMSG: " ) [ 1 ]
-        msg_splitted = msg_prefixless.split ( ": " )
-        if len ( msg_splitted ) > 1:
+    def parse_gmsg ( self, match ):
+        self.log.debug ( match )
+        msg = match [ 7 ]
+        msg_splitted = msg.split ( ":" )
+
+        if len ( msg_splitted ) == 2:
             msg_origin = msg_splitted [ 0 ]
-            if len ( msg_splitted ) > 2:
-                msg_content = ""
-                for item in range ( 1, len ( msg_splitted ) - 1 ):
-                    msg_content += msg_splitted [ item ] + ": "
-                msg_content += msg_splitted [ -1 ] [ : -1 ]
-            else:
-                msg_content = msg_splitted [ 1 ] [ : -1 ]
-            self.log.info ( "CHAT %s: %s" % ( msg_origin, msg_content ) )
-            if len ( msg_content ) > 2:
-                if msg_content [ 0 : 1 ] == "/":
-                    # chat message started with "/"
-                    # so it is possibly a command.
-                    for key in self.commands.keys ( ):
+            msg_content = msg_splitted [ 1 ] [ 1 : ]
+        else:
+            msg_origin = None
+            if msg_splitted [ 0 ] == "Server":
+                msg_origin = "Server"
+                msg_content = msg [ 8 : ]
+            for steamid in self.players_info.keys ( ):
+                player = self.players_info [ steamid ]
+                if player.name == msg [ : len ( player.name ) ]:
+                    msg_origin = player.name
+                    msg_content = msg [ len ( player.name ) + 2 : ]
+                
+            if not msg_origin:
+                self.log.error ( "Possible injection attempt, ignoring gmsg '{}'.".format ( msg ) )
+                return
+
+        self.log.info ( "CHAT %s: %s" % ( msg_origin, msg_content ) )
+        if len ( msg_content ) > 2:
+            if msg_content [ 0 : 1 ] == "/":
+                # chat message started with "/"
+                # so it is possibly a command.
+                self.log.debug ( "Possible command: '{}'.".format ( msg_content ) )
+                for key in self.commands.keys ( ):
+                    if msg_content [ 1 : len ( key ) + 1 ] == key:
+                        self.commands [ key ] [ 0 ] ( msg_origin, msg_content )
+                        return
+                for mod_key in self.framework.mods:
+                    mod = self.framework.mods [ mod_key ] [ 'reference' ]
+                    for key in mod.commands.keys ( ):
                         if msg_content [ 1 : len ( key ) + 1 ] == key:
-                            self.commands [ key ] [ 0 ] ( msg_origin, msg_content )
+                            mod.commands [ key ] [ 0 ] ( msg_origin, msg_content )
                             return
-                    for mod_key in self.framework.mods:
-                        mod = self.framework.mods [ mod_key ] [ 'reference' ]
-                        for key in mod.commands.keys ( ):
-                            if msg_content [ 1 : len ( key ) + 1 ] == key:
-                                mod.commands [ key ] [ 0 ] ( msg_origin, msg_content )
-                                return
-                    for external_command in self.external_commands:
-                        if msg_content [ 1 : -1 ] == external_command:
-                            return
-                    self.framework.console.say ( "Syntax error: %s." % msg_content [ 1 : -1 ] )
+                for external_command in self.external_commands:
+                    if msg_content [ 1 : -1 ] == external_command:
+                        return
+                self.framework.console.say ( "Syntax error: %s." % msg_content [ 1 : ] )
+            else:
+                if 'translator'  in self.framework.mods.keys ( ):
+                    self.framework.mods [ 'translator' ] [ 'reference' ].translate (
+                    msg_origin, msg_content [ : ] )
                 else:
-                    for mod_key in self.framework.mods.keys ( ):
-                        mod = self.framework.mods [ mod_key ] [ 'reference' ]
-                        if mod.__class__.__name__ == "translator":
-                            mod.translate ( msg_origin, msg_content [ : -1 ] )
+                    self.log.info ( "translate not working" )
 
     def player_info_update ( self,
                              level,
@@ -712,7 +723,7 @@ class server ( threading.Thread ):
             old_timestamp = player.timestamp_latest_update
             old_online_time = player.online_time
             old_zombies = player.zombies
-            
+
             if isinstance ( old_timestamp, float ):
                 added_time = 0
                 time_difference = now - old_timestamp
@@ -742,6 +753,14 @@ class server ( threading.Thread ):
             player.ip = ip
             player.level = level
             player.name = name
+            if player.name != old_name:
+                events.append ( self.framework.game_events.player_changed_name )
+                if not player.attributes:
+                    player.attributes = { }
+                    if 'old names' not in player.attributes.keys ( ):
+                        player.attributes [ 'old names' ] = [ ]
+                    player.attributes [ 'old names' ].append ( old_name )
+                
             player.name_sane = self.sanitize ( name )
             player.online = online
             player.pos_x = pos_x
@@ -883,6 +902,12 @@ class server ( threading.Thread ):
     def show_inventory ( self, player ):
         msg = "showinventory " + str ( player )
         self.console ( msg )
+
+    def set_steamid_online ( self, steamid ):
+        if steamid in self.players_info.keys ( ):
+            player = self.players_info [ steamid ]
+            player.online = True
+            self.log.info ( "Player {} set as online.".format ( player.name ) )
         
     def sos ( self, msg_origin, msg_contents ):
         origin = self.get_player ( msg_origin )
@@ -1042,56 +1067,11 @@ class server ( threading.Thread ):
             pickle.dump ( self.players_info, backup_file, pickle.HIGHEST_PROTOCOL )
 
     def update_le ( self, matches ):
+        self.log.debug ( matches )
         le_id = int ( matches [ 0 ] )
-        raw_type = matches [ 1 ]
-        
-        known_types = [
-            'animalPig',
-            'animalRabbit',
-            'animalStag',
-            'burntzombie',
-            'car_Blue',
-            'car_Orange',
-            'car_Red',
-            'car_White',
-            'EntityPlayer',
-            'EntitySupplyPlane',
-            'fatzombie',
-            'hornet',
-            'sc_General',
-            'snowzombie01',
-            'snowzombie02',
-            'snowzombie03',
-            'spiderzombie',
-            'zombie04',
-            'zombie05',
-            'zombie06',
-            'zombie07',
-            'zombiecrawler',
-            'zombiedog',
-            'zombieferal',
-            'zombiegal01',
-            'zombiegal02',
-            'zombiegal03',
-            'zombiegal04',
-            ]
-        le_type = None
-        for known in known_types:
-            if known in raw_type:
-                le_type = known
-                break
-        if not le_type:
-            self.log.warning ( "Unknown entity found: {}." . format ( matches [ 1 ] ) )
-            le_type = matches [ 1 ]
-
-        if ( le_type == "EntityPlayer" or
-             le_type == 'EntitySupplyPlane' or
-             le_type == "car_Blue" or
-             le_type == "car_Orange" or
-             le_type == "car_Red" or             
-             le_type == "car_White" ):
+        le_type = matches [ 1 ]
+        if le_type not in self.entity_db.keys ( ):
             return
-            
         pos_x  = float ( matches [ 2 ] )
         pos_y  = float ( matches [ 4 ] )
         pos_z  = float ( matches [ 3 ] )
@@ -1124,54 +1104,21 @@ class server ( threading.Thread ):
         
         self.framework.server.entities [ le_id ] = entity
         self.framework.let_ent_lock ( ) 
-        
-    def update_mem ( self, line_string ):
+
+    def update_mem ( self, match ):
         now =  time.time ( )
         new_mem_info = { } 
-        time_matcher = re.compile ( r'Time: ([0-9]+.[0-9]+)m' )
-        time_match = time_matcher.search ( line_string )
-        if time_match:
-            new_mem_info [ 'time' ] = time_match.group ( 1 )
-        fps_matcher = re.compile ( r'FPS: ([0-9]+.[0-9]+)' )
-        fps_match = fps_matcher.search ( line_string )
-        if fps_match:
-            new_mem_info [ 'fps' ] = fps_match.group ( 1 )
-        heap_matcher = re.compile ( r'Heap: ([0-9]+.[0-9]+)MB' )
-        heap_match = heap_matcher.search ( line_string )
-        if heap_match:
-            new_mem_info [ 'heap' ] = heap_match.group ( 1 )
-        max_matcher = re.compile ( r'Max: ([0-9]+.[0-9]+)MB' )
-        max_match = max_matcher.search ( line_string )
-        if max_match:
-            new_mem_info [ 'max' ] = max_match.group ( 1 )
-        chunks_matcher = re.compile ( r'Chunks: ([0-9]+)' )
-        chunks_match = chunks_matcher.search ( line_string )
-        if chunks_match:
-            new_mem_info [ 'chunks' ] = chunks_match.group ( 1 )
-        cgo_matcher = re.compile ( r'CGO: ([0-9]+)' )
-        cgo_match = cgo_matcher.search ( line_string )
-        if cgo_match:
-            new_mem_info [ 'cgo' ] = cgo_match.group ( 1 )
-        players_matcher = re.compile ( r'Ply: ([0-9]+)' )
-        players_match = players_matcher.search ( line_string )
-        if players_match:
-            new_mem_info [ 'players' ] = players_match.group ( 1 )
-        zombies_matcher = re.compile ( r'Zom: ([0-9]+)' )
-        zombies_match = zombies_matcher.search ( line_string )
-        if zombies_match:
-            new_mem_info [ 'zombies' ] = zombies_match.group ( 1 )
-        entities_1_matcher = re.compile ( r'Ent: ([0-9]+)' )
-        entities_1_match = entities_1_matcher.search ( line_string )
-        if entities_1_match:
-            new_mem_info [ 'entities_1' ] = entities_1_match.group ( 1 )
-        entities_2_matcher = re.compile ( r'Ent: [0-9]+ \(([0-9]+)\)' )
-        entities_2_match = entities_2_matcher.search ( line_string )
-        if entities_2_match:
-            new_mem_info [ 'entities_2' ] = entities_2_match.group ( 1 )
-        items_matcher = re.compile ( r'Items: ([0-9]+)' )
-        items_match = items_matcher.search ( line_string )
-        if items_match:
-            new_mem_info [ 'items' ] = items_match.group ( 1 )
+        new_mem_info [ 'time'       ] = match [ 0  ]
+        new_mem_info [ 'fps'        ] = match [ 1  ]
+        new_mem_info [ 'heap'       ] = match [ 2  ]
+        new_mem_info [ 'max'        ] = match [ 3  ]
+        new_mem_info [ 'chunks'     ] = match [ 4  ]
+        new_mem_info [ 'cgo'        ] = match [ 5  ]
+        new_mem_info [ 'players'    ] = match [ 6  ]
+        new_mem_info [ 'zombies'    ] = match [ 7  ]
+        new_mem_info [ 'entities_1' ] = match [ 8  ]
+        new_mem_info [ 'entities_2' ] = match [ 9  ]
+        new_mem_info [ 'items'      ] = match [ 10 ]
             
         self.game_server.mem = ( new_mem_info, now )
         
@@ -1459,15 +1406,10 @@ class server ( threading.Thread ):
         for key in self.players_info.keys ( ):
             if self.players_info [ key ].steamid == steamid:
                 if ( key == steamid ):
-                    #print ( "key == steamid" )
                     continue
                 else:
                     print ( "Found entry with steamid {}: {}.".format ( steamid,
                                                                         self.players_info [ key ].name ) )
-
-                    #print ( "Did nothing, there is an entry [ {} ] == {}.".format ( steamid,
-                    #                                                                self.players_info [ steamid ].name ) )
-
         self.framework.let_db_lock ( )
 
     def fix_invitees_using_playerid ( self ):
@@ -1487,3 +1429,21 @@ class server ( threading.Thread ):
                     else:
                         print ( "invited {} has no record!".format ( invitee ) )
             
+
+    def little_inferno ( self, player, waves ):
+        for count in range ( waves ):
+            rythm = 2
+            self.framework.console.se ( player, 'zombiedog', 2 )
+            time.sleep ( rythm )
+            self.framework.console.se ( player, 'hornet', 2 )
+            time.sleep ( rythm )
+            self.framework.console.se ( player, 'zombiecrawler', 2 )
+            time.sleep ( rythm )
+            self.framework.console.se ( player, 'fatzombiecop', 2 )
+            time.sleep ( rythm )
+            self.framework.console.se ( player, 'zombiedog', 2 )
+            time.sleep ( rythm )
+            self.framework.console.se ( player, 'zombieferal', 1 )
+            time.sleep ( rythm )
+            self.framework.console.se ( player, 'spiderzombie', 3 )
+

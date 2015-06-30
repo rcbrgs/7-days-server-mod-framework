@@ -13,9 +13,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.3.7'
+        self.__version__ = '0.3.8'
         self.changelog = {
-            '0.3.8' : "Added load_time ppty.",
+            '0.3.8' : "Separated send and list channels. Makes sense; who talks through their ears?",
             '0.3.7' : "Reverted to reliable non-self-healing version.",
             '0.3.6' : "Extended with utils module. Added db_lock functionality.",
             '0.3.5' : "Linked with game events.",
@@ -27,19 +27,60 @@ class orchestrator ( threading.Thread ):
             '0.2.2' : "Increased interval between offline_all_players calls, because everything is racing this.",
             '0.2.1' : "Fixing errors regarding self.mods change.",
             '0.2.0' : "Changed self.mods to be a dict, and output changelog during updates." }
-        self.load_time = time.time ( )
+
+        self.gt_info = {
+            'sending'   : { 'condition' : False,
+                            'timestamp' : 0 },
+            'executing' : { 'condition' : False,
+                            'timestamp' : 0 },
+            'lag'       : 0
+            }
+        self.le_info = {
+            'sent'      : { 'condition' : False,
+                            'timestamp' : 0 },
+            'executing' : { 'condition' : False,
+                            'timestamp' : 0 },
+            'parsed'    : { 'condition' : False,
+                            'timestamp' : 0 },
+            }
+        self.lp_info = {
+            'sent'      : { 'condition' : False,
+                            'timestamp' : 0 },
+            'executing' : { 'condition' : False,
+                            'timestamp' : 0 },
+            'parsed'    : { 'condition' : False,
+                            'timestamp' : 0 },
+            'lag'       : 0
+            }
+        self.pm_info = {
+            'enqueueing' : { 'condition' : True,
+                            'timestamp' : 0 },
+            'sending'    : { 'condition' : False,
+                            'timestamp' : 0 },
+            'executing'  : { 'condition' : False,
+                            'timestamp' : 0 },
+            'parsed'     : { 'condition' : False,
+                            'timestamp' : 0 },
+            'lag'        : 0
+            }
 
         self.db_lock = None
         self.ent_lock = None
+        self.framework_state = None
         self.items_lock = None
         self.llp_lock = None
+        self.load_time = time.time ( )
+        self.lock_gt = None
         self.verbose = False
         
     def config ( self, preferences_file_name ):
         self.silence = False
         self.shutdown = False
         self.preferences = framework.preferences ( preferences_file_name )
-
+        self.server = framework.server ( framework = self )
+        self.game_events = framework.game_events ( framework = self )
+        self.parser = framework.parser ( self )
+        
         framework.set_log_file ( self.preferences.log_file )
 
         self.log.info ( "**************************   Starting framework   ***************************" )
@@ -62,16 +103,21 @@ class orchestrator ( threading.Thread ):
         self.framework_state = { 'orchestrator' : { 'version' : self.__version__,
                                                     'changelog' : self.changelog [ self.__version__ ] } }
 
-        self.console = framework.console ( framework = self )
-        self.telnet = framework.telnet_connect ( framework = self )
+        self.log.info ( "Loading console." )
+        self.console = framework.queued_console ( self )
+        self.console.start ( )
+
+        self.log.info ( "Loading telnet." )
+        self.telnet = framework.telnet_client ( framework = self )
+        self.log.info ( "Connecting telnet." )
         self.telnet.open_connection ( )
 
-        self.server = framework.server ( framework = self )
-        
-        self.game_events = framework.game_events ( framework = self )
-        
+        self.log.info ( "Loading parser." )
+        self.parser.start ( )
         self.server.start ( )
         self.telnet.start ( )
+        self.telnet.write ( "loglevel ALL true\n".encode ( 'utf-8') )
+
         self.game_events.start ( )
 
         self.utils = framework.utils ( )
@@ -101,9 +147,9 @@ class orchestrator ( threading.Thread ):
                 old_version = 'unknown'
             new_version = self.framework_state [ component ] [ 'version' ]
             if old_version != new_version:
-                self.console.say ( "Mod %s updated to %s: %s" %
-                                   ( str ( component ), str ( new_version ),
-                                     str ( self.framework_state [ component ] [ 'changelog' ] ) ) )
+                self.log.info ( "Mod %s updated to %s: %s" %
+                                ( str ( component ), str ( new_version ),
+                                  str ( self.framework_state [ component ] [ 'changelog' ] ) ) )
             
     def get_db_lock ( self ):
         callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
@@ -141,6 +187,29 @@ class orchestrator ( threading.Thread ):
         self.llp_lock = callee_class + "." + callee
         self.log.debug ( "{:s} get llp lock.".format ( callee ) )
 
+    def le_lp_footer ( self, matches ):
+        to_update = None
+        if ( self.le_info [ 'executing' ] [ 'condition' ] == True and
+             self.lp_info [ 'executing' ] [ 'condition' ] == False ):
+            to_update = 'le'
+        else:
+            if (  self.le_info [ 'executing' ] [ 'condition' ] == False and
+                  self.lp_info [ 'executing' ] [ 'condition' ] == True ):
+                to_update = 'lp'
+            else:
+                to_update = 'both'
+
+        if to_update == 'le' or to_update == 'both':
+            self.le_info [ 'sent'      ] [ 'condition' ] = False
+            self.le_info [ 'executing' ] [ 'condition' ] = False
+            self.le_info [ 'executing' ] [ 'timestamp' ] = time.time ( )
+            return
+
+        if to_update == 'lp' or to_update == 'both':
+            self.lp_info [ 'sent'      ] [ 'condition' ] = False
+            self.lp_info [ 'executing' ] [ 'condition' ] = False
+            self.lp_info [ 'executing' ] [ 'timestamp' ] = time.time ( )
+        
     def let_db_lock ( self ):
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         self.db_lock = None
@@ -155,6 +224,22 @@ class orchestrator ( threading.Thread ):
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         self.llp_lock = None
         self.log.debug ( "{:s} let llp lock.".format ( callee ) )
+
+    def lock_gt_get ( self, callee ):
+        if not self.lock_gt:
+            self.lock_gt = callee
+            return True
+        if self.lock_gt != callee:
+            return False
+        return True
+
+    def lock_gt_let ( self, callee ):
+        if not self.lock_gt:
+            return
+        if self.lock_gt != callee:
+            return
+        self.lock_gt = None
+        return
 
     def load_mod ( self, module_name ):
         full_module_name = module_name + "." + module_name
@@ -183,9 +268,6 @@ class orchestrator ( threading.Thread ):
         return mod_instance
 
     def run ( self ):            
-        self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
-
-        #self.console.say ( "Mods up." )
         self.server.offline_players ( )
         count = 1
 
@@ -210,22 +292,21 @@ class orchestrator ( threading.Thread ):
                         mod_instance.start ( )
                         new_version = mod_instance.__version__
                         if old_version != new_version:
-                            self.console.say ( "Mod %s updated to v%s. Changelog: %s" %
-                                              ( mod_key, old_version, new_version,
-                                                mod_instance.changelog [ new_version ] ) )
+                            self.log.info ( "Mod %s updated to v%s. Changelog: %s" %
+                                            ( mod_key, old_version, new_version,
+                                              mod_instance.changelog [ new_version ] ) )
 
                 if count % 100 == 0:
                     self.server.offline_players ( )
                             
-                self.log.debug ( "Before gt" )
+                self.log.debug ( "Asking server for updates." )
                 self.console.gt ( )
-                self.log.debug ( "After gt" )
-                
-                if ( time.time ( ) - self.server.latest_id_parse_call ) > self.preferences.loop_wait:
-                    self.server.entities = { }
-                    self.console.send ( "le" )
-
+                self.console.le ( )
                 self.console.lp ( )
+
+                self.log.debug ( "Resetting the commands pipelines if they are stuck." )
+                if time.time ( ) - self.lp_info [ 'sent' ] [ 'timestamp' ] > 60:
+                    self.lp_info [ 'sent' ] [ 'condition' ] = False
                     
                 time.sleep ( self.preferences.loop_wait )
                 count += 1
@@ -253,7 +334,6 @@ class orchestrator ( threading.Thread ):
 
     def stop ( self ):
         self.log.info ( "<framework>.stop" )
-        #self.console.say ( "Mods down." )
         pickle_file = open ( self.preferences.framework_state_file, 'wb' )
         pickle.dump ( self.framework_state, pickle_file, pickle.HIGHEST_PROTOCOL )
 
