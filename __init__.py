@@ -7,10 +7,11 @@ from .player_info      import player_info
 from .preferences      import preferences
 from .server           import server
 from .telnet_client.telnet_client    import telnet_client
-from .telnet_connect   import telnet_connect
-from .telnet_listener  import telnet_listener
-from .utils            import utils
-from .void_fall_detector import void_fall_detector
+from .telnet_connect                 import telnet_connect
+from .telnet_listener                import telnet_listener
+from .utils                          import utils
+from .void_fall_detector             import void_fall_detector
+from .world_state                    import world_state
 
 import importlib
 import logging

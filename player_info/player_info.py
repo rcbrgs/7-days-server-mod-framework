@@ -270,22 +270,22 @@ class player_info_v5 ( object ):
        
 class player_info_v6 ( object ):
     def __init__ ( self,
-                   deaths = None,
-                   health = None,
-                   home = None,
-                   ip = None,
-                   level = None,
-                   name = None,
-                   online = None,
-                   ping = None,
-                   playerid = None,
-                   players = None,
-                   pos_x = None,
-                   pos_y = None,
-                   pos_z = None,
-                   score = None,
-                   steamid = None,
-                   zombies = None ):
+                   deaths = 0,
+                   health = 0,
+                   home = ( ),
+                   ip = "",
+                   level = 1,
+                   name = "",
+                   online = False,
+                   ping = 0,
+                   playerid = -1,
+                   players = 0,
+                   pos_x = 0,
+                   pos_y = 0,
+                   pos_z = 0,
+                   score = 0,
+                   steamid = -1,
+                   zombies = 0 ):
         super ( self.__class__, self ).__init__ ( )
 
         # Attributes received from lp:
@@ -306,29 +306,30 @@ class player_info_v6 ( object ):
         self.zombies = zombies
 
         # Attributes received from mods:
-        self.accounted_zombies = None
-        self.camp = None
-        self.cash = None
-        self.home_invasion_beacon = None
-        self.home_invasions = None
-        self.home_invitees = None
-        self.inventory_tracker = None
-        self.karma = None
-        self.language_preferred = None
-        self.languages_spoken = None
-        self.latest_teleport = None
-        self.map_limit_beacon = None
-        self.name_sane = None
-        self.new_since_last_update = None
-        self.online_time = None
-        self.permissions = None
-        self.player_kills_explanations = None
-        self.positions = None
-        self.timestamp_latest_update = None
+        self.accounted_zombies = 0
+        self.camp = ( )
+        self.cash = 0
+        self.home_invasion_beacon = ( )
+        self.home_invasions = { }
+        self.home_invitees = [ ]
+        self.inventory_tracker = [ ]
+        self.karma = 0
+        self.language_preferred = ""
+        self.languages_spoken = [ ]
+        self.latest_teleport = { }
+        self.map_limit_beacon = ( )
+        self.name_sane = ""
+        self.new_since_last_update = { }
+        self.online_time = 0
+        self.permissions = { }
+        self.player_kills_explanations = [ ]
+        self.positions = [ ]
+        self.timestamp_latest_update = 0
         
         # Extensible attributes dictionary:
         self.attributes = { }
 
         # New attributes:
+        self.old_names = [ ]
         self.ping = ping
-        self.country = ""
+        self.countries = [ ]

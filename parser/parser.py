@@ -15,6 +15,8 @@ class parser ( threading.Thread ):
             '0.1.0' : "Initial commit." }
 
         self.daemon = True
+        self.llp_current_player = None
+        self.llp_total_recently_set = True
         self.match_string_date = r'([0-9]{4})-([0-9]{2})-([0-9]{2}).+([0-9]{2}):([0-9]{2}):([0-9]{2}) ([0-9]+\.[0-9]+)' # 7 groups
         self.match_string_ip = r'([\d]+\.[\d]+\.[\d]+\.[\d]+)' # 1 group
         self.match_string_pos = r'\(([-+]*[\d]*\.[\d]), ([-+]*[\d]*\.[\d]), ([-+]*[\d]*\.[\d])\)'
@@ -25,20 +27,25 @@ class parser ( threading.Thread ):
         self.shutdown = False
         self.framework = framework
         self.telnet_output_matchers = {
+            'add obs entity'       : { 'to_match' : self.match_prefix + r'INF Adding observed entity: ' +\
+                                       r'[\d]+, ' + self.match_string_pos + r', [\d]+$',
+                                       'to_call'  : [ ] },
             'chunks saved'         : { 'to_match' : r'.* INF Saving (.*) of chunks took (.*)ms',
                                        'to_call' : [ ] },
-            'claim finished'       : { 'to_match' : r'Total of [\d]+ keystones in the game',
-                                       'to_call'  : [ self.framework.server.llp_finished ] },
-            'claim player'         : { 'to_match' : r'Player "(.*) \(([\d]+)\)" owns [\d]+ ' + \
+            'claim finished'       : { 'to_match' : r'Total of ([\d]+) keystones in the game',
+                                       'to_call'  : [ self.framework.world_state.buffer_claimstones ] },
+            'claim player'         : { 'to_match' : r'Player ".* \(([\d]+)\)" owns ([\d]+) ' + \
                                        r'keystones \(protected: [\w]+, current hardness multiplier: [\d]+\)',
-                                       'to_call'  : [ self.framework.server.llp_claim_player ] },
+                                       'to_call'  : [ self.framework.world_state.buffer_claimstones ] },
             'claim stone'          : { 'to_match' : r'\(([-+]*[\d]*), ([-+]*[\d]*), ([-+]*[\d]*)\)',
-                                       'to_call'  : [ self.framework.server.llp_claim_stone ] },
+                                       'to_call'  : [ self.framework.world_state.buffer_claimstones ] },
             'deny match'           : { 'to_match' : r'(.*) INF Player (.*) denied: ' + \
                                        r'(.*) has been banned until (.*)',
                                        'to_call'  : [ self.framework.game_events.player_denied ] },
             'EAC callback'         : { 'to_match' : self.match_prefix + r'INF \[EAC\] UserStatusHandler callback.'+\
                                        r' Status: UserAuthenticated GUID: [\d]+ ReqKick: [\w]+ Message:.*$',
+                                       'to_call'  : [ ] },
+            'EAC free user'        : { 'to_match' : r'INF \[EAC\] FreeUser \(.*\)',
                                        'to_call'  : [ ] },
             'empty line'           : { 'to_match' : r'^$',
                                        'to_call'  : [ ] },
@@ -53,6 +60,25 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ self.command_gt_executing_parser ] },
             'gt command output'    : { 'to_match' : r'Day ([0-9]+), ([0-9]{2}):([0-9]{2})',
                                        'to_call'  : [ self.command_gt_output_parser ] },
+            'header  0'            : { 'to_match' : r'^\*\*\* Connected with 7DTD server\.$',
+                                       'to_call'  : [ ] },
+            'header  1'            : { 'to_match' : r'^\*\*\* Server version: Alpha 11\.6 \(b5\) Compatibility ' + \
+                                       r'Version: Alpha 11\.6$',
+                                       'to_call'  : [ ] },
+            'header  2'            : { 'to_match' : r'^\*\*\* Dedicated server only build$',
+                                       'to_call'  : [ ] },
+            'header  3'            : { 'to_match' : r'^Server IP:   ' + self.match_string_ip + r'$',
+                                       'to_call'  : [ ] },
+            'header  4'            : { 'to_match' : r'^Server port: [\d]+$',
+                                       'to_call'  : [ ] },
+            'header  5'            : { 'to_match' : r'^Max players: [\d]+$',
+                                       'to_call'  : [ ] },
+            'header  6'            : { 'to_match' : r'^Game mode:   GameModeSurvivalMP$',
+                                       'to_call'  : [ ] },
+            'header  7'            : { 'to_match' : r'^World:       Random Gen$',
+                                       'to_call'  : [ ] },
+            'header  8'            : { 'to_match' : r'Game name:   (.*)$',
+                                       'to_call'  : [ ] },
             'header  9'            : { 'to_match' : r'^Difficulty:  [\d]+$',
                                        'to_call'  : [ ] },
             'header 10'            : { 'to_match' : r'Press \'help\' to get a list of all commands\. Press ' + \
@@ -97,9 +123,34 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ self.command_lp_output_parser ] },
             'le/lp output footer'  : { 'to_match' : r'^Total of ([\d]+) in the game$',
                                        'to_call'  : [ self.framework.le_lp_footer ] },
+            'mem output'           : { 'to_match' : r'[0-9]{4}-[0-9]{2}-[0-9]{2}.* INF Time: ([0-9]+.[0-9]+)m ' + \
+                                       r'FPS: ([0-9]+.[0-9]+) Heap: ([0-9]+.[0-9]+)MB Max: ([0-9]+.[0-9]+)MB ' + \
+                                       r'Chunks: ([0-9]+) CGO: ([0-9]+) Ply: ([0-9]+) Zom: (.*) Ent: ([\d]+) ' + \
+                                       r'\(([\d]+)\) Items: ([0-9]+)',
+                                       'to_call'  : [ self.framework.server.update_mem ] },
+            'message player'       : { 'to_match' : r'Message to player ".*" sent with sender "Server"',
+                                       'to_call'  : [ ] },
+            'player created'       : { 'to_match' : self.match_prefix + r'INF Created player with id=[\d]+$',
+                                       'to_call'  : [ ] },
+            'player joined'        : { 'to_match' : self.match_prefix + 'INF GMSG: .* joined the game',
+                                       'to_call'  : [ ] },
+            'player kicked'        : { 'to_match' : self.match_prefix + r'INF Executing command \'kick [\d]+\'' + \
+                                       r' by Telnet from ' + self.match_string_ip + ':[\d]+$',
+                                       'to_call'  : [ ] },
+            'player offline'       : { 'to_match' : self.match_prefix + r'INF Player set to offline: [\d]+$',
+                                       'to_call'  : [ ] },
             'player online'        : { 'to_match' : r'^' + self.match_string_date + r' INF Player set to online' + \
-                                       r' : ([\d]+)$',
+                                       r': ([\d]+)$',
                                        'to_call'  : [ self.framework.server.set_steamid_online ] },
+            'player connected'     : { 'to_match' : self.match_prefix + r'INF Player connected, entityid=[\d]+, ' +\
+                                       r'name=.*, steamid=[\d]+, ip=' + self.match_string_ip + r'$',
+                                       'to_call'  : [ ] },
+            'player disconnected'  : { 'to_match' : self.match_prefix + r'INF Player disconnected: EntityID=' + \
+                                       r'-*[\d]+, PlayerID=\'[\d]+\', OwnerID=\'[\d]+\', PlayerName=\'.*\'$',
+                                       'to_call'  : [ ] },
+            'player disconn error' : { 'to_match' : self.match_prefix + r'ERR DisconnectClient: Player ' + \
+                                       r'[\d]+ not found$',
+                                       'to_call'  : [ ] },
             'player died'          : { 'to_match' : self.match_prefix + r'INF GMSG: Player (.*) died$',
                                        'to_call'  : [ self.framework.game_events.player_died ] },
             'player kill'          : { 'to_match' : self.match_prefix + r'INF GMSG: Player (.*)' + \
@@ -107,15 +158,12 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ self.framework.game_events.player_kill ] },
             'player left'          : { 'to_match' : self.match_prefix + r'INF GMSG: (.*) left the game$',
                                        'to_call'  : [ self.framework.game_events.player_left ] },
-            'mem output'           : { 'to_match' : r'[0-9]{4}-[0-9]{2}-[0-9]{2}.* INF Time: ([0-9]+.[0-9]+)m ' + \
-                                       r'FPS: ([0-9]+.[0-9]+) Heap: ([0-9]+.[0-9]+)MB Max: ([0-9]+.[0-9]+)MB ' + \
-                                       r'Chunks: ([0-9]+) CGO: ([0-9]+) Ply: ([0-9]+) Zom: (.*) Ent: ([\d]+) ' + \
-                                       r'\(([\d]+)\) Items: ([0-9]+)',
-                                       'to_call'  : [ self.framework.server.update_mem ] },
             'pm executing'         : { 'to_match' : r'^' + self.match_string_date + r' INF Executing command' + \
                                        r' \'pm (.*) (.*)\' by Telnet from ' + self.match_string_ip + r':[\d]+$',
                                        'to_call'  : [ self.command_pm_executing_parser ] },
             'removing entity'      : { 'to_match' : self.match_prefix + r'INF Removing observed entity [\d]+',
+                                       'to_call'  : [ ] },
+            'request to enter'     : { 'to_match' : self.match_prefix + r'INF RequestToEnterGame: [\d]+/.*$',
                                        'to_call'  : [ ] },
             'saveworld'            : { 'to_match' : r'^' + self.match_string_date + r' INF Executing ' + \
                                        r'command \'saveworld\' by Telnet from ' + self.match_string_ip + r':[\d]+$',
@@ -133,13 +181,17 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'spawn wander horde'   : { 'to_match' : self.match_prefix + r'INF Spawning Wandering Horde.$',
                                        'to_call'  : [ ] },
+            'wanderer'             : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie' +\
+                                       r' \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' was spawned and is moving ' + \
+                                       r'towards pitstop.$',
+                                       'to_call'  : [ ] },
             'spawned'              : { 'to_match' : r'^' + self.match_string_date + r' INF Spawned ' + \
                                        r'\[type=EntityZombie[\w]*, name=(.*), id=[\d]+\] at ' + \
                                        self.match_string_pos + r' Day=[\d]+ TotalInWave=[\d]+ CurrentWave=[\d]+$',
                                        'to_call'  : [ ] },
             'spawn output'         : { 'to_match' : r'^Spawned [\w\d]+$',
                                        'to_call'  : [ ] },
-            'steam auth'           : { 'to_match' : r'^' + self.match_string_date + r' INF \[Steamworks.NET\] ' + \
+            'steam auth'           : { 'to_match' : self.match_prefix + r'INF \[Steamworks.NET\] ' + \
                                        r'Authentication callback\. ID: [\d]+, owner: [\d]+, result: .*$',
                                        'to_call'  : [ ] },
             'wave spawn'           : { 'to_match' : r'^' + self.match_string_date + r' INF Spawning this wave:' +\
@@ -149,7 +201,7 @@ class parser ( threading.Thread ):
                                        r'\'[\w]+\'\. timeout=[\d]+s$',
                                        'to_call'  : [ ] },
             'telnet thread exit'   : { 'to_match' : '^' + self.match_string_date + \
-                                       r' INF Exited thread TelnetClientSend_' + self.match_string_ip + r':[\d]+$',
+                                       r' INF Exited thread TelnetClient[\w]+_' + self.match_string_ip + r':[\d]+$',
                                        'to_call'  : [ ] },
             'telnet thread start r': { 'to_match' : '^' + self.match_string_date + \
                                        r' INF Started thread TelnetClientReceive_' + self.match_string_ip + \
@@ -180,7 +232,7 @@ class parser ( threading.Thread ):
 
     def run ( self ):
         while ( self.shutdown == False ):
-
+            
             line = self.dequeue ( )
             self.log.debug ( "dequeued: '{}'.".format ( line [ 'text' ]) ) 
             
@@ -189,6 +241,8 @@ class parser ( threading.Thread ):
                 match = self.matchers [ key ] [ 'matcher' ].search ( line [ 'text' ] )
                 if match:
                     any_match = True
+                    matched_key = key
+                    match_timestamp = time.time ( )
                     self.log.debug ( "{} groups = {}.".format ( key, match.groups ( ) ) )
                     for caller in self.matchers [ key ] [ 'callers' ]:
                         self.log.debug ( "{} calls {}.".format ( key, caller ) )
@@ -197,8 +251,15 @@ class parser ( threading.Thread ):
 
             if not any_match:
                 self.log.info ( "Unparsed output: '{:s}'.".format ( line [ 'text' ] ) )
+                continue
 
-            self.log.debug ( "Line parsed in {:.5f}s.".format ( time.time ( ) - line [ 'timestamp' ] ) )
+            match_delay = time.time ( ) - match_timestamp
+            delay = time.time ( ) - line [ 'timestamp' ]
+            if delay > 15:
+                self.log.info ( "Line {} matched {} in {:.1f}s, parsed in {:.1f}.".format ( line,
+                                                                                            matched_key,
+                                                                                            match_delay,
+                                                                                            delay ) )
 
     def stop ( self ):
         self.shutdown = True
@@ -219,22 +280,22 @@ class parser ( threading.Thread ):
             self.framework.gt_info [ 'executing' ] [ 'condition' ] = True
             now = time.time ( )
             self.framework.gt_info [ 'executing' ] [ 'timestamp' ] = now
-            old_lag = self.framework.gt_info [ 'lag' ]
-            self.framework.gt_info [ 'lag' ] = now - self.framework.gt_info [ 'sent'      ] [ 'timestamp' ]
+            #if self.framework.gt_info [ 'sending' ] 'timestamp' ] != 0:
+            self.framework.gt_info [ 'lag' ] = now - self.framework.gt_info [ 'sending' ] [ 'timestamp' ]
             self.log.debug ( 'gt executing' )
-            if "{:.1f}".format ( self.framework.gt_info [ 'lag' ] ) != "{:.1f}".format ( old_lag ):            
-                if ( self.framework.gt_info [ 'lag' ] > 5 ):
-                    self.log.info ( "gt lag: {:.1f}s.".format ( self.framework.gt_info [ 'lag' ] ) )
+            if ( self.framework.gt_info [ 'lag' ] > 5 ):
+                self.log.info ( "gt lag: {:.1f}s.".format ( self.framework.gt_info [ 'lag' ] ) )
 
     def command_gt_output_parser ( self, match ):
+        self.log.info ( "gt parser" )
         day     = int ( match [ 0 ] )
         hour    = int ( match [ 1 ] )
         minutes = int ( match [ 2 ] )
         self.framework.server.get_game_info_lock ( )
         self.framework.server.game_server.day = day
         self.framework.server.game_server.hour = hour
-        if minutes % 15 == 0 and minutes != self.framework.server.game_server.minute:
-            self.log.info ( "Game date: {} {:02d}:{:02d}.".format ( day, hour, minutes ) )
+        #if minutes % 15 == 0 and minutes != self.framework.server.game_server.minute:
+        self.log.info ( "Game date: {} {:02d}:{:02d}.".format ( day, hour, minutes ) )
         self.framework.server.game_server.minute = minutes
         self.framework.server.game_server.time = ( day, hour, minutes )
         self.framework.server.let_game_info_lock ( )
@@ -291,6 +352,40 @@ class parser ( threading.Thread ):
         self.unlock_queue ( )
         return popped
 
+    def llp_claim_player ( self, matcher ):
+        self.log.info ( "llp_claim_player {}".format ( matcher [ 0 ] ) )
+        player = self.framework.server.get_player ( int ( matcher [ 1 ] ) )
+        if player:
+            self.llp_current_player = player
+        else:
+            self.llp_current_player = None
+
+    def llp_claim_stone ( self, matcher ):
+        places = self.framework.mods [ 'place_protection' ] [ 'reference' ].places
+        self.log.info ( "llp_claim_stone {}".format ( matcher ) )
+        if self.llp_current_player:
+            for place_key in places.keys ( ):
+                distance_place = self.framework.utils.calculate_distance ( ( float ( matcher [ 0 ] ),
+                                                                             float ( matcher [ 2 ] ) ),
+                                                                           places [ place_key ] [ 0 ] )
+                if distance_place < places [ place_key ] [ 1 ] + self.framework.preferences.home_radius:
+                    return
+            claimstones = self.framework.world_state.get_claimstones ( )
+            if self.llp_current_player.steamid in claimstones.keys ( ):
+                claimstones [ self.llp_current_player.steamid ].append ( ( float ( matcher [ 0 ] ),
+                                                                           float ( matcher [ 2 ] ),
+                                                                           float ( matcher [ 1 ] ) ) )
+            else:
+                claimstones [ self.llp_current_player.steamid ] = [ ( float ( matcher [ 0 ] ),
+                                                                      float ( matcher [ 2 ] ),
+                                                                      float ( matcher [ 1 ] ) ) ]
+            self.framework.world_state.let_claimstones ( )
+        else:
+            self.log.debug ( "No player attached to this claimstone." )
+        
+    def llp_finished ( self, matcher ):
+        self.llp_total_recently_set = True
+        
     def lock_queue ( self ):
         callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name

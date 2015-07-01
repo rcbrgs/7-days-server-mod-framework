@@ -19,8 +19,8 @@ class queueable_call ( threading.Thread ):
         self.retirement_age      = float ( "inf" )
 
     def run ( self ):
-        while not become_executable ( ):
-            time.sleep self.loop_wait
+        while not self.become_executable ( ):
+            time.sleep ( self.loop_wait )
         self.execute ( )
         
     def become_executable ( self ):

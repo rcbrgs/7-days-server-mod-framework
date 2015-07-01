@@ -1,3 +1,4 @@
+import framework.parser as parser
 import logging
 import re
 import sys
@@ -20,6 +21,9 @@ class telnet_client ( threading.Thread ):
         self.shutdown = False
         self.connected = False
         self.framework = framework
+        self.parsers = [ parser ( framework ) ]
+        self.parsers [ 0 ].start ( )
+        self.parsers_pointer = 0
                 
         self.telnet_ip       = self.framework.preferences.telnet_ip
         self.telnet_password = self.framework.preferences.telnet_password
@@ -54,11 +58,14 @@ class telnet_client ( threading.Thread ):
                 
             self.log.debug ( line_string )
 
-            self.framework.parser.enqueue ( line_string )
+            self.send_to_parser ( line_string )
 
     def stop ( self ):
         self.shutdown = True
 
+    def add_parser ( self ):
+        self.parsers.append ( parser ( self.framework ) )
+        
     def close_connection ( self ):
         self.connected = False
         self.telnet.close ( )
@@ -89,6 +96,10 @@ class telnet_client ( threading.Thread ):
             self.log.error ("Logon failed.")
             self.framework.shutdown = True
 
+    def send_to_parser ( self, line ):
+        self.parsers [ self.parsers_pointer ].enqueue ( line )
+        self.parsers_pointer = ( self.parsers_pointer + 1 ) % len ( self.parsers )
+            
     def write ( self, msg ):
         if ( self.telnet.get_socket ( ) == 0 ):
             self.open_connection ( )

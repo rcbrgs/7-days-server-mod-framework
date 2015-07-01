@@ -134,10 +134,17 @@ class game_events ( threading.Thread ):
         self.log.info ( "{} connected.".format ( player.name_sane ) )
 
     def player_died ( self, matches ):
+        player_died_messages = [
+            ( "I want brains, and after eating {} I'm still hungry!" ),
+            ( "Again, {}!?" ),
+            ( "That's not how a log spike is supposed to work, {}." ),
+            ( "Don't feel bad, {}. Even the zombies died once." ),
+            ]
         player = self.framework.server.get_player ( matches [ 7 ] )
         if player:
             self.log.info ( "{} died!".format ( player.name_sane ) )
-            self.framework.console.say ( "{} brainzzzzzzz good but few".format ( player.name_sane ) )
+            message_number = random.randint ( 0, len ( player_died_messages ) - 1 )
+            self.framework.console.say ( player_died_messages [ message_number ].format ( player.name_sane ) )
         
     def player_denied ( self, player_denied_match_group ):
         quoted_player_name = player_denied_match_group [ 1 ]
@@ -173,17 +180,19 @@ class game_events ( threading.Thread ):
         if not isinstance ( player, framework.player_info.player_info_v5 ):
             self.log.warning ( "calling p killd 100 zeds with id" )
             player = self.framework.server.get_player ( player )
-            
+
+        money_before = player.cash
         for callback in self.registered_callbacks [ 'player_killed_100_zombies' ]:
             function = callback [ 0 ]
             kwargs   = callback [ 1 ]
             kwargs [ 'player' ] = player
             function ( **kwargs )
 
-        self.framework.console.say ( "{} gained cash for killing zombies!".format ( player.name_sane ) )
+        self.framework.console.pm ( player, "You gained {} cash for killing 100 zombies!".format ( player.cash -\
+                                                                                                   money_before ) )
 
     def player_left ( self, matches ):
-        player = self.framework.server.get_player ( matches [ 0 ] )
+        player = self.framework.server.get_player ( matches [ 7 ] )
         if player:
             player.online = False
             self.log.info ( "{} left the game.".format ( player.name ) )

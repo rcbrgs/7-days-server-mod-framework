@@ -68,10 +68,11 @@ class orchestrator ( threading.Thread ):
         self.ent_lock = None
         self.framework_state = None
         self.items_lock = None
-        self.llp_lock = None
         self.load_time = time.time ( )
         self.lock_gt = None
+        self.mods = { }
         self.verbose = False
+        self.world_state = framework.world_state ( self )
         
     def config ( self, preferences_file_name ):
         self.silence = False
@@ -79,7 +80,7 @@ class orchestrator ( threading.Thread ):
         self.preferences = framework.preferences ( preferences_file_name )
         self.server = framework.server ( framework = self )
         self.game_events = framework.game_events ( framework = self )
-        self.parser = framework.parser ( self )
+        #self.parser = framework.parser ( self )
         
         framework.set_log_file ( self.preferences.log_file )
 
@@ -111,9 +112,9 @@ class orchestrator ( threading.Thread ):
         self.telnet = framework.telnet_client ( framework = self )
         self.log.info ( "Connecting telnet." )
         self.telnet.open_connection ( )
-
-        self.log.info ( "Loading parser." )
-        self.parser.start ( )
+        time.sleep ( 9 )
+        #self.log.info ( "Loading parser." )
+        #self.parser.start ( )
         self.server.start ( )
         self.telnet.start ( )
         self.telnet.write ( "loglevel ALL true\n".encode ( 'utf-8') )
@@ -129,8 +130,6 @@ class orchestrator ( threading.Thread ):
                                               'changelog' : self.server.changelog [ self.server.__version__ ] }
         self.framework_state [ 'game_events' ] = { 'version'   : self.game_events.__version__,
                                                    'changelog' : self.game_events.changelog [ self.game_events.__version__ ] }
-
-        self.mods = { }
 
         for mod in self.preferences.mods.keys ( ):
             module_name = self.preferences.mods [ mod ] [ 'module' ]
@@ -174,19 +173,6 @@ class orchestrator ( threading.Thread ):
         self.ent_lock = callee_class + "." + callee
         self.log.debug ( "{:s} get entities db lock.".format ( callee ) )
 
-    def get_llp_lock ( self ):
-        callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
-        callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
-        begin = time.time ( )
-        while self.ent_lock:
-            self.log.info ( "{}.{} wants llp lock from {}.".format (
-                callee_class, callee, self.llp_lock ) )
-            time.sleep ( 0.6 )
-            if time.time ( ) - begin > 60:
-                break
-        self.llp_lock = callee_class + "." + callee
-        self.log.debug ( "{:s} get llp lock.".format ( callee ) )
-
     def le_lp_footer ( self, matches ):
         to_update = None
         if ( self.le_info [ 'executing' ] [ 'condition' ] == True and
@@ -219,11 +205,6 @@ class orchestrator ( threading.Thread ):
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         self.ent_lock = None
         self.log.debug ( "{:s} let entities db lock.".format ( callee ) )
-
-    def let_llp_lock ( self ):
-        callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
-        self.llp_lock = None
-        self.log.debug ( "{:s} let llp lock.".format ( callee ) )
 
     def lock_gt_get ( self, callee ):
         if not self.lock_gt:
@@ -300,9 +281,20 @@ class orchestrator ( threading.Thread ):
                     self.server.offline_players ( )
                             
                 self.log.debug ( "Asking server for updates." )
-                self.console.gt ( )
-                self.console.le ( )
-                self.console.lp ( )
+                now = time.time ( )
+                if now - self.world_state.gt_timestamp > self.preferences.loop_wait:
+                    self.world_state.gt_timestamp = now
+                    self.console.gt ( )
+                if now - self.world_state.le_timestamp > self.preferences.loop_wait:
+                    pass
+                    self.world_state.le_timestamp = now
+                    self.console.le ( )
+                if now - self.world_state.lp_timestamp > self.preferences.loop_wait:
+                    self.world_state.lp_timestamp = now
+                    self.console.lp ( )
+                if now - self.world_state.llp_timestamp > self.preferences.loop_wait * 100:
+                    self.world_state.llp_timestamp = now
+                    self.console.llp ( )
 
                 self.log.debug ( "Resetting the commands pipelines if they are stuck." )
                 if time.time ( ) - self.lp_info [ 'sent' ] [ 'timestamp' ] > 60:

@@ -61,7 +61,9 @@ class utils ( object ):
                 #return "{}".format ( cardinals [ key ] )
         
     def calculate_distance ( self, point_A, point_B ):
-        if len ( point_A ) == 2 and len ( point_B ) == 2:
+        if ( ( len ( point_A ) == 2 and len ( point_B ) == 2 ) or
+             ( len ( point_A ) == 3 and len ( point_B ) == 2 ) or
+             ( len ( point_A ) == 2 and len ( point_B ) == 3 ) ):
             return math.sqrt ( ( point_A [ 0 ] - point_B [ 0 ] ) ** 2 +
                                ( point_A [ 1 ] - point_B [ 1 ] ) ** 2 )
         if ( len ( point_A ) == 3 and

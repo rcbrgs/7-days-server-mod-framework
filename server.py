@@ -58,8 +58,6 @@ class server ( threading.Thread ):
         self.log.info ( "Server module initializing." )
 
         self.chat = None
-        self.claimstones = { }
-        self.claimstones_timestamp = 0
         self.clear_online_property = False
         self.entities = { }
         self.entity_db = {
@@ -106,8 +104,7 @@ class server ( threading.Thread ):
         self.game_server = game_server_info ( )
         self.latest_id_parse_call = time.time ( )
         self.latest_player_db_backup = 0
-        self.llp_current_player = None
-        self.llp_total_recently_set = False
+        self.player_db_save_timestamp = 0
         self.shutdown = False
 
         self.preferences = self.framework.preferences
@@ -154,10 +151,6 @@ class server ( threading.Thread ):
 
     def __del__ ( self ):
         self.log.warning ( "__del__" )
-        if self.chat != None:
-            self.chat.close ( )
-        pickle_file = open ( self.player_info_file, 'wb' )
-        pickle.dump ( self.players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
 
     def command_about ( self, origin, message ):
         self.framework.console.say ( "This mod was initiated by Schabracke and is developed by rc." )
@@ -166,13 +159,13 @@ class server ( threading.Thread ):
     def command_help ( self, msg_origin, msg_content ):
         if len ( msg_content ) > len ( "/help" ):
             for key in self.commands.keys ( ):
-                if msg_content [ 6 : -1 ] == key:
+                if msg_content [ 6 : ] == key:
                     self.framework.console.say ( self.commands [ key ] [ 1 ] )
                     return
             for mod_key in self.framework.mods.keys ( ):
                 mod = self.framework.mods [ mod_key ] [ 'reference' ]
                 for key in mod.commands.keys ( ):
-                    if msg_content [ 6 : -1 ] == key:
+                    if msg_content [ 6 : ] == key:
                         self.framework.console.say ( mod.commands [ key ] [ 1 ] )
                         return
 
@@ -204,6 +197,15 @@ class server ( threading.Thread ):
                 msg += ", inside"
             else:
                 msg += ", outside"
+        if player.steamid in self.framework.world_state.claimstones.keys ( ):
+            msg += ", claims: "
+            claim_msg = ""
+            for claim in self.framework.world_state.claimstones [ player.steamid ]:
+                if claim_msg == "":
+                    claim_msg = str ( claim )
+                else:
+                    claim_msg += ", " + str ( claim )
+            msg += claim_msg
         if player.languages_spoken:
             msg += ", speaks"
             for language in player.languages_spoken:
@@ -217,7 +219,7 @@ class server ( threading.Thread ):
         msg += ", karma {:d}".format ( player.karma )
         msg += ", cash {:d}".format ( player.cash )
         msg += "."
-        self.framework.console.say ( msg )
+        self.framework.console.pm ( player, msg )
 
     def command_rules ( self, origin, message ):
         self.framework.console.say ( "rules are: 1. [FF0000]PVE[FFFFFF] only." )
@@ -235,7 +237,7 @@ class server ( threading.Thread ):
         return
 
     def curse_player ( self, msg_origin, msg_content ):
-        target = self.get_player ( msg_content [ 7 : -1 ] )
+        target = self.get_player ( msg_content [ 7 : ] )
         if target != None:
             curses = [ "%s can't hit a fat zombie with a blunderbuss.",
                        "%s infected a cheerleader.",
@@ -278,14 +280,6 @@ class server ( threading.Thread ):
 
     def display_game_server ( self ):
         print ( self.get_game_server_summary ( ) )
-
-    def get_claimstones ( self ):
-        if time.time ( ) - self.claimstones_timestamp > 600:
-            self.framework.get_llp_lock ( )
-            self.llp_wrapper ( )
-            self.framework.let_llp_lock ( )
-            self.claimstones_timestamp = time.time ( )
-        return self.claimstones
 
     def get_game_info_lock ( self ):
         pass
@@ -456,9 +450,9 @@ class server ( threading.Thread ):
         return None
 
     def get_player_summary ( self, player ):
-        player_line = "{: <2.1f} {:<10s} {:<10d} {: <4.1f} {:>2d}/{:<2d} {:<3d} {:<6d} {:<4d}" .format (
+        player_line = "{: >4.1f} {:<11s} {:<10d} {: >5.1f} {:>2d}/{:<2d} {:>3d} {: >5d} {: >5d}" .format (
             time.time ( ) - player.timestamp_latest_update,
-            str ( player.name_sane [ : 9 ] ),
+            str ( player.name_sane [ : 10 ] ),
             player.steamid,
             player.online_time / 3600,
             player.players,
@@ -509,45 +503,6 @@ class server ( threading.Thread ):
     def greet ( self ):
         self.framework.console.say ( "%s module %s loaded." % ( self.__class__.__name__,
                                               self.__version__ ) )
-
-    def llp_claim_player ( self, matcher ):
-        self.log.debug ( "llp_claim_player {}".format ( matcher [ 0 ] ) )
-        player = self.get_player ( int ( matcher [ 1 ] ) )
-        if player:
-            self.llp_current_player = player
-        else:
-            self.llp_current_player = None
-
-    def llp_claim_stone ( self, matcher ):
-        places = self.framework.mods [ 'place_protection' ] [ 'reference' ].places
-        self.log.debug ( "llp_claim_stone {}".format ( matcher ) )
-        if self.llp_current_player:
-            for place_key in places.keys ( ):
-                distance_place = self.framework.utils.calculate_distance ( ( float ( matcher [ 0 ] ),
-                                                                             float ( matcher [ 2 ] ) ),
-                                                                           places [ place_key ] [ 0 ] )
-                if distance_place < places [ place_key ] [ 1 ] + self.framework.preferences.home_radius:
-                    return
-            if self.llp_current_player.steamid in self.claimstones.keys ( ):
-                self.claimstones [ self.llp_current_player.steamid ].append ( ( float ( matcher [ 0 ] ),
-                                                                                float ( matcher [ 2 ] ),
-                                                                                float ( matcher [ 1 ] ) ) )
-            else:
-                self.claimstones [ self.llp_current_player.steamid ] = [ ( float ( matcher [ 0 ] ),
-                                                                           float ( matcher [ 2 ] ),
-                                                                           float ( matcher [ 1 ] ) ) ]
-        else:
-            self.log.debug ( "No player attached to this claimstone." )
-        
-    def llp_finished ( self, matcher ):
-        self.llp_total_recently_set = True
-        
-    def llp_wrapper ( self ):
-        self.framework.get_llp_lock ( )
-        now = time.time ( )
-        self.llp_total_recently_set = False
-        self.framework.console.send ( "llp" )
-        self.framework.let_llp_lock ( )
         
     def list_players ( self ):
         for key in self.players_info.keys ( ):
@@ -575,7 +530,7 @@ class server ( threading.Thread ):
         return result
             
     def list_online_players ( self ):
-        print ( "----+----------+-----------------+-----+----+-----+--------+------+------" )
+        print ( "----+-----------+-----------------+-----+-----+---+-----+-----+" )
         while self.framework.lp_info [ 'executing' ] [ 'condition' ]:
             time.sleep ( 0.1 )
         for player in self.get_online_players ( ):
@@ -862,6 +817,12 @@ class server ( threading.Thread ):
         while self.shutdown == False:
             self.log.debug ( "Tick" )
             time.sleep ( self.framework.preferences.loop_wait )
+
+        if self.chat != None:
+            self.chat.close ( )
+        self.log.info ( "Saving player db." )
+        pickle_file = open ( self.player_info_file, 'wb' )
+        pickle.dump ( self.players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
                 
     def sanitize ( self, original ):
         result = original.replace ( '"', '_' )
@@ -903,8 +864,8 @@ class server ( threading.Thread ):
         msg = "showinventory " + str ( player )
         self.console ( msg )
 
-    def set_steamid_online ( self, steamid ):
-        if steamid in self.players_info.keys ( ):
+    def set_steamid_online ( self, matches ):
+        if matches [ 7 ] in self.players_info.keys ( ):
             player = self.players_info [ steamid ]
             player.online = True
             self.log.info ( "Player {} set as online.".format ( player.name ) )
@@ -1057,13 +1018,20 @@ class server ( threading.Thread ):
                                   score = score,
                                   steamid = steamid )
 
-        pickle_file = open ( self.player_info_file, 'wb' )
-        pickle.dump ( self.players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
+        last_save_timestamp = self.player_db_save_timestamp
+        
         now = time.time ( )
+        if now - last_save_timestamp > 60:
+            self.player_db_save_timestamp = now
+            pickle_file = open ( self.player_info_file, 'wb' )
+            self.log.info ( "Saving player db." )
+            pickle.dump ( self.players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
+
         if ( now - self.latest_player_db_backup > 24 * 3600 ):
             self.latest_player_db_backup = now
             backup_file_name = self.player_info_file + "_" + time.strftime ( "%Y-%m-%d_%Hh%M.pickle" )
             backup_file = open ( backup_file_name, 'wb' )
+            self.log.info ( "Saving player db backup." )
             pickle.dump ( self.players_info, backup_file, pickle.HIGHEST_PROTOCOL )
 
     def update_le ( self, matches ):
@@ -1296,6 +1264,8 @@ class server ( threading.Thread ):
                     new_player.timestamp_latest_update = player.timestamp_latest_update
 
                     # new
+                    new_player.countries = [ ]
+                    new_player.old_names = [ ]
                     new_player.ping = ping
 
                 if new_player == None:
@@ -1307,6 +1277,7 @@ class server ( threading.Thread ):
 
         self.log.info ( "Creating new player info file." )
         pickle_file = open ( self.player_info_file, 'wb' )
+        self.log.info ( "Saving player db." )
         pickle.dump ( new_players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
         self.log.info ( "Resetting pointer." )
         self.players_info = new_players_info
@@ -1397,6 +1368,7 @@ class server ( threading.Thread ):
                 self.log.error ( "***************just above*" )
 
         pickle_file = open ( "cleaned_db", 'wb' )
+        self.log.info ( "Saving player db." )
         pickle.dump ( pinfo, pickle_file, pickle.HIGHEST_PROTOCOL )
         
         self.framework.let_db_lock()

@@ -17,17 +17,18 @@ class queued_console ( threading.Thread ):
         
         self.framework = orchestrator
         self.daemon = True
-        #self.lag = 0
         self.le_lag = 0
-        #self.lp_lag = 0
-        #self.pm_lag = 0
         self.queue = [ ]
         self.queue_lock = None
         self.shutdown = False
-        telnet_wait = 8
+        telnet_wait = 9
         self.telnet_client_commands = framework.telnet_client ( self.framework )
         self.telnet_client_commands.open_connection ( )
         self.telnet_client_commands.start ( )
+        #self.telnet_client_commands.add_parser ( )
+        #self.telnet_client_commands.add_parser ( )
+        #self.telnet_client_commands.add_parser ( )
+        #self.telnet_client_commands.add_parser ( )
         time.sleep ( telnet_wait )
         self.telnet_client_le = framework.telnet_client ( self.framework )
         self.telnet_client_le.open_connection ( )
@@ -42,8 +43,6 @@ class queued_console ( threading.Thread ):
         self.telnet_client_pm.start ( )
         time.sleep ( telnet_wait )
         self.timestamp_le = 0
-        #self.timestamp_lp = 0
-        #self.timestamp_pm = 0
         
     def __del__ ( self ):
         self.stop ( )
@@ -119,7 +118,8 @@ class queued_console ( threading.Thread ):
 
         if diff < 60:
             return
-        
+
+        self.framework.gt_info [ 'sending' ] [ 'timestamp' ] = time.time ( )
         command_call = queueable_call ( )
         command_call.function = self.gt_wrapper
         command_call.kill_timer = self.framework.preferences.loop_wait * 10
@@ -155,6 +155,9 @@ class queued_console ( threading.Thread ):
         self.queue.append ( command_call )
         self.let_queue_lock ( )
 
+    def llp ( self ):
+        self.llp_wrapper ( )
+        
     def lp ( self ):
         if self.framework.lp_info [ 'sent' ] [ 'condition' ]:
             self.log.debug ( "Previous lp call not yet finished. Ignoring call for lp." )
@@ -173,10 +176,12 @@ class queued_console ( threading.Thread ):
         self.queue.append ( command_call )
         self.let_queue_lock ( )
 
-    def pm ( self, player, message ):
+    def pm ( self, player, message, can_fail = False, loglevel = "INFO" ):
         command_call = queueable_call ( )
         command_call.function = self.pm_wrapper
         command_call.function_args = ( player, message )
+        command_call.function_kwargs = { 'can_fail' : can_fail,
+                                         'loglevel' : loglevel }
         command_call.kill_timer = self.framework.preferences.loop_wait * 10
         command_call.retirement_age = self.framework.preferences.loop_wait * 10
         
@@ -201,6 +206,9 @@ class queued_console ( threading.Thread ):
         le_message = self.telnet_wrapper ( "le" )
         self.telnet_client_le.write ( le_message )
 
+    def llp_wrapper ( self ):
+        self.framework.console.send ( "llp" )
+
     def lp_wrapper ( self ):    
         if self.framework.server.clear_online_property:
             self.framework.server.offline_players ( )
@@ -224,13 +232,15 @@ class queued_console ( threading.Thread ):
                     print ( entry )
         self.log.debug ( "Counts differ {} != {}".format ( counter, lp_finish_matcher [ 0 ] ) )    
         
-    def pm_wrapper ( self, player, message ):
+    def pm_wrapper ( self, player, message, can_fail = False, loglevel = "INFO" ):
         first_timestamp = time.time ( )
         while ( self.framework.pm_info [ 'sending' ] [ 'condition' ] ):
             self.log.debug ( "Previous pm call not yet finished." )
+            if can_fail:
+                return
             time.sleep ( self.framework.pm_info [ 'lag' ] * 0.1 )
             if ( time.time ( ) - first_timestamp ) > ( self.framework.pm_info [ 'lag' ] * 10 ):
-                self.log.warning ( "Enqueueing PM despite sent flag." )
+                self.log.warning ( "Enqueueing PM despite sent flag: {}.".format ( message ) )
                 break
 
         self.framework.pm_info [ 'enqueueing' ] [ 'condition' ] = False
@@ -239,7 +249,11 @@ class queued_console ( threading.Thread ):
         self.framework.pm_info [ 'sending'    ] [ 'timestamp' ] = time.time ( )
         
         pm_string = 'pm {} "{}"'.format ( player.steamid, message )
-        self.log.debug ( pm_string )
+        pm_log_string = 'pm {} "{}"'.format ( player.name_sane, message )
+        if loglevel == "INFO":
+            self.log.info ( pm_log_string )
+        elif loglevel == "DEBUG":
+            self.log.debug ( pm_log_string )
         pm_message = self.telnet_wrapper ( pm_string )
         self.telnet_client_pm.write ( pm_message )
 
