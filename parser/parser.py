@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.1'
+        self.__version__ = '0.1.2'
         self.changelog = {
+            '0.1.2' : "+AI scout matchers.",
             '0.1.1' : "Matcher for player requested spawn, EAC kicking user reason, playerid not found.",
             '0.1.0' : "Initial commit." }
 
@@ -30,6 +31,14 @@ class parser ( threading.Thread ):
         self.telnet_output_matchers = {
             'add obs entity'       : { 'to_match' : self.match_prefix + r'INF Adding observed entity: ' +\
                                        r'[\d]+, ' + self.match_string_pos + r', [\d]+$',
+                                       'to_call'  : [ ] },
+            'AI scout'             : { 'to_match' : self.match_prefix + r'INF AIDirector: scout horde zombie' + \
+                                       r'\'\[type=EntityZombie, name=spiderzombie, id=[\d]+\]\' was spawned and' + \
+                                       r' is moving towards point of interest\.$',
+                                       'to_call'  : [ ] },
+            'AI scouts'            : { 'to_match' : self.match_prefix + r'INF AIDirector: Spawning scouts @ \(' + \
+                                       self.match_string_pos + r '\) heading towards \(' + self.match_string_pos + \
+                                       r'\)$',
                                        'to_call'  : [ ] },
             'chunks saved'         : { 'to_match' : r'.* INF Saving (.*) of chunks took (.*)ms',
                                        'to_call' : [ ] },
@@ -56,6 +65,9 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'fell off world'       : { 'to_match' : self.match_string_date + r' WRN Entity \[type=.*, name=.*' +\
                                        r', id=[\d]+\] fell off the world, if=[\d]+ pos=' + self.match_string_date,
+                                       'to_call'  : [ ] },
+            'item fell off'        : { 'to_match' : self.match_prefix + r'WRN Entity Item_[\d]+ \(EntityItem\) ' + \
+                                       r'fell off the world, id=[\d]+ pos=' + self.match_string_pos + r'$',
                                        'to_call'  : [ ] },
             'gmsg'                 : { 'to_match' : self.match_string_date + r' INF GMSG: (.*: .*)$',
                                        'to_call'  : [ self.framework.server.parse_gmsg ] },
