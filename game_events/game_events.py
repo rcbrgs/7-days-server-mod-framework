@@ -135,10 +135,11 @@ class game_events ( threading.Thread ):
 
     def player_died ( self, matches ):
         player_died_messages = [
-            ( "I want brains, and after eating {} I'm still hungry!" ),
+            ( "I want brains, and after eating {}'s, I'm still hungry!" ),
             ( "Again, {}!?" ),
             ( "That's not how a log spike is supposed to work, {}." ),
             ( "Don't feel bad, {}. Even the zombies died once." ),
+            ( "Quick everyone! {}'s backpack has two augers!!" ),
             ]
         player = self.framework.server.get_player ( matches [ 7 ] )
         if player:

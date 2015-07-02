@@ -978,6 +978,8 @@ class server ( threading.Thread ):
             self.framework.game_events.hour_changed ( previous_hour )
 
         self.game_server.gt = ( new_gt, now )
+
+        self.log.info ( "Game date: {} {:02d}:{:02d}.".format ( day, hour, minute ) )
         
     def update_id ( self, id_fields ):
         self.latest_id_parse_call = time.time ( )

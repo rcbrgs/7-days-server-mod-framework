@@ -59,7 +59,7 @@ class parser ( threading.Thread ):
                                        self.match_string_ip + ':([\d]+)',
                                        'to_call'  : [ self.command_gt_executing_parser ] },
             'gt command output'    : { 'to_match' : r'Day ([0-9]+), ([0-9]{2}):([0-9]{2})',
-                                       'to_call'  : [ self.command_gt_output_parser ] },
+                                       'to_call'  : [ self.framework.server.update_gt ] },
             'header  0'            : { 'to_match' : r'^\*\*\* Connected with 7DTD server\.$',
                                        'to_call'  : [ ] },
             'header  1'            : { 'to_match' : r'^\*\*\* Server version: Alpha 11\.6 \(b5\) Compatibility ' + \
@@ -287,6 +287,7 @@ class parser ( threading.Thread ):
                 self.log.info ( "gt lag: {:.1f}s.".format ( self.framework.gt_info [ 'lag' ] ) )
 
     def command_gt_output_parser ( self, match ):
+        self.log.warning ( "DEPRECATED" )
         self.log.info ( "gt parser" )
         day     = int ( match [ 0 ] )
         hour    = int ( match [ 1 ] )
