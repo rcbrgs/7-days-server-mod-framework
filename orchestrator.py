@@ -13,8 +13,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.3.8'
+        self.__version__ = '0.4.0'
         self.changelog = {
+            '0.4.0' : "Major refactor to use multiple telnets and parsers.",
             '0.3.8' : "Separated send and list channels. Makes sense; who talks through their ears?",
             '0.3.7' : "Reverted to reliable non-self-healing version.",
             '0.3.6' : "Extended with utils module. Added db_lock functionality.",
@@ -145,10 +146,11 @@ class orchestrator ( threading.Thread ):
                 self.log.error ( e )
                 old_version = 'unknown'
             new_version = self.framework_state [ component ] [ 'version' ]
-            if old_version != new_version:
-                self.log.info ( "Mod %s updated to %s: %s" %
-                                ( str ( component ), str ( new_version ),
-                                  str ( self.framework_state [ component ] [ 'changelog' ] ) ) )
+            if ( old_version != new_version and
+                 old_version != 'unknown' ):
+                self.framework.console.say ( "Mod %s updated to %s: %s" %
+                                             ( str ( component ), str ( new_version ),
+                                               str ( self.framework_state [ component ] [ 'changelog' ] ) ) )
             
     def get_db_lock ( self ):
         callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
