@@ -26,6 +26,7 @@ class server ( threading.Thread ):
         self.log = logging.getLogger ( __name__ )
         self.__version__ = '0.4.8'
         self.changelog = {
+            '0.4.9'  : "Better logging of preteleports.",
             '0.4.8'  : "give_player_stuff now using steamid instead of player names. Converting steamid to string.",
             '0.4.7'  : "+db_clean. Preteleport now prevents immediate reteleport to same location.",
             '0.4.6'  : "Refactor give_stuff. Reindexed players by steamid.",
@@ -42,18 +43,18 @@ class server ( threading.Thread ):
             '0.3.12' : "Fixed error on parsing messages containing colons.",
             '0.3.11' : "Adapted for pm sent from events. Fixed /status bug.",
             '0.3.10' : "Made backend lp more useful. Added +1 karma every 1h. Added karma to /me.",
-            '0.3.9' : "Disabled old prison system.",
-            '0.3.8' : "Fixed 'lp storm' by only calling lp if needed, not every interval.",
-            '0.3.7' : "Preventively change player position after teleport.",
-            '0.3.6' : "Added pkill explanations to /me.",
-            '0.3.5' : "Added lp after teleport to prevent double teleports.",
-            '0.3.4' : "Fixed positions not being saved.",
-            '0.3.3' : "Added accounting of play time (/me) and player position.",
-            '0.3.2' : "Fixed db update function.",
-            '0.3.1' : "Started to ignore command 'restart'.",
-            '0.3.0' : "Added pm wrapper function.",
-            '0.2.0' : "Upgraded player_info to v3, with stubs to new attributes.",
-            '0.1.2' : "Fixed framework.mods being called as list, but now is dict." }
+            '0.3.9'  : "Disabled old prison system.",
+            '0.3.8'  : "Fixed 'lp storm' by only calling lp if needed, not every interval.",
+            '0.3.7'  : "Preventively change player position after teleport.",
+            '0.3.6'  : "Added pkill explanations to /me.",
+            '0.3.5'  : "Added lp after teleport to prevent double teleports.",
+            '0.3.4'  : "Fixed positions not being saved.",
+            '0.3.3'  : "Added accounting of play time (/me) and player position.",
+            '0.3.2'  : "Fixed db update function.",
+            '0.3.1'  : "Started to ignore command 'restart'.",
+            '0.3.0'  : "Added pm wrapper function.",
+            '0.2.0'  : "Upgraded player_info to v3, with stubs to new attributes.",
+            '0.1.2'  : "Fixed framework.mods being called as list, but now is dict." }
 
         self.log.info ( "Server module initializing." )
 
@@ -941,10 +942,13 @@ class server ( threading.Thread ):
             msg += str ( int ( where_to [ 0 ] ) ) + " " + \
                    str ( int ( where_to [ 2 ] ) + 1 ) + " " + \
                    str ( int ( where_to [ 1 ] ) )
+            logmsg = str ( int ( where_to [ 0 ] ) ) + " " + \
+                     str ( int ( where_to [ 2 ] ) + 1 ) + " " + \
+                     str ( int ( where_to [ 1 ] ) )
             premsg += str ( int ( where_to [ 0 ] ) ) + " " + \
                       str ( int ( where_to [ 2 ] ) - 5000 ) + " " + \
                       str ( int ( where_to [ 1 ] ) )
-        self.log.info ( "Preteleport: {}.".format ( premsg ) )
+        self.log.info ( "Preteleport {} ({})".format ( player.name_sane, logmsg ) )
         self.framework.console.send ( premsg )
         time.sleep ( 3 )
         self.framework.console.send ( msg )

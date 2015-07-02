@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.1.1'
         self.changelog = {
+            '0.1.1' : "Matcher for player requested spawn, EAC kicking user reason, playerid not found.",
             '0.1.0' : "Initial commit." }
 
         self.daemon = True
@@ -46,6 +47,10 @@ class parser ( threading.Thread ):
                                        r' Status: UserAuthenticated GUID: [\d]+ ReqKick: [\w]+ Message:.*$',
                                        'to_call'  : [ ] },
             'EAC free user'        : { 'to_match' : r'INF \[EAC\] FreeUser \(.*\)',
+                                       'to_call'  : [ ] },
+            'EAC kicking player'   : { 'to_match' : self.match_prefix + r'Kicking player: Kicked by EAC. ' + \
+                                       r'Please check if you started the game with AntiCheat protection ' + \
+                                       r'software enabled$',
                                        'to_call'  : [ ] },
             'empty line'           : { 'to_match' : r'^$',
                                        'to_call'  : [ ] },
@@ -83,6 +88,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'header 10'            : { 'to_match' : r'Press \'help\' to get a list of all commands\. Press ' + \
                                        r'\'exit\' to end session.',
+                                       'to_call'  : [ ] },
+            'kicking player'       : { 'to_match' : self.match_prefix + r'INF Kicking player: goodbye$',
                                        'to_call'  : [ ] },
             'le command executing' : { 'to_match' : self.match_string_date + \
                                        r' INF Executing command \'le\' by Telnet from ' + \
@@ -130,6 +137,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ self.framework.server.update_mem ] },
             'message player'       : { 'to_match' : r'Message to player ".*" sent with sender "Server"',
                                        'to_call'  : [ ] },
+            'not found'            : { 'to_match' : r'^Playername or entity ID not found.$',
+                                       'to_call'  : [ ] },
             'player created'       : { 'to_match' : self.match_prefix + r'INF Created player with id=[\d]+$',
                                        'to_call'  : [ ] },
             'player joined'        : { 'to_match' : self.match_prefix + 'INF GMSG: .* joined the game',
@@ -158,6 +167,9 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ self.framework.game_events.player_kill ] },
             'player left'          : { 'to_match' : self.match_prefix + r'INF GMSG: (.*) left the game$',
                                        'to_call'  : [ self.framework.game_events.player_left ] },
+            'player req spawn'     : { 'to_match' : self.match_prefix + r'INF RequestToSpawnPlayer: [\d]+, ' + \
+                                       r'.*, [\d]+$',
+                                       'to_call'  : [ ] },
             'pm executing'         : { 'to_match' : r'^' + self.match_string_date + r' INF Executing command' + \
                                        r' \'pm (.*) (.*)\' by Telnet from ' + self.match_string_ip + r':[\d]+$',
                                        'to_call'  : [ self.command_pm_executing_parser ] },
