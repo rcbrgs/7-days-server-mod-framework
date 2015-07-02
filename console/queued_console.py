@@ -21,7 +21,7 @@ class queued_console ( threading.Thread ):
         self.queue = [ ]
         self.queue_lock = None
         self.shutdown = False
-        telnet_wait = 9
+        telnet_wait = 8
         self.telnet_client_commands = framework.telnet_client ( self.framework )
         self.telnet_client_commands.open_connection ( )
         self.telnet_client_commands.start ( )

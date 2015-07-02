@@ -9,9 +9,10 @@ import time
 class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
-        self.log = framework.log
+        self.log = logging.getLogger ( __name__ )
         self.__version__ = "0.2.4"
         self.changelog = {
+            '0.2.5' : "Use __name__ logger.",
             '0.2.4' : "Log player and gameserver info every game hour. +player detected. Fixed map beacon not being saved.",
             '0.2.3' : "Added hook for player connection. Added daily vote message.",
             '0.2.2' : "Added hook for triggering on player position change.",

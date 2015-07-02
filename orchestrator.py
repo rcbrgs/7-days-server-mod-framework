@@ -109,13 +109,11 @@ class orchestrator ( threading.Thread ):
         self.console = framework.queued_console ( self )
         self.console.start ( )
 
-        self.log.info ( "Loading telnet." )
+        self.log.debug ( "Loading telnet." )
         self.telnet = framework.telnet_client ( framework = self )
-        self.log.info ( "Connecting telnet." )
+        self.log.debug ( "Connecting telnet." )
         self.telnet.open_connection ( )
         time.sleep ( 9 )
-        #self.log.info ( "Loading parser." )
-        #self.parser.start ( )
         self.server.start ( )
         self.telnet.start ( )
         self.telnet.write ( "loglevel ALL true\n".encode ( 'utf-8') )
@@ -148,9 +146,9 @@ class orchestrator ( threading.Thread ):
             new_version = self.framework_state [ component ] [ 'version' ]
             if ( old_version != new_version and
                  old_version != 'unknown' ):
-                self.framework.console.say ( "Mod %s updated to %s: %s" %
-                                             ( str ( component ), str ( new_version ),
-                                               str ( self.framework_state [ component ] [ 'changelog' ] ) ) )
+                self.console.say ( "Mod %s updated to %s: %s" %
+                                   ( str ( component ), str ( new_version ),
+                                     str ( self.framework_state [ component ] [ 'changelog' ] ) ) )
             
     def get_db_lock ( self ):
         callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
@@ -246,8 +244,8 @@ class orchestrator ( threading.Thread ):
                                                  'changelog' : mod_instance.changelog [ mod_instance.__version__ ] }
         self.mods [ module_name ] = { 'reference'      : mod_instance,
                                       'loaded version' : mod_instance.__version__ }
-        self.log.info ( "framework_state update with info for mod %s." %
-                        module_name )
+        self.log.debug ( "framework_state update with info for mod %s." %
+                         module_name )
         return mod_instance
 
     def run ( self ):            
