@@ -5,6 +5,7 @@ from .orchestrator     import orchestrator
 from .parser           import ( parser )
 from .player_info      import player_info
 from .preferences      import preferences
+from .rank             import rank
 from .server           import server
 from .telnet_client.telnet_client    import telnet_client
 from .utils                          import utils
@@ -30,9 +31,6 @@ maestro = orchestrator ( )
 def config ( preferences_file_name ):
     maestro.config ( preferences_file_name )
     maestro.start ( )
-
-#def console ( input_string ):
-#    maestro.server.console ( input_string )
 
 def set_log_file ( log_file_name ):
     log_handler = logging.FileHandler ( log_file_name )

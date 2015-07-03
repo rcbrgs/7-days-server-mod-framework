@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.2'
+        self.__version__ = '0.1.3'
         self.changelog = {
+            '0.1.3' : "EAC Auth matcher.",
             '0.1.2' : "+AI scout matchers.",
             '0.1.1' : "Matcher for player requested spawn, EAC kicking user reason, playerid not found.",
             '0.1.0' : "Initial commit." }
@@ -37,8 +38,10 @@ class parser ( threading.Thread ):
                                        r' is moving towards point of interest\.$',
                                        'to_call'  : [ ] },
             'AI scouts'            : { 'to_match' : self.match_prefix + r'INF AIDirector: Spawning scouts @ \(' + \
-                                       self.match_string_pos + r '\) heading towards \(' + self.match_string_pos + \
+                                       self.match_string_pos + r'\) heading towards \(' + self.match_string_pos + \
                                        r'\)$',
+                                       'to_call'  : [ ] },
+            'allowing player'      : { 'to_match' : self.match_prefix + r'INF Allowing player with id [\d]+$',
                                        'to_call'  : [ ] },
             'chunks saved'         : { 'to_match' : r'.* INF Saving (.*) of chunks took (.*)ms',
                                        'to_call' : [ ] },
@@ -60,6 +63,8 @@ class parser ( threading.Thread ):
             'EAC kicking player'   : { 'to_match' : self.match_prefix + r'Kicking player: Kicked by EAC. ' + \
                                        r'Please check if you started the game with AntiCheat protection ' + \
                                        r'software enabled$',
+                                       'to_call'  : [ ] },
+            'EAC Auth'             : { 'to_match' : self.match_prefix + r'INF \[Steamworks\.NET\] Authenticating player: [\w]+ SteamId: [\d]+ TicketLen: [\d]+ Result: k_EBeginAuthSessionResultOK$',
                                        'to_call'  : [ ] },
             'empty line'           : { 'to_match' : r'^$',
                                        'to_call'  : [ ] },
@@ -185,6 +190,9 @@ class parser ( threading.Thread ):
             'pm executing'         : { 'to_match' : r'^' + self.match_string_date + r' INF Executing command' + \
                                        r' \'pm (.*) (.*)\' by Telnet from ' + self.match_string_ip + r':[\d]+$',
                                        'to_call'  : [ self.command_pm_executing_parser ] },
+            'registering player'   : { 'to_match' : self.match_prefix + r'INF \[EAC\] Registering user: id=[\d]+,'+\
+                                       r' owner=[\d]+$',
+                                       'to_call'  : [ ] },
             'removing entity'      : { 'to_match' : self.match_prefix + r'INF Removing observed entity [\d]+',
                                        'to_call'  : [ ] },
             'request to enter'     : { 'to_match' : self.match_prefix + r'INF RequestToEnterGame: [\d]+/.*$',
@@ -214,6 +222,9 @@ class parser ( threading.Thread ):
                                        self.match_string_pos + r' Day=[\d]+ TotalInWave=[\d]+ CurrentWave=[\d]+$',
                                        'to_call'  : [ ] },
             'spawn output'         : { 'to_match' : r'^Spawned [\w\d]+$',
+                                       'to_call'  : [ ] },
+            'spider spawn horde'   : { 'to_match' : self.match_prefix + r'INF Spider scout spawned a zombie' + \
+                                       r' horde!$',
                                        'to_call'  : [ ] },
             'steam auth'           : { 'to_match' : self.match_prefix + r'INF \[Steamworks.NET\] ' + \
                                        r'Authentication callback\. ID: [\d]+, owner: [\d]+, result: .*$',

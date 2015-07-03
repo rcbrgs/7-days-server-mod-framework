@@ -90,10 +90,10 @@ class game_events ( threading.Thread ):
         if ( time.time ( ) - self.framework.load_time ) < 60:
             return
         # Which position are we? Save it to pos.txt
-        position_file = open ( "pos.txt", "r" )
-        position = int (position_file.readline ().strip() )
-        self.log.info ( "Rank = {}".format ( position ) )
-        self.framework.console.say ( "If you like this server, vote for it on http://7daystodie-servers.com/server/14698. We are currently # {}!".format ( position ) )
+        #position_file = open ( "pos.txt", "r" )
+        position = self.framework.rank.current_rank
+        if position != -1:
+            self.framework.console.say ( "Please vote for our server on http://7daystodie-servers.com/server/14698. We are currently # {} on the rank! Also, you gain one karma per vote.".format ( position ) )
     
     def hour_changed ( self, previous_hour ):
         # do not continue if mod just came up:

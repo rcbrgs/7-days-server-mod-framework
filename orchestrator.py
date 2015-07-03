@@ -13,8 +13,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.4.0'
+        self.__version__ = '0.4.1'
         self.changelog = {
+            '0.4.1' : "Added a framework.rank object to scrape 7daystodie-servers.com. Initial work on soft shutdown for components.",
             '0.4.0' : "Major refactor to use multiple telnets and parsers.",
             '0.3.8' : "Separated send and list channels. Makes sense; who talks through their ears?",
             '0.3.7' : "Reverted to reliable non-self-healing version.",
@@ -72,6 +73,7 @@ class orchestrator ( threading.Thread ):
         self.load_time = time.time ( )
         self.lock_gt = None
         self.mods = { }
+        self.rank = framework.rank ( self )
         self.verbose = False
         self.world_state = framework.world_state ( self )
         
@@ -79,6 +81,7 @@ class orchestrator ( threading.Thread ):
         self.silence = False
         self.shutdown = False
         self.preferences = framework.preferences ( preferences_file_name )
+        self.rank.start ( )
         self.server = framework.server ( framework = self )
         self.game_events = framework.game_events ( framework = self )
         #self.parser = framework.parser ( self )
@@ -103,7 +106,8 @@ class orchestrator ( threading.Thread ):
             self.old_framework_state = None
 
         self.framework_state = { 'orchestrator' : { 'version' : self.__version__,
-                                                    'changelog' : self.changelog [ self.__version__ ] } }
+                                                    'changelog' : self.changelog [ self.__version__ ], } }
+                                                    #'reference' : self } }
 
         self.log.info ( "Loading console." )
         self.console = framework.queued_console ( self )
@@ -123,12 +127,18 @@ class orchestrator ( threading.Thread ):
         self.utils = framework.utils ( )
 
 
-        self.framework_state [ 'telnet' ] = { 'version' : self.telnet.__version__,
-                                              'changelog' : self.telnet.changelog [ self.telnet.__version__ ] }
-        self.framework_state [ 'server' ] = { 'version' : self.server.__version__,
-                                              'changelog' : self.server.changelog [ self.server.__version__ ] }
+        self.framework_state [ 'telnet' ] = { 'version'   : self.telnet.__version__,
+                                              'changelog' : self.telnet.changelog [ self.telnet.__version__ ], }
+                                              #'reference' : self.telnet }
+        self.framework_state [ 'server' ] = { 'version'   : self.server.__version__,
+                                              'changelog' : self.server.changelog [ self.server.__version__ ], }
+                                              #'reference' : self.server }
         self.framework_state [ 'game_events' ] = { 'version'   : self.game_events.__version__,
-                                                   'changelog' : self.game_events.changelog [ self.game_events.__version__ ] }
+                                                   'changelog' : self.game_events.changelog [ self.game_events.__version__ ], }
+                                                   #'reference' : self.game_events }
+        self.framework_state [ 'rank' ] = { 'version'   : self.rank.__version__,
+                                            'changelog' : self.rank.changelog [ self.rank.__version__ ], }
+                                            #'reference' : self.rank }
 
         for mod in self.preferences.mods.keys ( ):
             module_name = self.preferences.mods [ mod ] [ 'module' ]
@@ -240,8 +250,9 @@ class orchestrator ( threading.Thread ):
         mod_class = getattr ( mod_module, module_name )
         mod_instance = mod_class ( framework = self )
         self.log.info ( "Mod %s loaded." % module_name )
-        self.framework_state [ module_name ] = { 'version' : mod_instance.__version__,
-                                                 'changelog' : mod_instance.changelog [ mod_instance.__version__ ] }
+        self.framework_state [ module_name ] = { 'version'   : mod_instance.__version__,
+                                                 'changelog' : mod_instance.changelog [ mod_instance.__version__ ], }
+                                                 #'reference' : mod_instance }
         self.mods [ module_name ] = { 'reference'      : mod_instance,
                                       'loaded version' : mod_instance.__version__ }
         self.log.debug ( "framework_state update with info for mod %s." %
@@ -317,6 +328,13 @@ class orchestrator ( threading.Thread ):
                 mod.join ( )
         self.log.info ( "All mods stopped." )
 
+        for component_key in self.framework_state.keys ( ):
+            try:
+                #if self.framework_state [ component_key ] [ 'reference' ].isAlive:
+                self.log.warning ( "{} should be stopped!".format ( component_key ) )
+            except:
+                self.log.error ( "Error while trying to check component is alive." )
+        
         self.telnet.stop ( )
         self.telnet.join ( )
         self.telnet.close_connection ( )
@@ -325,11 +343,15 @@ class orchestrator ( threading.Thread ):
         self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
     def stop ( self ):
-        self.log.info ( "<framework>.stop" )
+        self.log.info ( "framework.stop" )
         pickle_file = open ( self.preferences.framework_state_file, 'wb' )
         pickle.dump ( self.framework_state, pickle_file, pickle.HIGHEST_PROTOCOL )
 
         self.shutdown = True
+        self.rank.shutdown = True
+        self.rank.join ( )
+        self.server.shutdown = True
+        self.server.join ( )
 
     def __del__ ( self ):
         self.log.info ( "<framework>.__del__" )
