@@ -24,9 +24,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.8'
+        self.__version__ = '0.4.9'
         self.changelog = {
-            '0.4.9'  : "Better logging of preteleports.",
+            '0.4.9'  : "Better logging of preteleports. Player positions are cleaned up to make save file smaller. (50% smaller!)",
             '0.4.8'  : "give_player_stuff now using steamid instead of player names. Converting steamid to string.",
             '0.4.7'  : "+db_clean. Preteleport now prevents immediate reteleport to same location.",
             '0.4.6'  : "Refactor give_stuff. Reindexed players by steamid.",
@@ -1039,6 +1039,8 @@ class server ( threading.Thread ):
             backup_file = open ( backup_file_name, 'wb' )
             self.log.info ( "Saving player db backup." )
             pickle.dump ( self.players_info, backup_file, pickle.HIGHEST_PROTOCOL )
+            self.log.info ( "Cleaning up positions." )
+            self.remove_old_positions ( )
 
     def update_le ( self, matches ):
         self.log.debug ( matches )
@@ -1406,7 +1408,22 @@ class server ( threading.Thread ):
                         player.home_invitees.remove ( invitee )
                     else:
                         print ( "invited {} has no record!".format ( invitee ) )
-            
+
+    def remove_old_positions ( self ):
+        now = time.time ( )
+        self.framework.get_db_lock()
+
+        for steamid in self.players_info.keys ( ):
+            if self.players_info [ steamid ].positions == [ ]:
+                continue
+            self.log.info ( "{} has non-empty positions.".format ( self.players_info [ steamid ].name_sane ) )
+            if self.players_info [ steamid ].timestamp_latest_update > now - 24 * 3600:
+                continue
+            self.log.info ( "{} has not logged in in 24h. Cleaning positions.".format (
+                self.players_info [ steamid ].name_sane ) )
+            self.players_info [ steamid ].positions = [ ]
+        
+        self.framework.let_db_lock()
 
     def little_inferno ( self, player, waves ):
         for count in range ( waves ):

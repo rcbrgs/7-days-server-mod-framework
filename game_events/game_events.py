@@ -157,11 +157,12 @@ class game_events ( threading.Thread ):
             ( "Hmmm. I think I can make a base out of {}'s gore blocks." ),
             ( "I want brains, and after eating {}'s, I'm still hungry!" ),
             ( "If you will keep dying that fast, I will start respawning you as a rabbit, {}." ),
-            ( "How very Blaulila of you, {}!" ),
+            ( "Lemme guess, {}: you learned how to play with Lulu?" ),
             ( "Lol {}, are you role-playing a zombie?" ),
+            ( "Player stew: one water, one potato and one {}." ),
             ( "Quick everyone! {}'s backpack has two augers!!" ),
             ( "That's not how a log spike is supposed to work, {}." ),
-            ( "Wow, {} tastes just like chicken!", )
+            ( "Wow, {} tastes just like chicken!" ),
             ( "You expect a prize if you read all taunts, {}?" ),
             ]
         player = self.framework.server.get_player ( matches [ 7 ] )

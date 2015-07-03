@@ -10,7 +10,7 @@ class rank ( threading.Thread ):
         self.log = logging.getLogger ( __name__ )
         self.__version__ = '0.1.2'
         self.changelog = {
-            '0.1.3' : "Jazzed up vote thank you.",
+            '0.1.3' : "Jazzed up vote thank you. Added log about rank changing position.",
             '0.1.2' : "Increased prize for votes.",
             '0.1.1' : "Changed delay to 10 minutes to not overwhelm the rank server.",
             '0.1.0' : "Initital commit" }
@@ -19,6 +19,7 @@ class rank ( threading.Thread ):
         self.daemon = True
         self.framework = framework
         self.players_votes = { }
+        self.previous_rank = -1
         self.shutdown = False
         self.timestamp = time.time ( )
 
@@ -46,6 +47,11 @@ class rank ( threading.Thread ):
         tds = soup.findAll ( "td" )
         rank = int ( tds [ 29 ].contents [ 0 ] )
         self.current_rank = rank
+        if self.previous_rank != self.current_rank:
+            if self.previous_rank != -1:
+                self.log.info ( "Server rank changed from {} to {}.".format ( self.previous_rank,
+                                                                              self.current_rank ) )
+            self.previous_rank = self.current_rank
         self.log.info ( "Current rank is {}.".format  ( rank ) )
         
     def update_players_votes ( self ):

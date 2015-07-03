@@ -12,6 +12,7 @@ class parser ( threading.Thread ):
         self.log.setLevel ( logging.INFO )
         self.__version__ = '0.1.5'
         self.changelog = {
+            '0.1.6' : "Matcher for item drop, Steam auth.",
             '0.1.5' : "Added hook to player creation event.",
             '0.1.4' : "Some more connection / new player matchers.",
             '0.1.3' : "EAC Auth matcher.",
@@ -117,6 +118,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'header 10'            : { 'to_match' : r'Press \'help\' to get a list of all commands\. Press ' + \
                                        r'\'exit\' to end session.',
+                                       'to_call'  : [ ] },
+            'item dropped'         : { 'to_match' : r'^Dropped item$',
                                        'to_call'  : [ ] },
             'kicking executing'    : { 'to_match' : self.match_prefix + r'INF Executing command \'kick' + \
                                        r' [\d]+ .*\' by Telnet from ' + self.match_string_ip + r':[\d]+$',
@@ -243,7 +246,11 @@ class parser ( threading.Thread ):
             'steam auth ()'        : { 'to_match' : self.match_prefix + r'INF \[Steamworks.NET\] Auth\.' + \
                                        r'AuthenticateUser\(\)$',
                                        'to_call'  : [ ] },
-            'steam auth'           : { 'to_match' : self.match_prefix + r'INF \[Steamworks.NET\] ' + \
+            'steam auth'           : { 'to_match' : self.match_prefix + r'INF \[Steamworks\.NET\] Authent' + \
+                                       r'icating player: .* SteamId: [\d]+ TicketLen: [\d]+ Result: ' + \
+                                       r'k_EBeginAuthSessionResultOK$',
+                                       'to_call'  : [ ] },
+            'steam auth callback'  : { 'to_match' : self.match_prefix + r'INF \[Steamworks.NET\] ' + \
                                        r'Authentication callback\. ID: [\d]+, owner: [\d]+, result: .*$',
                                        'to_call'  : [ ] },
             'steam player connect' : { 'to_match' : self.match_prefix + r'INF \[NET\] PlayerConnected ' + \
@@ -254,6 +261,9 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'wave start'           : { 'to_match' : r'^' + self.match_string_date + r' INF Start a new wave ' + \
                                        r'\'[\w]+\'\. timeout=[\d]+s$',
+                                       'to_call'  : [ ] },
+            'telnet conn from'     : { 'to_match' : self.match_prefix + r'INF Telnet connection from: ' + \
+                                       self.match_string_ip + ':[\d]+$',
                                        'to_call'  : [ ] },
             'telnet thread exit'   : { 'to_match' : '^' + self.match_string_date + \
                                        r' INF Exited thread TelnetClient[\w]+_' + self.match_string_ip + r':[\d]+$',
