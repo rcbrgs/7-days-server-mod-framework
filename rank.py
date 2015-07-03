@@ -8,8 +8,10 @@ class rank ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.1.1'
+        self.__version__ = '0.1.2'
         self.changelog = {
+            '0.1.3' : "Jazzed up vote thank you.",
+            '0.1.2' : "Increased prize for votes.",
             '0.1.1' : "Changed delay to 10 minutes to not overwhelm the rank server.",
             '0.1.0' : "Initital commit" }
 
@@ -81,9 +83,10 @@ class rank ( threading.Thread ):
                 self.log.debug ( "{} to receive {} karma for voting.".format ( player.name_sane,
                                                                               votes_to_account ) )
                 if votes_to_account > 0:
-                    self.framework.console.say ( "Thank you {} for voting for us! Have some karma!".format (
+                    self.framework.console.say ( "Thank you {} for voting for us! Have some cash and karma! You are [123456]amazing[FFFFFF]!".format (
                         player.name_sane ) )
                     player.karma += votes_to_account
+                    player.cash  += votes_to_account * 100
                 if 'accounted_votes' not in list ( player.attributes.keys ( ) ):
                     player.attributes [ 'accounted_votes' ] = { }
                 player.attributes [ 'accounted_votes' ] [ self.players_votes [ player.steamid ] [ 0 ] ] = self.players_votes [ player.steamid ] [ 1 ]

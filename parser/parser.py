@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.4'
+        self.__version__ = '0.1.5'
         self.changelog = {
+            '0.1.5' : "Added hook to player creation event.",
             '0.1.4' : "Some more connection / new player matchers.",
             '0.1.3' : "EAC Auth matcher.",
             '0.1.2' : "+AI scout matchers.",
@@ -171,8 +172,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'not found'            : { 'to_match' : r'^Playername or entity ID not found.$',
                                        'to_call'  : [ ] },
-            'player created'       : { 'to_match' : self.match_prefix + r'INF Created player with id=[\d]+$',
-                                       'to_call'  : [ ] },
+            'player created'       : { 'to_match' : self.match_prefix + r'INF Created player with id=([\d]+)$',
+                                       'to_call'  : [ self.framework.game_events.player_created ] },
             'player joined'        : { 'to_match' : self.match_prefix + 'INF GMSG: .* joined the game',
                                        'to_call'  : [ ] },
             'player kicked'        : { 'to_match' : self.match_prefix + r'INF Executing command \'kick [\d]+\'' + \

@@ -10,8 +10,10 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.6"
+        self.__version__ = "0.2.7"
         self.changelog = {
+            '0.2.8' : "Added processing for player creation event. More taunts",
+            '0.2.7' : "Increased prize for votes.",
             '0.2.6' : "More taunts.",
             '0.2.5' : "Use __name__ logger. More player taunts upon death.",
             '0.2.4' : "Log player and gameserver info every game hour. +player detected. Fixed map beacon not being saved.",
@@ -94,7 +96,7 @@ class game_events ( threading.Thread ):
         #position_file = open ( "pos.txt", "r" )
         position = self.framework.rank.current_rank
         if position != -1:
-            self.framework.console.say ( "Please vote for our server on http://7daystodie-servers.com/server/14698. We are currently # {} on the rank! Also, you gain one karma per vote.".format ( position ) )
+            self.framework.console.say ( "Please vote for our server on http://7daystodie-servers.com/server/14698. We are currently # {} on the rank! Also, you gain 100$+1k per vote.".format ( position ) )
     
     def hour_changed ( self, previous_hour ):
         # do not continue if mod just came up:
@@ -135,6 +137,16 @@ class game_events ( threading.Thread ):
         self.framework.console.pm ( player, "Welcome back {}!".format ( player.name_sane ) )
         self.log.info ( "{} connected.".format ( player.name_sane ) )
 
+    def player_created ( self, matches ):
+        playerid = int ( matches [ 0 ] )
+        self.log.info ( "Player with playerid = {} created.".format ( playerid ) )
+        player = self.framework.server.get_player ( playerid )
+        if player:
+            self.log.info ( "Player name is {}, position is ({}, {}, {}).".format (
+                player.name, player.pos_x, player.pos_y, player.pos_z ) )
+        else:
+            self.log.info ( "Player is not in db yet." )
+        
     def player_died ( self, matches ):
         player_died_messages = [
             ( "Again, {}!?" ),
@@ -146,8 +158,10 @@ class game_events ( threading.Thread ):
             ( "I want brains, and after eating {}'s, I'm still hungry!" ),
             ( "If you will keep dying that fast, I will start respawning you as a rabbit, {}." ),
             ( "How very Blaulila of you, {}!" ),
+            ( "Lol {}, are you role-playing a zombie?" ),
             ( "Quick everyone! {}'s backpack has two augers!!" ),
             ( "That's not how a log spike is supposed to work, {}." ),
+            ( "Wow, {} tastes just like chicken!", )
             ( "You expect a prize if you read all taunts, {}?" ),
             ]
         player = self.framework.server.get_player ( matches [ 7 ] )
