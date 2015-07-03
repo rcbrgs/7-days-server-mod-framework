@@ -26,6 +26,7 @@ class server ( threading.Thread ):
         self.log = logging.getLogger ( __name__ )
         self.__version__ = '0.4.9'
         self.changelog = {
+            '0.4.10' : "Simplified player positions being saved from floats to ints.",
             '0.4.9'  : "Better logging of preteleports. Player positions are cleaned up to make save file smaller. (50% smaller!)",
             '0.4.8'  : "give_player_stuff now using steamid instead of player names. Converting steamid to string.",
             '0.4.7'  : "+db_clean. Preteleport now prevents immediate reteleport to same location.",
@@ -725,7 +726,9 @@ class server ( threading.Thread ):
             player_positions = player.positions
             if not isinstance ( player_positions, list ):
                 player_positions = [ ]
-            player_positions.append ( ( pos_x, pos_y, pos_z ) )
+            player_positions.append ( ( int ( round ( pos_x ) ),
+                                        int ( round ( pos_y ) ),
+                                        int ( round ( pos_z ) ) ) )
             if len ( player_positions ) > 24 * 60 * 60 / self.framework.preferences.loop_wait:
                 del ( player_positions [ 0 ] )
             player.positions = player_positions
@@ -1416,7 +1419,7 @@ class server ( threading.Thread ):
         for steamid in self.players_info.keys ( ):
             if self.players_info [ steamid ].positions == [ ]:
                 continue
-            self.log.info ( "{} has non-empty positions.".format ( self.players_info [ steamid ].name_sane ) )
+            self.log.debug ( "{} has non-empty positions.".format ( self.players_info [ steamid ].name_sane ) )
             if self.players_info [ steamid ].timestamp_latest_update > now - 24 * 3600:
                 continue
             self.log.info ( "{} has not logged in in 24h. Cleaning positions.".format (

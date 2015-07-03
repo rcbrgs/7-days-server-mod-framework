@@ -10,9 +10,10 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.5'
+        self.__version__ = '0.1.6'
         self.changelog = {
-            '0.1.6' : "Matcher for item drop, Steam auth.",
+            '0.1.7' : "Supply plane and crates matchers.",
+            '0.1.6' : "Matcher for item drop, Steam auth. Fixed zed fall through void matcher typo.",
             '0.1.5' : "Added hook to player creation event.",
             '0.1.4' : "Some more connection / new player matchers.",
             '0.1.3' : "EAC Auth matcher.",
@@ -81,8 +82,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'empty line'           : { 'to_match' : r'^$',
                                        'to_call'  : [ ] },
-            'fell off world'       : { 'to_match' : self.match_string_date + r' WRN Entity \[type=.*, name=.*' +\
-                                       r', id=[\d]+\] fell off the world, if=[\d]+ pos=' + self.match_string_date,
+            'fell off world'       : { 'to_match' : self.match_prefix + r'WRN Entity \[type=.*, name=.*' +\
+                                       r', id=[\d]+\] fell off the world, id=[\d]+ pos=' + self.match_string_date,
                                        'to_call'  : [ ] },
             'item fell off'        : { 'to_match' : self.match_prefix + r'WRN Entity Item_[\d]+ \(EntityItem\) ' + \
                                        r'fell off the world, id=[\d]+ pos=' + self.match_string_pos + r'$',
@@ -255,6 +256,13 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'steam player connect' : { 'to_match' : self.match_prefix + r'INF \[NET\] PlayerConnected ' + \
                                        r'EntityID=-1, PlayerID=\'\', OwnerID=\'\', PlayerName=\'\'$',
+                                       'to_call'  : [ ] },
+            'supply crate'         : { 'to_match' : self.match_prefix + r'INF AIAirDrop: Spawned supply ', +\
+                                       r'crate @ \(' + self.match_string_pos + '\)$',
+                                       'to_call'  : [ ] },
+            'supply plane'         : { 'to_match' : r'[\d]+\. id=[\d]+, GameObject (EntitySupplyPlane), pos=' +\
+                                       self.match_string_pos + r', rot=' + self.match_string_pos + \
+                                       r', lifetime=float.Max, remote=False, dead=False,$',
                                        'to_call'  : [ ] },
             'wave spawn'           : { 'to_match' : r'^' + self.match_string_date + r' INF Spawning this wave:' +\
                                        r' ([\d]+)',
