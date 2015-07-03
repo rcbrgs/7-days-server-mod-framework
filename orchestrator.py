@@ -13,8 +13,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.4.1'
+        self.__version__ = '0.4.2'
         self.changelog = {
+            '0.4.2' : "Soft shutdown refactor, using a more systematic approach.",
             '0.4.1' : "Added a framework.rank object to scrape 7daystodie-servers.com. Initial work on soft shutdown for components.",
             '0.4.0' : "Major refactor to use multiple telnets and parsers.",
             '0.3.8' : "Separated send and list channels. Makes sense; who talks through their ears?",
@@ -74,6 +75,7 @@ class orchestrator ( threading.Thread ):
         self.lock_gt = None
         self.mods = { }
         self.rank = framework.rank ( self )
+        self.stop_on_shutdown = [ ]
         self.verbose = False
         self.world_state = framework.world_state ( self )
         
@@ -82,6 +84,7 @@ class orchestrator ( threading.Thread ):
         self.shutdown = False
         self.preferences = framework.preferences ( preferences_file_name )
         self.rank.start ( )
+        self.stop_on_shutdown.append ( self.rank )
         self.server = framework.server ( framework = self )
         self.game_events = framework.game_events ( framework = self )
         #self.parser = framework.parser ( self )
@@ -112,6 +115,7 @@ class orchestrator ( threading.Thread ):
         self.log.info ( "Loading console." )
         self.console = framework.queued_console ( self )
         self.console.start ( )
+        self.stop_on_shutdown.append ( self.console )
 
         self.log.debug ( "Loading telnet." )
         self.telnet = framework.telnet_client ( framework = self )
@@ -119,10 +123,13 @@ class orchestrator ( threading.Thread ):
         self.telnet.open_connection ( )
         time.sleep ( 9 )
         self.server.start ( )
+        self.stop_on_shutdown.append ( self.server )
         self.telnet.start ( )
+        self.stop_on_shutdown.append ( self.telnet )
         self.telnet.write ( "loglevel ALL true\n".encode ( 'utf-8') )
 
         self.game_events.start ( )
+        self.stop_on_shutdown.append ( self.game_events )
 
         self.utils = framework.utils ( )
 
@@ -328,13 +335,6 @@ class orchestrator ( threading.Thread ):
                 mod.join ( )
         self.log.info ( "All mods stopped." )
 
-        for component_key in self.framework_state.keys ( ):
-            try:
-                #if self.framework_state [ component_key ] [ 'reference' ].isAlive:
-                self.log.warning ( "{} should be stopped!".format ( component_key ) )
-            except:
-                self.log.error ( "Error while trying to check component is alive." )
-        
         self.telnet.stop ( )
         self.telnet.join ( )
         self.telnet.close_connection ( )
@@ -348,10 +348,10 @@ class orchestrator ( threading.Thread ):
         pickle.dump ( self.framework_state, pickle_file, pickle.HIGHEST_PROTOCOL )
 
         self.shutdown = True
-        self.rank.shutdown = True
-        self.rank.join ( )
-        self.server.shutdown = True
-        self.server.join ( )
+        for component in self.stop_on_shutdown:
+            self.log.info ( "Trying soft shutdown of {}.".format ( str ( component ) ) )
+            component.shutdown = True
+            component.join ( )
 
     def __del__ ( self ):
         self.log.info ( "<framework>.__del__" )

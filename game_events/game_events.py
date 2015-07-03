@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.5"
+        self.__version__ = "0.2.6"
         self.changelog = {
+            '0.2.6' : "More taunts.",
             '0.2.5' : "Use __name__ logger. More player taunts upon death.",
             '0.2.4' : "Log player and gameserver info every game hour. +player detected. Fixed map beacon not being saved.",
             '0.2.3' : "Added hook for player connection. Added daily vote message.",
@@ -141,6 +142,7 @@ class game_events ( threading.Thread ):
             ( "Don't feel bad, {}. Even the zombies died once." ),
             ( "Ewwww {}, you taste awful! What have you been eating?!" ),
             ( "Hahaha I knew that broken leg was gonna do you in, {}!" ),
+            ( "Hmmm. I think I can make a base out of {}'s gore blocks." ),
             ( "I want brains, and after eating {}'s, I'm still hungry!" ),
             ( "If you will keep dying that fast, I will start respawning you as a rabbit, {}." ),
             ( "How very Blaulila of you, {}!" ),

@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.3'
+        self.__version__ = '0.1.4'
         self.changelog = {
+            '0.1.4' : "Some more connection / new player matchers.",
             '0.1.3' : "EAC Auth matcher.",
             '0.1.2' : "+AI scout matchers.",
             '0.1.1' : "Matcher for player requested spawn, EAC kicking user reason, playerid not found.",
@@ -33,13 +34,20 @@ class parser ( threading.Thread ):
             'add obs entity'       : { 'to_match' : self.match_prefix + r'INF Adding observed entity: ' +\
                                        r'[\d]+, ' + self.match_string_pos + r', [\d]+$',
                                        'to_call'  : [ ] },
-            'AI scout'             : { 'to_match' : self.match_prefix + r'INF AIDirector: scout horde zombie' + \
-                                       r'\'\[type=EntityZombie, name=spiderzombie, id=[\d]+\]\' was spawned and' + \
-                                       r' is moving towards point of interest\.$',
+            'AI scout horde'       : { 'to_match' : self.match_prefix + r'INF AIDirector: scout horde zombie' + \
+                                       r' \'\[type=EntityZombie, name=spiderzombie, id=[\d]+\]\' was spawned' + \
+                                       r' and is moving towards point of interest\.$',
                                        'to_call'  : [ ] },
             'AI scouts'            : { 'to_match' : self.match_prefix + r'INF AIDirector: Spawning scouts @ \(' + \
                                        self.match_string_pos + r'\) heading towards \(' + self.match_string_pos + \
                                        r'\)$',
+                                       'to_call'  : [ ] },
+            'AI scout fail'        : { 'to_match' : self.match_prefix + r'INF AIDirector: Scout spawning failed,'+\
+                                       r' FindHordeTargets\(\) returned false!',
+                                       'to_call'  : [ ] },
+            'AI wanderer'          : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie' +\
+                                       r' \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' was spawned and is moving ' + \
+                                       r'towards pitstop.$',
                                        'to_call'  : [ ] },
             'allowing player'      : { 'to_match' : self.match_prefix + r'INF Allowing player with id [\d]+$',
                                        'to_call'  : [ ] },
@@ -52,6 +60,9 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ self.framework.world_state.buffer_claimstones ] },
             'claim stone'          : { 'to_match' : r'\(([-+]*[\d]*), ([-+]*[\d]*), ([-+]*[\d]*)\)',
                                        'to_call'  : [ self.framework.world_state.buffer_claimstones ] },
+            'created new player'   : { 'to_match' : self.match_prefix + r'INF Created new player entry for' + \
+                                       r' ID: [\d]+$',
+                                       'to_call'  : [ ] },
             'deny match'           : { 'to_match' : r'(.*) INF Player (.*) denied: ' + \
                                        r'(.*) has been banned until (.*)',
                                        'to_call'  : [ self.framework.game_events.player_denied ] },
@@ -106,8 +117,12 @@ class parser ( threading.Thread ):
             'header 10'            : { 'to_match' : r'Press \'help\' to get a list of all commands\. Press ' + \
                                        r'\'exit\' to end session.',
                                        'to_call'  : [ ] },
+            'kicking executing'    : { 'to_match' : self.match_prefix + r'INF Executing command \'kick' + \
+                                       r' [\d]+ .*\' by Telnet from ' + self.match_string_ip + r':[\d]+$',
+                                       'to_call'  : [ ] },
             'kicking player'       : { 'to_match' : self.match_prefix + r'INF Kicking player: goodbye$',
                                        'to_call'  : [ ] },
+
             'le command executing' : { 'to_match' : self.match_string_date + \
                                        r' INF Executing command \'le\' by Telnet from ' + \
                                        self.match_string_ip + ':([\d]+)',
@@ -184,6 +199,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ self.framework.game_events.player_kill ] },
             'player left'          : { 'to_match' : self.match_prefix + r'INF GMSG: (.*) left the game$',
                                        'to_call'  : [ self.framework.game_events.player_left ] },
+            'player login'         : { 'to_match' : self.match_prefix + r'INF PlayerLogin: .*/Alpha 11\.6$',
+                                       'to_call'  : [ ] },
             'player req spawn'     : { 'to_match' : self.match_prefix + r'INF RequestToSpawnPlayer: [\d]+, ' + \
                                        r'.*, [\d]+$',
                                        'to_call'  : [ ] },
@@ -213,10 +230,6 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'spawn wander horde'   : { 'to_match' : self.match_prefix + r'INF Spawning Wandering Horde.$',
                                        'to_call'  : [ ] },
-            'wanderer'             : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie' +\
-                                       r' \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' was spawned and is moving ' + \
-                                       r'towards pitstop.$',
-                                       'to_call'  : [ ] },
             'spawned'              : { 'to_match' : r'^' + self.match_string_date + r' INF Spawned ' + \
                                        r'\[type=EntityZombie[\w]*, name=(.*), id=[\d]+\] at ' + \
                                        self.match_string_pos + r' Day=[\d]+ TotalInWave=[\d]+ CurrentWave=[\d]+$',
@@ -226,8 +239,14 @@ class parser ( threading.Thread ):
             'spider spawn horde'   : { 'to_match' : self.match_prefix + r'INF Spider scout spawned a zombie' + \
                                        r' horde!$',
                                        'to_call'  : [ ] },
+            'steam auth ()'        : { 'to_match' : self.match_prefix + r'INF \[Steamworks.NET\] Auth\.' + \
+                                       r'AuthenticateUser\(\)$',
+                                       'to_call'  : [ ] },
             'steam auth'           : { 'to_match' : self.match_prefix + r'INF \[Steamworks.NET\] ' + \
                                        r'Authentication callback\. ID: [\d]+, owner: [\d]+, result: .*$',
+                                       'to_call'  : [ ] },
+            'steam player connect' : { 'to_match' : self.match_prefix + r'INF \[NET\] PlayerConnected ' + \
+                                       r'EntityID=-1, PlayerID=\'\', OwnerID=\'\', PlayerName=\'\'$',
                                        'to_call'  : [ ] },
             'wave spawn'           : { 'to_match' : r'^' + self.match_string_date + r' INF Spawning this wave:' +\
                                        r' ([\d]+)',
@@ -244,6 +263,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'telnet thread start s': { 'to_match' : '^' + self.match_string_date + \
                                        r' INF Started thread TelnetClientSend_' + self.match_string_ip + r':[\d]+$',
+                                       'to_call'  : [ ] },
+            'token length'         : { 'to_match' : self.match_prefix + r'INF Token length: [\d]+$',
                                        'to_call'  : [ ] },
             'tp command executing' : { 'to_match' : self.match_string_date + \
                                        r' INF Executing command \'teleportplayer ([\d]+) ([+-]*[\d]+) ' + \
