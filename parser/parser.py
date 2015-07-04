@@ -72,7 +72,7 @@ class parser ( threading.Thread ):
             'biome ani zom'       : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
-                                       r'AnimalsAll_Any: c=[\d]+/r=[\d]+ ZombiesAll_any: c=[\d]+/r=[\d]+$',
+                                       r'AnimalsAll_Any: c=[\d]+/r=[\d]+ ZombiesAll_Any: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
             'biome sani zom'      : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \

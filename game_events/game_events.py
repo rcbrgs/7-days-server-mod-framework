@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.10"
+        self.__version__ = "0.2.11"
         self.changelog = {
+            '0.2.11' : "1% chance felling a tree will trigger a hornet mini horde.",
             '0.2.10' : "Skeleton event for tree felling.",
             '0.2.9'  : "More taunts. Added event for increase shop stock.",
             '0.2.8'  : "Added processing for player creation event. More taunts",
@@ -245,11 +246,12 @@ class game_events ( threading.Thread ):
 
     def tree_felled ( self, matches ):
         self.log.info ( "Tree was felled at ( {}, {} ).".format ( matches [ 0 ], matches [ 3 ] ) )
-        if random.randint ( 1, 10 ) == 1:
+        if random.randint ( 1, 100 ) == 1:
             self.log.info ( "Small swarm event triggered!" )
-        nearest_player = self.framework.server.find_nearest_player_to_position ( ( float ( matches [ 0 ] ),
+            nearest_player = self.framework.server.find_nearest_player_to_position ( ( float ( matches [ 0 ] ),
                                                                                    float ( matches [ 3 ] ) ) )
-        # ( key, min_distance, player_inverted_directions [ key ] )
-        self.log.info ( "Nearest {:.1f}m player is {}.".format (
-            min_distance,
-            self.framework.server.get_player ( nearest_player [ 0 ] ) ) )
+            self.log.info ( "Nearest {:.1f}m player is {}.".format (
+                nearest_player [ 1 ],
+                self.framework.server.get_player ( nearest_player [ 0 ] ) ) )
+            self.framework.server.little_swarm ( self.framework.server.get_player ( nearest_player [ 0 ] ), 1 )
+
