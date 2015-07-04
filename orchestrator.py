@@ -334,9 +334,9 @@ class orchestrator ( threading.Thread ):
                 mod.join ( )
         self.log.info ( "All mods stopped." )
 
+        self.telnet.close_connection ( )
         self.telnet.stop ( )
         self.telnet.join ( )
-        self.telnet.close_connection ( )
 
         self.log.info ( "**************************   Stopping framework   ***************************" )
         self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )
@@ -349,7 +349,7 @@ class orchestrator ( threading.Thread ):
         self.shutdown = True
         for component in self.stop_on_shutdown:
             self.log.info ( "Trying soft shutdown of {}.".format ( str ( component ) ) )
-            component.shutdown = True
+            component.stop ( )
             component.join ( )
 
     def __del__ ( self ):

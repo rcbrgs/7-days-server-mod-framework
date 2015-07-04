@@ -11,8 +11,9 @@ class telnet_client ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.1.1'
         self.changelog = {
+            '0.1.1' : "Fixed telnet client leaving open threads on server.",
             '0.1.0' : "Initial commit." }
 
         self.daemon = True
@@ -44,8 +45,8 @@ class telnet_client ( threading.Thread ):
                 self.log.debug ( "Got line '{}'.".format ( line ) )
             except Exception as e:
                 self.log.error ( e )
-                self.close_connection ( )
-                self.open_connection ( )
+                #self.close_connection ( )
+                #self.open_connection ( )
                 continue
             try:
                 line_string = ""
@@ -62,11 +63,13 @@ class telnet_client ( threading.Thread ):
 
     def stop ( self ):
         self.shutdown = True
+        self.close_connection ( )
 
     def add_parser ( self ):
         self.parsers.append ( parser ( self.framework ) )
         
     def close_connection ( self ):
+        self.write ( "exit\n".encode ( 'utf-8' ) )
         self.connected = False
         self.telnet.close ( )
         self.log.info ( "Telnet connection closed." )
@@ -102,7 +105,8 @@ class telnet_client ( threading.Thread ):
             
     def write ( self, msg ):
         if ( self.telnet.get_socket ( ) == 0 ):
-            self.open_connection ( )
+            self.log.error ( "Can't get_socket()!" )
+            return
         try:
             self.telnet.write ( msg )
             self.log.debug ( "Wrote '{}'.".format ( msg ) )

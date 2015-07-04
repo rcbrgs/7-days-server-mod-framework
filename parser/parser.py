@@ -10,9 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.7'
+        self.__version__ = '0.1.8'
         self.changelog = {
-            '0.1.8' : "Matchers for biomespawn.",
+            '0.1.8' : "Matchers for biomespawn, falling trees.",
             '0.1.7' : "Supply plane and crates matchers. A12 header matcher.",
             '0.1.6' : "Matcher for item drop, Steam auth. Fixed zed fall through void matcher typo.",
             '0.1.5' : "Added hook to player creation event.",
@@ -65,10 +65,15 @@ class parser ( threading.Thread ):
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
                                        r'AnimalsSmall_Any: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
-            'biome zombiesall'     : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+            'biome ani zom'       : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
                                        r'AnimalsSmall_Any: c=[\d]+/r=[\d]+ ZombiesAll_any: c=[\d]+/r=[\d]+$',
+                                       'to_call'  : [ ] },
+            'biome zom ani'        : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+                                       r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
+                                       r'ZombiesAll_any: c=[\d]+/r=[\d]+ AnimalsSmall_Any: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
             'chunks saved'         : { 'to_match' : r'.* INF Saving (.*) of chunks took (.*)ms',
                                        'to_call'  : [ ] },
@@ -101,6 +106,15 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'empty line'           : { 'to_match' : r'^$',
                                        'to_call'  : [ ] },
+            'executing cmd give'   : { 'to_match' : self.match_prefix + r'INF Executing command \'give ' + \
+                                       r'[\d]+ [\w\d]+ [\d]+\' by Telnet from ' + self.match_string_ip + \
+                                       r':[\d]+$',
+                                       'to_call'  : [ ] },
+            'falling tree'         : { 'to_match' : r'^[\d]+. id=[\d]+, FallingTree_[\d]+' + \
+                                       r' \(EntityFallingTree\), pos=' +self.match_string_pos + r', rot=' + \
+                                       self.match_string_pos + r', lifetime=[\d]+\.[\d]+, remote=[\w]+, ' + \
+                                       r'dead=[\w]+,$',
+                                       'to_call'  : [ ] }, 
             'fell off world'       : { 'to_match' : self.match_prefix + r'WRN Entity \[type=.*, name=.*' +\
                                        r', id=[\d]+\] fell off the world, id=[\d]+ pos=' + self.match_string_date,
                                        'to_call'  : [ ] },
