@@ -10,9 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.8"
+        self.__version__ = "0.2.9"
         self.changelog = {
-            '0.2.9' : "More taunts.",
+            '0.2.9' : "More taunts. Added event for increase shop stock.",
             '0.2.8' : "Added processing for player creation event. More taunts",
             '0.2.7' : "Increased prize for votes.",
             '0.2.6' : "More taunts.",
@@ -94,6 +94,9 @@ class game_events ( threading.Thread ):
         position = self.framework.rank.current_rank
         if position != -1:
             self.framework.console.say ( "Please vote for our server on http://7daystodie-servers.com/server/14698. We are currently # {} on the rank! Also, you gain 100$+1k per vote.".format ( position ) )
+
+        if 'shop' in list ( self.framework.mods.keys ( ) ):
+            self.framework.mods [ 'shop' ] [ 'reference' ].increase_stock ( )
     
     def hour_changed ( self, previous_hour ):
         # do not continue if mod just came up:

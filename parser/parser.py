@@ -372,7 +372,10 @@ class parser ( threading.Thread ):
                     self.log.debug ( "{} groups = {}.".format ( key, match.groups ( ) ) )
                     for caller in self.matchers [ key ] [ 'callers' ]:
                         self.log.debug ( "{} calls {}.".format ( key, caller ) )
-                        caller ( match.groups ( ) )
+                        try:
+                            caller ( match.groups ( ) )
+                        except Exception as e:
+                            self.log.error ( "caller ( match.groups ( ) )" )
                         self.log.debug ( "{} called {} and finished.".format ( key, caller ) )
 
             if not any_match:
