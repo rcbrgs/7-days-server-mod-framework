@@ -12,6 +12,7 @@ class parser ( threading.Thread ):
         self.log.setLevel ( logging.INFO )
         self.__version__ = '0.1.7'
         self.changelog = {
+            '0.1.8' : "Matchers for biomespawn.",
             '0.1.7' : "Supply plane and crates matchers. A12 header matcher.",
             '0.1.6' : "Matcher for item drop, Steam auth. Fixed zed fall through void matcher typo.",
             '0.1.5' : "Added hook to player creation event.",
@@ -54,8 +55,23 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'allowing player'      : { 'to_match' : self.match_prefix + r'INF Allowing player with id [\d]+$',
                                        'to_call'  : [ ] },
+            'biome animal'         : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+                                       r'animalRabbit pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ZombiesAll_Any: ' + \
+                                       r'c=[\d]+/r=[\d]+ AnimalsSmall_Any: c=[\d]+/r=[\d]+$',
+                                       'to_call'  : [ ] },
+            'biome animalSmall'    : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+                                       r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
+                                       r'AnimalsSmall_Any: c=[\d]+/r=[\d]+$',
+                                       'to_call'  : [ ] },
+            'biome zombiesall'     : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+                                       r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
+                                       r'AnimalsSmall_Any: c=[\d]+/r=[\d]+ ZombiesAll_any: c=[\d]+/r=[\d]+$',
+                                       'to_call'  : [ ] },
             'chunks saved'         : { 'to_match' : r'.* INF Saving (.*) of chunks took (.*)ms',
-                                       'to_call' : [ ] },
+                                       'to_call'  : [ ] },
             'claim finished'       : { 'to_match' : r'Total of ([\d]+) keystones in the game',
                                        'to_call'  : [ self.framework.world_state.buffer_claimstones ] },
             'claim player'         : { 'to_match' : r'Player ".* \(([\d]+)\)" owns ([\d]+) ' + \
@@ -79,6 +95,9 @@ class parser ( threading.Thread ):
                                        r'software enabled$',
                                        'to_call'  : [ ] },
             'EAC Auth'             : { 'to_match' : self.match_prefix + r'INF \[Steamworks\.NET\] Authenticating player: [\w]+ SteamId: [\d]+ TicketLen: [\d]+ Result: k_EBeginAuthSessionResultOK$',
+                                       'to_call'  : [ ] },
+            'EAC status change'    : { 'to_match' : self.match_prefix + r'INF \[EAC\] Log: User status changed' + \
+                                       r': [\d]+. Status: Authenticated Message: N/A$',
                                        'to_call'  : [ ] },
             'empty line'           : { 'to_match' : r'^$',
                                        'to_call'  : [ ] },
