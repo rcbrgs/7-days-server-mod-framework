@@ -12,7 +12,7 @@ class parser ( threading.Thread ):
         self.log.setLevel ( logging.INFO )
         self.__version__ = '0.1.8'
         self.changelog = {
-            '0.1.9' : "Matchers for telnet close",
+            '0.1.9' : "Matchers for telnet close.",
             '0.1.8' : "Matchers for biomespawn, falling trees.",
             '0.1.7' : "Supply plane and crates matchers. A12 header matcher.",
             '0.1.6' : "Matcher for item drop, Steam auth. Fixed zed fall through void matcher typo.",
@@ -307,7 +307,7 @@ class parser ( threading.Thread ):
                                        r', lifetime=float.Max, remote=False, dead=False,$',
                                        'to_call'  : [ ] },
             'telnet closed'        : { 'to_match' : self.match_string_date + r'INF Telnet connection closed: ' +\
-                                       self.match_string_ip + r':[\d]$',
+                                       self.match_string_ip + r':[\d]+$',
                                        'to_call'  : [ ] },
             'wave spawn'           : { 'to_match' : r'^' + self.match_string_date + r' INF Spawning this wave:' +\
                                        r' ([\d]+)',
