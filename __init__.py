@@ -4,6 +4,7 @@ from .game_events      import game_events
 from .orchestrator     import orchestrator
 from .parser           import ( parser )
 from .player_info      import player_info
+from .polis            import polis
 from .preferences      import preferences
 from .rank             import rank
 from .server           import server

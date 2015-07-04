@@ -10,7 +10,7 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.7"
+        self.__version__ = "0.2.8"
         self.changelog = {
             '0.2.8' : "Added processing for player creation event. More taunts",
             '0.2.7' : "Increased prize for votes.",
@@ -138,14 +138,14 @@ class game_events ( threading.Thread ):
         self.log.info ( "{} connected.".format ( player.name_sane ) )
 
     def player_created ( self, matches ):
-        playerid = int ( matches [ 0 ] )
-        self.log.info ( "Player with playerid = {} created.".format ( playerid ) )
-        player = self.framework.server.get_player ( playerid )
-        if player:
-            self.log.info ( "Player name is {}, position is ({}, {}, {}).".format (
-                player.name, player.pos_x, player.pos_y, player.pos_z ) )
-        else:
-            self.log.info ( "Player is not in db yet." )
+        playerid = int ( matches [ 7 ] )
+        self.log.debug ( "Player with playerid = {} created.".format ( playerid ) )
+        #player = self.framework.server.get_player ( playerid )
+        #if player:
+        #    self.log.info ( "Player name is {}, position is ({}, {}, {}).".format (
+        #        player.name, player.pos_x, player.pos_y, player.pos_z ) )
+        #else:
+        #    self.log.info ( "Player is not in db yet." )
         
     def player_died ( self, matches ):
         player_died_messages = [

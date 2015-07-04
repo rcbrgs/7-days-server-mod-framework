@@ -87,7 +87,6 @@ class orchestrator ( threading.Thread ):
         self.stop_on_shutdown.append ( self.rank )
         self.server = framework.server ( framework = self )
         self.game_events = framework.game_events ( framework = self )
-        #self.parser = framework.parser ( self )
         
         framework.set_log_file ( self.preferences.log_file )
 

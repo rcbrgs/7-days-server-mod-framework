@@ -939,7 +939,7 @@ class server ( threading.Thread ):
                      time.time ( ) - player.latest_teleport [ 'timestamp' ] < 2 * self.framework.preferences.loop_wait ):
                     self.log.info ( "Teleport cooldown for {}.".format ( player.name_sane ) )
             
-        msg = 'teleportplayer ' + str ( player.playerid ) + ' '
+        msg = 'teleportplayer ' + str ( player.steamid ) + ' '
         premsg = msg
         if isinstance ( where_to, tuple ):
             msg += str ( int ( where_to [ 0 ] ) ) + " " + \

@@ -10,9 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.6'
+        self.__version__ = '0.1.7'
         self.changelog = {
-            '0.1.7' : "Supply plane and crates matchers.",
+            '0.1.7' : "Supply plane and crates matchers. A12 header matcher.",
             '0.1.6' : "Matcher for item drop, Steam auth. Fixed zed fall through void matcher typo.",
             '0.1.5' : "Added hook to player creation event.",
             '0.1.4' : "Some more connection / new player matchers.",
@@ -119,6 +119,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'header 10'            : { 'to_match' : r'Press \'help\' to get a list of all commands\. Press ' + \
                                        r'\'exit\' to end session.',
+                                       'to_call'  : [ ] },
+            'header A12'           : { 'to_match' : '\*\*\* Server version: Alpha 12 \(b56\) Compatibility Version: Alpha 12$',
                                        'to_call'  : [ ] },
             'item dropped'         : { 'to_match' : r'^Dropped item$',
                                        'to_call'  : [ ] },
@@ -257,8 +259,8 @@ class parser ( threading.Thread ):
             'steam player connect' : { 'to_match' : self.match_prefix + r'INF \[NET\] PlayerConnected ' + \
                                        r'EntityID=-1, PlayerID=\'\', OwnerID=\'\', PlayerName=\'\'$',
                                        'to_call'  : [ ] },
-            'supply crate'         : { 'to_match' : self.match_prefix + r'INF AIAirDrop: Spawned supply ', +\
-                                       r'crate @ \(' + self.match_string_pos + '\)$',
+            'supply crate'         : { 'to_match' : self.match_prefix + r'INF AIAirDrop: Spawned supply ' + \
+                                       r'crate @ \(' + self.match_string_pos + r'\)$',
                                        'to_call'  : [ ] },
             'supply plane'         : { 'to_match' : r'[\d]+\. id=[\d]+, GameObject (EntitySupplyPlane), pos=' +\
                                        self.match_string_pos + r', rot=' + self.match_string_pos + \

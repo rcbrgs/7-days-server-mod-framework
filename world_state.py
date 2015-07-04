@@ -45,7 +45,7 @@ class world_state ( object ):
             return
         if len ( match ) == 3:
             if self.claimstones_buffer_player == ( ):
-                self.log.error ( "Claimstone coords received for None player." )
+                self.log.error ( "Claimstone coords received for None player (match = {}).".format ( match ) )
                 return
             steamid = self.claimstones_buffer_player [ 0 ]
             amount  = self.claimstones_buffer_player [ 1 ]
