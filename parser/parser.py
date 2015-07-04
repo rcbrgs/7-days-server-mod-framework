@@ -10,9 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.8'
+        self.__version__ = '0.1.9'
         self.changelog = {
-            '0.1.9' : "Matchers for telnet close.",
+            '0.1.9' : "Matchers for telnet close. Biome.",
             '0.1.8' : "Matchers for biomespawn, falling trees.",
             '0.1.7' : "Supply plane and crates matchers. A12 header matcher.",
             '0.1.6' : "Matcher for item drop, Steam auth. Fixed zed fall through void matcher typo.",
@@ -67,6 +67,11 @@ class parser ( threading.Thread ):
                                        r'AnimalsSmall_Any: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
             'biome ani zom'       : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+                                       r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
+                                       r'AnimalsAll_Any: c=[\d]+/r=[\d]+ ZombiesAll_any: c=[\d]+/r=[\d]+$',
+                                       'to_call'  : [ ] },
+            'biome sani zom'      : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
                                        r'AnimalsSmall_Any: c=[\d]+/r=[\d]+ ZombiesAll_any: c=[\d]+/r=[\d]+$',

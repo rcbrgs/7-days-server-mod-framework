@@ -24,9 +24,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.9'
+        self.__version__ = '0.4.10'
         self.changelog = {
-            '0.4.10' : "Simplified player positions being saved from floats to ints.",
+            '0.4.10' : "Simplified player positions being saved from floats to ints. Playerid now updated every id update.",
             '0.4.9'  : "Better logging of preteleports. Player positions are cleaned up to make save file smaller. (50% smaller!)",
             '0.4.8'  : "give_player_stuff now using steamid instead of player names. Converting steamid to string.",
             '0.4.7'  : "+db_clean. Preteleport now prevents immediate reteleport to same location.",
@@ -720,6 +720,7 @@ class server ( threading.Thread ):
                 
             player.name_sane = self.sanitize ( name )
             player.online = online
+            player.playerid = playerid
             player.pos_x = pos_x
             player.pos_y = pos_y
             player.pos_z = pos_z
@@ -1395,6 +1396,7 @@ class server ( threading.Thread ):
                                                                         self.players_info [ key ].name ) )
         self.framework.let_db_lock ( )
 
+        
     def fix_invitees_using_playerid ( self ):
         def get_player_by_playerid ( playerid ):
             for player in self.get_online_players ( ):
