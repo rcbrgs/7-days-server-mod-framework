@@ -12,6 +12,7 @@ class parser ( threading.Thread ):
         self.log.setLevel ( logging.INFO )
         self.__version__ = '0.1.8'
         self.changelog = {
+            '0.1.9' : "Matchers for telnet close",
             '0.1.8' : "Matchers for biomespawn, falling trees.",
             '0.1.7' : "Supply plane and crates matchers. A12 header matcher.",
             '0.1.6' : "Matcher for item drop, Steam auth. Fixed zed fall through void matcher typo.",
@@ -155,6 +156,12 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'header A12'           : { 'to_match' : '\*\*\* Server version: Alpha 12 \(b56\) Compatibility Version: Alpha 12$',
                                        'to_call'  : [ ] },
+            'icon'                 : { 'to_match' : self.match_prefix + r'INF Web:IconHandler:FileNotFound: ".*"$',
+                                       'to_call'  : [ ] },
+            'inventory belt/bag'   : { 'to_match' : r'([\w]+) of player (.*):$',
+                                       'to_call'  : [ self.framework.world_state.update_inventory ] },
+            'inventory item'       : { 'to_match' : r'^Slot ([\d]+): ([\d]+) \* (.*)$',
+                                       'to_call'  : [ self.framework.world_state.update_inventory ] },
             'item dropped'         : { 'to_match' : r'^Dropped item$',
                                        'to_call'  : [ ] },
             'kicking executing'    : { 'to_match' : self.match_prefix + r'INF Executing command \'kick' + \
@@ -298,6 +305,9 @@ class parser ( threading.Thread ):
             'supply plane'         : { 'to_match' : r'[\d]+\. id=[\d]+, GameObject (EntitySupplyPlane), pos=' +\
                                        self.match_string_pos + r', rot=' + self.match_string_pos + \
                                        r', lifetime=float.Max, remote=False, dead=False,$',
+                                       'to_call'  : [ ] },
+            'telnet closed'        : { 'to_match' : self.match_string_date + r'INF Telnet connection closed: ' +\
+                                       self.match_string_ip + r':[\d]$',
                                        'to_call'  : [ ] },
             'wave spawn'           : { 'to_match' : r'^' + self.match_string_date + r' INF Spawning this wave:' +\
                                        r' ([\d]+)',

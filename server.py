@@ -1445,3 +1445,8 @@ class server ( threading.Thread ):
             time.sleep ( rythm )
             self.framework.console.se ( player, 'spiderzombie', 3 )
 
+    def little_swarm ( self, player, waves ):
+        for count in range ( waves ):
+            rythm = 2
+            self.framework.console.se ( player, 'hornet', 6 )
+            time.sleep ( rythm )

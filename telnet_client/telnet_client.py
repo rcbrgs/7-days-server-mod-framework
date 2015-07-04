@@ -11,8 +11,9 @@ class telnet_client ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.1'
+        self.__version__ = '0.1.2'
         self.changelog = {
+            '0.1.2' : "Catching error before exception for esthetic reason.",
             '0.1.1' : "Fixed telnet client leaving open threads on server.",
             '0.1.0' : "Initial commit." }
 
@@ -42,11 +43,12 @@ class telnet_client ( threading.Thread ):
                 continue
             try:
                 line = self.telnet.read_until ( b'\n', 5 )
+                if isinstance ( line, int ):
+                    self.log.info ( "line == {}. Shutting down imminent.".format ( line ) )
+                    continue
                 self.log.debug ( "Got line '{}'.".format ( line ) )
             except Exception as e:
                 self.log.error ( e )
-                #self.close_connection ( )
-                #self.open_connection ( )
                 continue
             try:
                 line_string = ""
@@ -111,9 +113,11 @@ class telnet_client ( threading.Thread ):
             self.telnet.write ( msg )
             self.log.debug ( "Wrote '{}'.".format ( msg ) )
         except AttributeError as e:
-            self.log.error ( e )
-            self.framework.stop ( )
+            self.log.error ( "During telnet write: {}". format ( e ) )
+            #self.framework.stop ( )
+            return
             
         except BrokenPipeError as e:
-            self.log.error ( e )
-            self.framework.stop ( )
+            self.log.error ( "BrokenPipeError '{}'".format ( e ) )
+            #self.framework.stop ( )
+            return

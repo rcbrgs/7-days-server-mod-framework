@@ -84,7 +84,7 @@ class orchestrator ( threading.Thread ):
         self.shutdown = False
         self.preferences = framework.preferences ( preferences_file_name )
         self.rank.start ( )
-        self.stop_on_shutdown.append ( self.rank )
+        #self.stop_on_shutdown.append ( self.rank )
         self.server = framework.server ( framework = self )
         self.game_events = framework.game_events ( framework = self )
         
@@ -122,13 +122,13 @@ class orchestrator ( threading.Thread ):
         self.telnet.open_connection ( )
         time.sleep ( 9 )
         self.server.start ( )
-        self.stop_on_shutdown.append ( self.server )
+        #self.stop_on_shutdown.append ( self.server )
         self.telnet.start ( )
         self.stop_on_shutdown.append ( self.telnet )
         self.telnet.write ( "loglevel ALL true\n".encode ( 'utf-8') )
 
         self.game_events.start ( )
-        self.stop_on_shutdown.append ( self.game_events )
+        #self.stop_on_shutdown.append ( self.game_events )
 
         self.utils = framework.utils ( )
 
@@ -349,7 +349,9 @@ class orchestrator ( threading.Thread ):
         self.shutdown = True
         for component in self.stop_on_shutdown:
             self.log.info ( "Trying soft shutdown of {}.".format ( str ( component ) ) )
+            self.log.info ( "{} stop".format ( str ( component ) ) )
             component.stop ( )
+            self.log.info ( "{} join".format ( str ( component ) ) )
             component.join ( )
 
     def __del__ ( self ):

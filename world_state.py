@@ -7,6 +7,9 @@ class world_state ( object ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
+        self.__version__ = '0.1.1'
+        self.changelog = {
+            '0.1.1' : "Added blocking_get_inventory." }
 
         self.framework = framework
         
@@ -18,7 +21,12 @@ class world_state ( object ):
         self.claimstones_lock = { 'callee'    : None,
                                   'timeout'   : 10,
                                   'timestamp' : None }
-        
+
+        self.inventory = { }
+        self.inventory_lock = { 'callee'    : None,
+                                'timeout'   : 10,
+                                'timestamp' : None }
+
         now = time.time ( )
         self.llp_timestamp = 0
 
@@ -124,7 +132,12 @@ class world_state ( object ):
 
         for event in events:
             event [ 0 ] ( *event [ 1 ] )
-                
+
+    def obtain_inventory ( self, player ):
+        pass
+            
+    # API
+    
     def get_claimstones ( self ):
         callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         now = time.time ( )
@@ -145,3 +158,64 @@ class world_state ( object ):
             self.log.error ( "Claimstones lock being freed by another function than callee!" )
         self.claimstones_lock [ 'callee'    ] = None
         self.claimstones_lock [ 'timestamp' ] = None
+
+    def blocking_get_inventory ( self, player ):
+        timestamp = time.time ( )
+        self.get_inventory ( )
+        self.request_inventory ( player )
+        while self.inventory [ 'checking' ]:
+            self.log.info ( "Waiting for si to complete..." )
+            time.sleep ( 1 )
+            if time.time ( ) - timestamp > 10:
+                break
+        inventory = self.inventory
+        self.let_inventory ( )
+        return inventory
+        
+    # /API
+        
+    def get_inventory ( self ):
+        callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        now = time.time ( )
+        
+        while ( self.inventory_lock [ 'callee' ] ):
+            if ( now - self.inventory_lock [ 'timestamp' ] > self.inventory_lock [ 'timeout' ] ):
+                break
+            time.sleep ( 0.1 )
+              
+        self.claimstones_lock [ 'callee'    ] = callee_function
+        self.claimstones_lock [ 'timestamp' ] = now
+
+    def let_inventory ( self ):
+        callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        if self.inventory_lock [ 'callee' ] != callee_function:
+            self.log.error ( "Inventory lock being freed by another function than callee!" )
+        self.inventory_lock [ 'callee'    ] = None
+        self.inventory_lock [ 'timestamp' ] = None
+
+    def request_inventory ( self, player ):
+        self.inventory = { 'checking' : True }
+        self.framework.console.send ( "si {}".format ( player.steamid ) )
+
+    def update_inventory ( self, matches ):
+        self.log.info ( "update inventory ( {} )".format ( matches ) )
+        if len ( matches ) == 2:
+            player = self.framework.server.get_player ( matches [ 1 ] )
+            if not player:
+                self.log.error ( "No player {} found for si update!".format ( matches [ 1 ] ) )
+                return
+            self.inventory [ 'storage' ] = matches [ 0 ]
+        if len ( matches ) == 3:
+            slot = int ( matches [ 0 ] )
+            quantity = int ( matches [ 1 ] )
+            kind = matches [ 2 ]
+            key_string = "{} {} {} {}".format ( self.inventory [ 'storage' ],
+                                                slot,
+                                                quantity,
+                                                kind )
+            self.inventory [ key_string ] = ( self.inventory [ 'storage' ],
+                                              slot,
+                                              quantity,
+                                              kind )
+            if slot == 31:
+                self.inventory [ 'checking' ] = False

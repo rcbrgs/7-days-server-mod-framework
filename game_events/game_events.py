@@ -12,6 +12,7 @@ class game_events ( threading.Thread ):
         self.log = logging.getLogger ( __name__ )
         self.__version__ = "0.2.8"
         self.changelog = {
+            '0.2.9' : "More taunts.",
             '0.2.8' : "Added processing for player creation event. More taunts",
             '0.2.7' : "Increased prize for votes.",
             '0.2.6' : "More taunts.",
@@ -43,12 +44,8 @@ class game_events ( threading.Thread ):
         self.stop ( )
 
     def run ( self ):
-        self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
-                             
         while ( self.shutdown == False ):
             time.sleep ( self.framework.preferences.loop_wait )        
-
-        self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
     def stop ( self ):
         self.shutdown = True
@@ -149,6 +146,7 @@ class game_events ( threading.Thread ):
         
     def player_died ( self, matches ):
         player_died_messages = [
+            ( "{} is quite the tree-hugger!" ),
             ( "Again, {}!?" ),
             ( "Another {}-kill and without spending a single arrow." ),
             ( "Don't feel bad, {}. Even the zombies died once." ),
@@ -162,7 +160,9 @@ class game_events ( threading.Thread ):
             ( "Player stew: one water, one potato and one {}." ),
             ( "Quick everyone! {}'s backpack has two augers!!" ),
             ( "That's not how a log spike is supposed to work, {}." ),
+            ( "Told you, {}, those are not teddy bears." ),
             ( "Wow, {} tastes just like chicken!" ),
+            ( "{}, you are supposed to stay [123456]behind[FFFFFF] the tree when it falls." ),
             ( "You expect a prize if you read all taunts, {}?" ),
             ]
         player = self.framework.server.get_player ( matches [ 7 ] )
