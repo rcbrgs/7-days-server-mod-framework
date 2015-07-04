@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.13'
+        self.__version__ = '0.1.14'
         self.changelog = {
+            '0.1.14' : "Added matcher for biome spawn zombie animal all, falling block fell void, AI wanderer removed.",
             '0.1.13' : "Added matcher for EAC unregister.",
             '0.1.12' : "Hooked tree felling match to event.",
             '0.1.11' : "Refactored biome matcher.",
@@ -58,6 +59,8 @@ class parser ( threading.Thread ):
                                        r' \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' was spawned and is moving ' + \
                                        r'towards pitstop.$',
                                        'to_call'  : [ ] },
+            'AI wander remove'     : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' is being removed from horde control.$',
+                                       'to_call'  : [ ] },
             'allowing player'      : { 'to_match' : self.match_prefix + r'INF Allowing player with id [\d]+$',
                                        'to_call'  : [ ] },
             'biome animal'         : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
@@ -79,7 +82,12 @@ class parser ( threading.Thread ):
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
                                        r'AnimalsSmall_Any: c=[\d]+/r=[\d]+ ZombiesAll_any: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
-            'biome zom ani'        : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+            'biome zom ani'       : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+                                       r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
+                                       r'ZombiesAll_any: c=[\d]+/r=[\d]+ AnimalsAll_Any: c=[\d]+/r=[\d]+$',
+                                       'to_call'  : [ ] },
+            'biome zom small ani' : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
                                        r'ZombiesAll_any: c=[\d]+/r=[\d]+ AnimalsSmall_Any: c=[\d]+/r=[\d]+$',
@@ -128,6 +136,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ self.framework.game_events.tree_felled ] }, 
             'fell off world'       : { 'to_match' : self.match_prefix + r'WRN Entity \[type=.*, name=.*' +\
                                        r', id=[\d]+\] fell off the world, id=[\d]+ pos=' + self.match_string_date,
+                                       'to_call'  : [ ] },
+            'block fell off'       : { 'to_match' : self.match_prefix + r'WRN Entity FallingBlock_[\d]+ \(EntityFallingBlock\) fell off the world, id=[\d]+ pos=' + self.match_string_pos + r'$',
                                        'to_call'  : [ ] },
             'item fell off'        : { 'to_match' : self.match_prefix + r'WRN Entity Item_[\d]+ \(EntityItem\) ' + \
                                        r'fell off the world, id=[\d]+ pos=' + self.match_string_pos + r'$',
