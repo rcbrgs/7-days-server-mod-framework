@@ -232,6 +232,8 @@ class parser ( threading.Thread ):
             'player kicked'        : { 'to_match' : self.match_prefix + r'INF Executing command \'kick [\d]+\'' + \
                                        r' by Telnet from ' + self.match_string_ip + ':[\d]+$',
                                        'to_call'  : [ ] },
+            'playerlogin'          : { 'to_match' : self.match_prefix + r'INF PlayerLogin: .*/Alpha 12$',
+                                       'to_call'  : [ ] },
             'player offline'       : { 'to_match' : self.match_prefix + r'INF Player set to offline: [\d]+$',
                                        'to_call'  : [ ] },
             'player online'        : { 'to_match' : r'^' + self.match_string_date + r' INF Player set to online' + \
@@ -376,7 +378,7 @@ class parser ( threading.Thread ):
                         try:
                             caller ( match.groups ( ) )
                         except Exception as e:
-                            self.log.error ( "caller ( match.groups ( ) )" )
+                            self.log.error ( "Exception in caller ( match.groups ( ) ): {}".format ( e ) )
                         self.log.debug ( "{} called {} and finished.".format ( key, caller ) )
 
             if not any_match:

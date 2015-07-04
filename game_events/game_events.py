@@ -244,9 +244,11 @@ class game_events ( threading.Thread ):
             function ( **kwargs )
 
     def tree_felled ( self, matches ):
-        self.log.info ( "Tree was felled at {}.".format ( matches ) )
-        nearest_player = self.framework.server.get_nearest_player_to_position ( ( int ( matches [ 0 ] ),
-                                                                                  int ( matches [ 3 ] ) ) )
+        self.log.info ( "Tree was felled at ( {}, {} ).".format ( matches [ 0 ], matches [ 3 ] ) )
+        if random.randint ( 1, 10 ) == 1:
+            self.log.info ( "Small swarm event triggered!" )
+        nearest_player = self.framework.server.find_nearest_player_to_position ( ( float ( matches [ 0 ] ),
+                                                                                   float ( matches [ 3 ] ) ) )
         # ( key, min_distance, player_inverted_directions [ key ] )
         self.log.info ( "Nearest {:.1f}m player is {}.".format (
             min_distance,
