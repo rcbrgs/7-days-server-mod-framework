@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.12'
+        self.__version__ = '0.1.13'
         self.changelog = {
+            '0.1.13' : "Added matcher for EAC unregister.",
             '0.1.12' : "Hooked tree felling match to event.",
             '0.1.11' : "Refactored biome matcher.",
             '0.1.10' : "Fixed matcher for telnet close.",
@@ -111,6 +112,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'EAC status change'    : { 'to_match' : self.match_prefix + r'INF \[EAC\] Log: User status changed' + \
                                        r': [\d]+. Status: Authenticated Message: N/A$',
+                                       'to_call'  : [ ] },
+            'EAC unregister'       : { 'to_match' : self.match_prefix + r'INF \[EAC\] Log: User unregistered. GUID: [\d]+$',
                                        'to_call'  : [ ] },
             'empty line'           : { 'to_match' : r'^$',
                                        'to_call'  : [ ] },
