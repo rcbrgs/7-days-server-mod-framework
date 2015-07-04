@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.10'
+        self.__version__ = '0.1.11'
         self.changelog = {
+            '0.1.11' : "Refactored biome matcher.",
             '0.1.10' : "Fixed matcher for telnet close.",
             '0.1.9'  : "Matchers for telnet close. Biome.",
             '0.1.8'  : "Matchers for biomespawn, falling trees.",
@@ -58,9 +59,8 @@ class parser ( threading.Thread ):
             'allowing player'      : { 'to_match' : self.match_prefix + r'INF Allowing player with id [\d]+$',
                                        'to_call'  : [ ] },
             'biome animal'         : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
-                                       r'animalRabbit pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
-                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ZombiesAll_Any: ' + \
-                                       r'c=[\d]+/r=[\d]+ AnimalsSmall_Any: c=[\d]+/r=[\d]+$',
+                                       r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ AnimalsAll_Any: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
             'biome animalSmall'    : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
