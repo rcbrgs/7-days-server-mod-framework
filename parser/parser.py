@@ -10,18 +10,19 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.9'
+        self.__version__ = '0.1.10'
         self.changelog = {
-            '0.1.9' : "Matchers for telnet close. Biome.",
-            '0.1.8' : "Matchers for biomespawn, falling trees.",
-            '0.1.7' : "Supply plane and crates matchers. A12 header matcher.",
-            '0.1.6' : "Matcher for item drop, Steam auth. Fixed zed fall through void matcher typo.",
-            '0.1.5' : "Added hook to player creation event.",
-            '0.1.4' : "Some more connection / new player matchers.",
-            '0.1.3' : "EAC Auth matcher.",
-            '0.1.2' : "+AI scout matchers.",
-            '0.1.1' : "Matcher for player requested spawn, EAC kicking user reason, playerid not found.",
-            '0.1.0' : "Initial commit." }
+            '0.1.10' : "Fixed matcher for telnet close.",
+            '0.1.9'  : "Matchers for telnet close. Biome.",
+            '0.1.8'  : "Matchers for biomespawn, falling trees.",
+            '0.1.7'  : "Supply plane and crates matchers. A12 header matcher.",
+            '0.1.6'  : "Matcher for item drop, Steam auth. Fixed zed fall through void matcher typo.",
+            '0.1.5'  : "Added hook to player creation event.",
+            '0.1.4'  : "Some more connection / new player matchers.",
+            '0.1.3'  : "EAC Auth matcher.",
+            '0.1.2'  : "+AI scout matchers.",
+            '0.1.1'  : "Matcher for player requested spawn, EAC kicking user reason, playerid not found.",
+            '0.1.0'  : "Initial commit." }
 
         self.daemon = True
         self.llp_current_player = None
@@ -311,7 +312,7 @@ class parser ( threading.Thread ):
                                        self.match_string_pos + r', rot=' + self.match_string_pos + \
                                        r', lifetime=float.Max, remote=False, dead=False,$',
                                        'to_call'  : [ ] },
-            'telnet closed'        : { 'to_match' : self.match_string_date + r'INF Telnet connection closed: ' +\
+            'telnet closed'        : { 'to_match' : self.match_prefix + r'INF Telnet connection closed: ' +\
                                        self.match_string_ip + r':[\d]+$',
                                        'to_call'  : [ ] },
             'wave spawn'           : { 'to_match' : r'^' + self.match_string_date + r' INF Spawning this wave:' +\
