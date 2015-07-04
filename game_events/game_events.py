@@ -10,20 +10,21 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.9"
+        self.__version__ = "0.2.10"
         self.changelog = {
-            '0.2.9' : "More taunts. Added event for increase shop stock.",
-            '0.2.8' : "Added processing for player creation event. More taunts",
-            '0.2.7' : "Increased prize for votes.",
-            '0.2.6' : "More taunts.",
-            '0.2.5' : "Use __name__ logger. More player taunts upon death.",
-            '0.2.4' : "Log player and gameserver info every game hour. +player detected. Fixed map beacon not being saved.",
-            '0.2.3' : "Added hook for player connection. Added daily vote message.",
-            '0.2.2' : "Added hook for triggering on player position change.",
-            '0.2.1' : "Refactored time accounting to be more efficient.",
-            '0.2.0' : "Killing 100 zombies gives some cash to player.",
-            '0.1.1' : "Karma gain now PMs player.",
-            '0.1.0' : "Initial version." }
+            '0.2.10' : "Skeleton event for tree felling.",
+            '0.2.9'  : "More taunts. Added event for increase shop stock.",
+            '0.2.8'  : "Added processing for player creation event. More taunts",
+            '0.2.7'  : "Increased prize for votes.",
+            '0.2.6'  : "More taunts.",
+            '0.2.5'  : "Use __name__ logger. More player taunts upon death.",
+            '0.2.4'  : "Log player and gameserver info every game hour. +player detected. Fixed map beacon not being saved." ,
+            '0.2.3'  : "Added hook for player connection. Added daily vote message.",
+            '0.2.2'  : "Added hook for triggering on player position change.",
+            '0.2.1'  : "Refactored time accounting to be more efficient.",
+            '0.2.0'  : "Killing 100 zombies gives some cash to player.",
+            '0.1.1'  : "Karma gain now PMs player.",
+            '0.1.0'  : "Initial version." }
         
         self.framework = framework
         self.daemon = True
@@ -242,3 +243,11 @@ class game_events ( threading.Thread ):
             kwargs [ 'player' ] = player
             function ( **kwargs )
 
+    def tree_felled ( self, matches ):
+        self.log.info ( "Tree was felled at {}.".format ( matches ) )
+        nearest_player = self.framework.server.get_nearest_player_to_position ( ( int ( matches [ 0 ] ),
+                                                                                  int ( matches [ 3 ] ) ) )
+        # ( key, min_distance, player_inverted_directions [ key ] )
+        self.log.info ( "Nearest {:.1f}m player is {}.".format (
+            min_distance,
+            self.framework.server.get_player ( nearest_player [ 0 ] ) ) )

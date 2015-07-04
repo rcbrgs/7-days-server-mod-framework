@@ -24,8 +24,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.10'
+        self.__version__ = '0.4.11'
         self.changelog = {
+            '0.4.11' : "Added get_nearest_player_to_position function.",
             '0.4.10' : "Simplified player positions being saved from floats to ints. Playerid now updated every id update.",
             '0.4.9'  : "Better logging of preteleports. Player positions are cleaned up to make save file smaller. (50% smaller!)",
             '0.4.8'  : "give_player_stuff now using steamid instead of player names. Converting steamid to string.",
@@ -323,6 +324,31 @@ class server ( threading.Thread ):
                         acos += 180
                     
                     player_inverted_directions [ key ] = int ( ( acos - 90 ) % 360 )
+        min_distance = min ( distances )
+        for key in player_distances.keys ( ):
+            if player_distances [ key ] == min_distance:
+                return ( key, min_distance, player_inverted_directions [ key ] )
+
+    def find_nearest_player_to_position ( self, position ):
+        player_distances = { }
+        player_inverted_directions = { }
+        distances = [ ]
+        origin_x = position [ 0 ]
+        origin_y = position [ 1 ]
+        for key in self.players_info.keys ( ):
+            if self.players_info [ key ].online == True:
+                helper_x = self.players_info [ key ].pos_x
+                helper_y = self.players_info [ key ].pos_y
+                relative_x = origin_x - helper_x
+                relative_y = origin_y - helper_y
+                distance = math.sqrt ( relative_x ** 2 + relative_y ** 2 )
+                player_distances [ key ] = distance
+                distances.append ( distance )
+                acos = math.degrees ( math.acos ( relative_x / distance ) )
+                if ( relative_y < 0 ):
+                    acos += 180
+                    
+                player_inverted_directions [ key ] = int ( ( acos - 90 ) % 360 )
         min_distance = min ( distances )
         for key in player_distances.keys ( ):
             if player_distances [ key ] == min_distance:

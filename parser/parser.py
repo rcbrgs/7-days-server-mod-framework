@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.11'
+        self.__version__ = '0.1.12'
         self.changelog = {
+            '0.1.12' : "Hooked tree felling match to event.",
             '0.1.11' : "Refactored biome matcher.",
             '0.1.10' : "Fixed matcher for telnet close.",
             '0.1.9'  : "Matchers for telnet close. Biome.",
@@ -121,7 +122,7 @@ class parser ( threading.Thread ):
                                        r' \(EntityFallingTree\), pos=' +self.match_string_pos + r', rot=' + \
                                        self.match_string_pos + r', lifetime=[\d]+\.[\d]+, remote=[\w]+, ' + \
                                        r'dead=[\w]+,$',
-                                       'to_call'  : [ ] }, 
+                                       'to_call'  : [ self.framework.game_events.tree_felled ] }, 
             'fell off world'       : { 'to_match' : self.match_prefix + r'WRN Entity \[type=.*, name=.*' +\
                                        r', id=[\d]+\] fell off the world, id=[\d]+ pos=' + self.match_string_date,
                                        'to_call'  : [ ] },
