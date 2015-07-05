@@ -353,6 +353,7 @@ class orchestrator ( threading.Thread ):
             component.stop ( )
             self.log.info ( "{} join".format ( str ( component ) ) )
             component.join ( )
+        self.log.info ( "Shutdown sequence complete." )
 
     def __del__ ( self ):
         self.log.info ( "<framework>.__del__" )

@@ -11,8 +11,9 @@ class telnet_client ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.2'
+        self.__version__ = '0.1.3'
         self.changelog = {
+            '0.1.3' : "Making shutdown on write exception.",
             '0.1.2' : "Catching error before exception for esthetic reason.",
             '0.1.1' : "Fixed telnet client leaving open threads on server.",
             '0.1.0' : "Initial commit." }
@@ -48,7 +49,8 @@ class telnet_client ( threading.Thread ):
                     continue
                 self.log.debug ( "Got line '{}'.".format ( line ) )
             except Exception as e:
-                self.log.error ( e )
+                self.log.error ( "in run: {}".format ( e ) )
+                self.shutdown = True
                 continue
             try:
                 line_string = ""

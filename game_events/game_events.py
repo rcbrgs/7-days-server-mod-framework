@@ -10,8 +10,11 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.11"
+        self.__version__ = "0.2.14"
         self.changelog = {
+            '0.2.14' : "Taunt",
+            '0.2.13' : "Tweaked nest event, fixed coordinates of tree felled.",
+            '0.2.12' : "More taunts.",
             '0.2.11' : "1% chance felling a tree will trigger a hornet mini horde.",
             '0.2.10' : "Skeleton event for tree felling.",
             '0.2.9'  : "More taunts. Added event for increase shop stock.",
@@ -88,6 +91,7 @@ class game_events ( threading.Thread ):
         self.framework.mods [ 'sethome' ] [ 'reference' ].enforce_home ( player )
         
     def day_changed ( self, previous_day ):
+        self.log.info ( "day_changed call" )
         # do not continue if mod just came up:
         if ( time.time ( ) - self.framework.load_time ) < 60:
             return
@@ -151,15 +155,20 @@ class game_events ( threading.Thread ):
         
     def player_died ( self, matches ):
         player_died_messages = [
+            ( "{}: from cradle to the gravel." ),
             ( "{} is quite the tree-hugger!" ),
+            ( "{} was hunted down by a vicious sand block." ),
             ( "Again, {}!?" ),
             ( "Another {}-kill and without spending a single arrow." ),
+            ( "Damn you {}, suicide-by-cop is cowardice!" ),
             ( "Don't feel bad, {}. Even the zombies died once." ),
             ( "Ewwww {}, you taste awful! What have you been eating?!" ),
+            ( "FATALITY! Server wins! {} loses." ),
             ( "Hahaha I knew that broken leg was gonna do you in, {}!" ),
             ( "Hmmm. I think I can make a base out of {}'s gore blocks." ),
             ( "I want brains, and after eating {}'s, I'm still hungry!" ),
             ( "If you will keep dying that fast, I will start respawning you as a rabbit, {}." ),
+            ( "It was an uneven math, {}. That tree has more kills than you ever will." ),
             ( "Lemme guess, {}: you learned how to play with Lulu?" ),
             ( "Lol {}, are you role-playing a zombie?" ),
             ( "Player stew: one water, one potato and one {}." ),
@@ -167,8 +176,9 @@ class game_events ( threading.Thread ):
             ( "That's not how a log spike is supposed to work, {}." ),
             ( "Told you, {}, those are not teddy bears." ),
             ( "Wow, {} tastes just like chicken!" ),
-            ( "{}, you are supposed to stay [123456]behind[FFFFFF] the tree when it falls." ),
+            ( "{}, you are supposed to stay [523456]behind[FFFFFF] the tree when it falls." ),
             ( "You expect a prize if you read all taunts, {}?" ),
+            ( "You shouldn't have eaten so much fast food, {}!" ),
             ]
         player = self.framework.server.get_player ( matches [ 7 ] )
         if player:
@@ -245,11 +255,13 @@ class game_events ( threading.Thread ):
             function ( **kwargs )
 
     def tree_felled ( self, matches ):
-        self.log.info ( "Tree was felled at ( {}, {} ).".format ( matches [ 0 ], matches [ 3 ] ) )
-        if random.randint ( 1, 100 ) == 1:
+        self.log.info ( "Tree was felled at ( {}, {} ).".format ( matches [ 0 ], matches [ 2 ] ) )
+        chance_event = random.randint ( 1, 100 )
+        self.log.info ( "chance_event = {}".format ( chance_event ) )
+        if chance_event < 2:
             self.log.info ( "Small swarm event triggered!" )
             nearest_player = self.framework.server.find_nearest_player_to_position ( ( float ( matches [ 0 ] ),
-                                                                                   float ( matches [ 3 ] ) ) )
+                                                                                   float ( matches [ 2 ] ) ) )
             self.log.info ( "Nearest {:.1f}m player is {}.".format (
                 nearest_player [ 1 ],
                 self.framework.server.get_player ( nearest_player [ 0 ] ) ) )

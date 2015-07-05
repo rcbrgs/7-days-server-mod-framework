@@ -143,7 +143,7 @@ class server ( threading.Thread ):
         try:
             pickle_file = open ( self.player_info_file, 'rb' )
         except FileNotFoundError as e:
-            self.log.error ( e )
+            self.log.error ( "While openeing pickle: {}".format ( e ) )
             self.log.info ( "Creating new player info file." )
             file_found = False
 
@@ -187,12 +187,14 @@ class server ( threading.Thread ):
         self.framework.console.say ( help_message )
             
     def command_me ( self, player_identifier, message ):
+        self.log.debug ( "me: start" )
         player = self.get_player ( player_identifier )
         if player == None:
             self.framework.console.say ( "No such player: %s" % str ( player_identifier ) )
             return
         msg = "%s: " % player.name_sane
         msg += self.geoip.country_code_by_addr ( player.ip )
+        self.log.debug ( "me: home" )
         if player.home != None:
             msg += ", home at %s" % ( self.framework.utils.get_map_coordinates ( player.home ) )
             if self.framework.utils.calculate_distance ( self.framework.utils.get_coordinates ( player ),
@@ -209,6 +211,7 @@ class server ( threading.Thread ):
                 else:
                     claim_msg += ", " + str ( claim )
             msg += claim_msg
+        self.log.debug ( "me: languages" )
         if player.languages_spoken:
             msg += ", speaks"
             for language in player.languages_spoken:
@@ -216,13 +219,16 @@ class server ( threading.Thread ):
         if player.language_preferred:
             msg += ', translation to %s' % player.language_preferred
         msg += ', played %dh' % ( round ( player.online_time / 3600 ) )
+        self.log.debug ( "me: pkills" )
         if isinstance ( player.player_kills_explanations, list ):
             msg += ", pkills (total/explained): %d/%d" % (
                 player.players, len ( player.player_kills_explanations ) )
+        self.log.debug ( "me: karma" )
         msg += ", karma {:d}".format ( player.karma )
         msg += ", cash {:d}".format ( player.cash )
         msg += "."
         self.framework.console.pm ( player, msg )
+        self.log.debug ( "me: end" )
 
     def command_rules ( self, origin, message ):
         self.framework.console.say ( "rules are: 1. [FF0000]PVE[FFFFFF] only." )
@@ -509,7 +515,7 @@ class server ( threading.Thread ):
             player.cash += amount
             self.log.debug ( player.cash )
         except Exception as e:
-            self.log.error ( e )
+            self.log.error ( "give_cash: {}".format ( e ) )
         
     def give_karma ( self, player = None, amount = 0 ):
         if amount == 0:
@@ -521,7 +527,7 @@ class server ( threading.Thread ):
             player.karma += amount
             self.log.debug ( player.karma )
         except Exception as e:
-            self.log.error ( e )
+            self.log.error ( "give karma {}".format ( e ) )
     
     def give_player_stuff ( self, player, stuff, quantity ):
         msg = 'give ' + str ( player.steamid ) + ' ' + stuff + ' ' + str ( quantity )
@@ -641,16 +647,18 @@ class server ( threading.Thread ):
                 self.log.debug ( "Possible command: '{}'.".format ( msg_content ) )
                 for key in self.commands.keys ( ):
                     if msg_content [ 1 : len ( key ) + 1 ] == key:
+                        self.log.debug ( "server command" )
                         self.commands [ key ] [ 0 ] ( msg_origin, msg_content )
                         return
                 for mod_key in self.framework.mods:
                     mod = self.framework.mods [ mod_key ] [ 'reference' ]
                     for key in mod.commands.keys ( ):
                         if msg_content [ 1 : len ( key ) + 1 ] == key:
+                            self.log.debug ( "mod {} command".format ( key ) )
                             mod.commands [ key ] [ 0 ] ( msg_origin, msg_content )
                             return
                 for external_command in self.external_commands:
-                    if msg_content [ 1 : -1 ] == external_command:
+                    if msg_content [ 1 : ] == external_command:
                         return
                 self.framework.console.say ( "Syntax error: %s." % msg_content [ 1 : ] )
             else:

@@ -10,8 +10,10 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.14'
+        self.__version__ = '0.1.16'
         self.changelog = {
+            '0.1.16' : "Matcher wasteland day",
+            '0.1.15' : "Matcher of zed wasteland day night.",
             '0.1.14' : "Added matcher for biome spawn zombie animal all, falling block fell void, AI wanderer removed.",
             '0.1.13' : "Added matcher for EAC unregister.",
             '0.1.12' : "Hooked tree felling match to event.",
@@ -95,7 +97,17 @@ class parser ( threading.Thread ):
             'biome zom small ani' : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
-                                       r'ZombiesAll_any: c=[\d]+/r=[\d]+ AnimalsSmall_Any: c=[\d]+/r=[\d]+$',
+                                       r'ZombiesAll_Any: c=[\d]+/r=[\d]+ AnimalsSmall_Any: c=[\d]+/r=[\d]+$',
+                                       'to_call'  : [ ] },
+            'biome waste day'      : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+                                       r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
+                                       r'ZombiesWasteland_Day: c=[\d]+/r=[\d]+$',
+                                       'to_call'  : [ ] },
+            'biome waste day night': { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+                                       r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
+                                       r'ZombiesWasteland_Day: c=[\d]+/r=[\d]+ ZombiesWastelanNight_Night: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
             'biome waste night'    : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
