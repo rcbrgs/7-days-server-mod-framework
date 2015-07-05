@@ -72,6 +72,11 @@ class parser ( threading.Thread ):
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
                                        r'AnimalsSmall_Any: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
+            'biome animalSmall zom': { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+                                       r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
+                                       r'AnimalsSmall_Any: c=[\d]+/r=[\d]+ ZombiesAll_Any: c=[\d]+/r=[\d]+$',
+                                       'to_call'  : [ ] },
             'biome ani zom'       : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
@@ -85,12 +90,17 @@ class parser ( threading.Thread ):
             'biome zom ani'       : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
-                                       r'ZombiesAll_any: c=[\d]+/r=[\d]+ AnimalsAll_Any: c=[\d]+/r=[\d]+$',
+                                       r'ZombiesAll_Any: c=[\d]+/r=[\d]+ AnimalsAll_Any: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
             'biome zom small ani' : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
                                        r'ZombiesAll_any: c=[\d]+/r=[\d]+ AnimalsSmall_Any: c=[\d]+/r=[\d]+$',
+                                       'to_call'  : [ ] },
+            'biome waste night'    : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+                                       r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
+                                       r'ZombiesWastelanNight_Night: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
             'chunks saved'         : { 'to_match' : r'.* INF Saving (.*) of chunks took (.*)ms',
                                        'to_call'  : [ ] },
