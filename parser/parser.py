@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.16'
+        self.__version__ = '0.1.17'
         self.changelog = {
+            '0.1.17' : "Fixed matcher claim to not false positive.",
             '0.1.16' : "Matcher wasteland day",
             '0.1.15' : "Matcher of zed wasteland day night.",
             '0.1.14' : "Added matcher for biome spawn zombie animal all, falling block fell void, AI wanderer removed.",
@@ -121,7 +122,7 @@ class parser ( threading.Thread ):
             'claim player'         : { 'to_match' : r'Player ".* \(([\d]+)\)" owns ([\d]+) ' + \
                                        r'keystones \(protected: [\w]+, current hardness multiplier: [\d]+\)',
                                        'to_call'  : [ self.framework.world_state.buffer_claimstones ] },
-            'claim stone'          : { 'to_match' : r'\(([-+]*[\d]*), ([-+]*[\d]*), ([-+]*[\d]*)\)',
+            'claim stone'          : { 'to_match' : r'\(([-+]*[\d]*), ([-+]*[\d]*), ([-+]*[\d]*)\)$',
                                        'to_call'  : [ self.framework.world_state.buffer_claimstones ] },
             'created new player'   : { 'to_match' : self.match_prefix + r'INF Created new player entry for' + \
                                        r' ID: [\d]+$',

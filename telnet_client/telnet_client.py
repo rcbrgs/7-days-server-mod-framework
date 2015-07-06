@@ -121,5 +121,5 @@ class telnet_client ( threading.Thread ):
             
         except BrokenPipeError as e:
             self.log.error ( "BrokenPipeError '{}'".format ( e ) )
-            #self.framework.stop ( )
+            self.shutdown = True
             return
