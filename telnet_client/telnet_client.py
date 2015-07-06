@@ -11,8 +11,9 @@ class telnet_client ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.3'
+        self.__version__ = '0.1.4'
         self.changelog = {
+            '0.1.4' : "Making framework shutdown on write exception.",
             '0.1.3' : "Making shutdown on write exception.",
             '0.1.2' : "Catching error before exception for esthetic reason.",
             '0.1.1' : "Fixed telnet client leaving open threads on server.",
@@ -121,5 +122,5 @@ class telnet_client ( threading.Thread ):
             
         except BrokenPipeError as e:
             self.log.error ( "BrokenPipeError '{}'".format ( e ) )
-            self.shutdown = True
+            self.framework.shutdown = True
             return

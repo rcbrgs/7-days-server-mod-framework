@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.14"
+        self.__version__ = "0.2.15"
         self.changelog = {
+            '0.2.15' : "Updated message about prize for voting.",
             '0.2.14' : "Taunt",
             '0.2.13' : "Tweaked nest event, fixed coordinates of tree felled.",
             '0.2.12' : "More taunts.",
@@ -99,7 +100,7 @@ class game_events ( threading.Thread ):
         #position_file = open ( "pos.txt", "r" )
         position = self.framework.rank.current_rank
         if position != -1:
-            self.framework.console.say ( "Please vote for our server on http://7daystodie-servers.com/server/14698. We are currently # {} on the rank! Also, you gain 100$+1k per vote.".format ( position ) )
+            self.framework.console.say ( "Please vote for our server on http://7daystodie-servers.com/server/14698. We are currently # {} on the rank! Also, you gain 200$+1k per vote.".format ( position ) )
 
         if 'shop' in list ( self.framework.mods.keys ( ) ):
             self.framework.mods [ 'shop' ] [ 'reference' ].increase_stock ( )
