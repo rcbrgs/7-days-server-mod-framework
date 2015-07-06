@@ -348,6 +348,15 @@ class orchestrator ( threading.Thread ):
         pickle.dump ( self.framework_state, pickle_file, pickle.HIGHEST_PROTOCOL )
 
         self.shutdown = True
+        for mod_key in self.mods.keys ( ):
+            mod = self.mods [ mod_key ] [ 'reference' ]
+            self.log.info ( "mod %s stop" % str ( mod ) )
+            mod.stop ( )
+            self.log.info ( "mod %s join" % str ( mod ) )
+            if mod.is_alive ( ):
+                mod.join ( )
+        self.log.info ( "All mods stopped." )
+
         for component in self.stop_on_shutdown:
             self.log.info ( "Trying soft shutdown of {}.".format ( str ( component ) ) )
             self.log.info ( "{} stop".format ( str ( component ) ) )

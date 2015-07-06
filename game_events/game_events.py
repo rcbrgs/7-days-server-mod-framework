@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.15"
+        self.__version__ = "0.2.16"
         self.changelog = {
+            '0.2.16' : "Added randomness to cash prize for zeds.",
             '0.2.15' : "Updated message about prize for voting.",
             '0.2.14' : "Taunt",
             '0.2.13' : "Tweaked nest event, fixed coordinates of tree felled.",
@@ -50,6 +51,8 @@ class game_events ( threading.Thread ):
         self.stop ( )
 
     def run ( self ):
+        random.seed ( )
+        
         while ( self.shutdown == False ):
             time.sleep ( self.framework.preferences.loop_wait )        
 
@@ -229,8 +232,9 @@ class game_events ( threading.Thread ):
             kwargs [ 'player' ] = player
             function ( **kwargs )
 
-        self.framework.console.pm ( player, "You gained {} cash for killing 100 zombies!".format ( player.cash -\
-                                                                                                   money_before ) )
+        self.framework.console.say ( "{} gained {} cash for killing 100 zombies!".format ( player.name_sane,
+                                                                                           player.cash -\
+                                                                                           money_before ) )
 
     def player_left ( self, matches ):
         player = self.framework.server.get_player ( matches [ 7 ] )

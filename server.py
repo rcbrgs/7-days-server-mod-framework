@@ -655,7 +655,7 @@ class server ( threading.Thread ):
                     mod = self.framework.mods [ mod_key ] [ 'reference' ]
                     for key in mod.commands.keys ( ):
                         if msg_content [ 1 : len ( key ) + 1 ] == key:
-                            self.log.debug ( "mod {} command".format ( key ) )
+                            self.log.info ( "mod {} command".format ( key ) )
                             try:
                                 mod.commands [ key ] [ 0 ] ( msg_origin, msg_content )
                                 return
