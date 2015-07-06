@@ -24,8 +24,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.11'
+        self.__version__ = '0.4.12'
         self.changelog = {
+            '0.4.12' : "Better logging when running a mod command.",
             '0.4.11' : "Added get_nearest_player_to_position function.",
             '0.4.10' : "Simplified player positions being saved from floats to ints. Playerid now updated every id update.",
             '0.4.9'  : "Better logging of preteleports. Player positions are cleaned up to make save file smaller. (50% smaller!)",
@@ -655,8 +656,11 @@ class server ( threading.Thread ):
                     for key in mod.commands.keys ( ):
                         if msg_content [ 1 : len ( key ) + 1 ] == key:
                             self.log.debug ( "mod {} command".format ( key ) )
-                            mod.commands [ key ] [ 0 ] ( msg_origin, msg_content )
-                            return
+                            try:
+                                mod.commands [ key ] [ 0 ] ( msg_origin, msg_content )
+                                return
+                            except Exception as e:
+                                self.log.error ( "During mod.commands {}: {}".format ( key, e ) )
                 for external_command in self.external_commands:
                     if msg_content [ 1 : ] == external_command:
                         return

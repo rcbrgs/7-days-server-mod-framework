@@ -13,8 +13,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.4.2'
+        self.__version__ = '0.4.3'
         self.changelog = {
+            '0.4.3' : "After shutdown sequence, logging level goes to debug.",
             '0.4.2' : "Soft shutdown refactor, using a more systematic approach.",
             '0.4.1' : "Added a framework.rank object to scrape 7daystodie-servers.com. Initial work on soft shutdown for components.",
             '0.4.0' : "Major refactor to use multiple telnets and parsers.",
@@ -84,7 +85,7 @@ class orchestrator ( threading.Thread ):
         self.shutdown = False
         self.preferences = framework.preferences ( preferences_file_name )
         self.rank.start ( )
-        #self.stop_on_shutdown.append ( self.rank )
+        self.stop_on_shutdown.append ( self.rank )
         self.server = framework.server ( framework = self )
         self.game_events = framework.game_events ( framework = self )
         
@@ -354,6 +355,7 @@ class orchestrator ( threading.Thread ):
             self.log.info ( "{} join".format ( str ( component ) ) )
             component.join ( )
         self.log.info ( "Shutdown sequence complete." )
+        self.log.setLevel ( logging.DEBUG )
 
     def __del__ ( self ):
         self.log.info ( "<framework>.__del__" )

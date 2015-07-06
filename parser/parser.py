@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.17'
+        self.__version__ = '0.1.18'
         self.changelog = {
+            '0.1.18' : "More informative exception log.",
             '0.1.17' : "Fixed matcher claim to not false positive.",
             '0.1.16' : "Matcher wasteland day",
             '0.1.15' : "Matcher of zed wasteland day night.",
@@ -414,7 +415,8 @@ class parser ( threading.Thread ):
                         try:
                             caller ( match.groups ( ) )
                         except Exception as e:
-                            self.log.error ( "Exception in caller ( match.groups ( ) ): {}".format ( e ) )
+                            self.log.error ( "Exception in {} ( match.groups ( ) ): {}".format ( str ( caller ),
+                                                                                                 e ) )
                         self.log.debug ( "{} called {} and finished.".format ( key, caller ) )
 
             if not any_match:
