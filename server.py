@@ -24,8 +24,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.15'
+        self.__version__ = '0.4.16'
         self.changelog = {
+            '0.4.16' : "Fixed syntax for set_steamid_online.",
             '0.4.15' : "Added event calls for when player becomes voter and senator.",
             '0.4.14' : "Fixed set steamid online",
             '0.4.13' : "Logging before time events for debugging exception on update_gt.",
@@ -918,7 +919,7 @@ class server ( threading.Thread ):
     def set_steamid_online ( self, matches ):
         self.log.info ( "set steamid online {}".format ( matches [ 7 ] ) )
         if int ( matches [ 7 ] ) in self.players_info.keys ( ):
-            player = self.players_info [ steamid ]
+            player = self.players_info [ int ( matches [ 7 ] ) ]
             player.online = True
             self.log.info ( "Player {} set as online.".format ( player.name ) )
         
@@ -1497,6 +1498,11 @@ class server ( threading.Thread ):
 
     def little_swarm ( self, player, waves ):
         for count in range ( waves ):
-            rythm = 2
-            self.framework.console.se ( player, 'hornet', 6 )
+            rythm = 3
+            self.framework.console.se ( player, 'hornet', 2 )
             time.sleep ( rythm )
+            self.framework.console.se ( player, 'hornet', 2 )
+            time.sleep ( rythm )
+            self.framework.console.se ( player, 'hornet', 2 )
+            if count != waves - 1:
+                time.sleep ( rythm )

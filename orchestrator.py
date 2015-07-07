@@ -362,7 +362,10 @@ class orchestrator ( threading.Thread ):
         pickle.dump ( self.framework_state, pickle_file, pickle.HIGHEST_PROTOCOL )
 
         self.shutdown = True
+        all_mods = list ( self.mods.keys ( ) )
         for mod_key in self.mods.keys ( ):
+            self.log.info ( "Mods to shutdown: {}".format ( all_mods ) )
+            all_mods.remove ( mod_key )
             mod = self.mods [ mod_key ] [ 'reference' ]
             self.log.info ( "mod %s stop" % str ( mod ) )
             mod.stop ( )

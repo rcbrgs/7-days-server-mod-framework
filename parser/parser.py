@@ -10,8 +10,12 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.27'
+        self.__version__ = '0.1.31'
         self.changelog = {
+            '0.1.31' : "Matcher steam drop client.",
+            '0.1.30' : "Matcher biome snow znimas zombies.",
+            '0.1.29' : "Matcher cmd se executing.",
+            '0.1.28' : "Matcher scout horde zombie being removed.",
             '0.1.27' : "Matcher failed triangles.",
             '0.1.26' : "Matcher RPC. Refactored player online.",
             '0.1.25' : "Fixed ai horde towards player.",
@@ -70,6 +74,8 @@ class parser ( threading.Thread ):
             'AI scout fail'        : { 'to_match' : self.match_prefix + r'INF AIDirector: Scout spawning failed,'+\
                                        r' FindHordeTargets\(\) returned false!',
                                        'to_call'  : [ ] },
+            'AI scout remove'      : { 'to_match' : self.match_prefix + r'INF AIDirector: scout horde zombie \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' is being removed from horde control.$',
+                                       'to_call'  : [ ] },
             'AI wanderer'          : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie' +\
                                        r' \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' was spawned and is moving ' + \
                                        r'towards pitstop.$',
@@ -103,7 +109,7 @@ class parser ( threading.Thread ):
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
                                        r'AnimalsAll_Any: c=[\d]+/r=[\d]+ ZombiesAll_Any: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
-            'biome ani snow'      : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+            'biome ani zom snow'  : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
                                        r'AnimalsAll_Any: c=[\d]+/r=[\d]+ SnowZombies_Any: c=[\d]+/r=[\d]+$',
@@ -121,6 +127,11 @@ class parser ( threading.Thread ):
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
                                        r'ZombiesAll_Any: c=[\d]+/r=[\d]+ AnimalsAll_Any: c=[\d]+/r=[\d]+$',
+                                       'to_call'  : [ ] },
+            'biome zom ani snow'  : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+                                       r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
+                                       r'SnowZombies_Any: c=[\d]+/r=[\d]+ AnimalsAll_Any: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
             'biome zom small ani' : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
@@ -186,7 +197,11 @@ class parser ( threading.Thread ):
                                        r'[\d]+ [\w\d]+ [\d]+\' by Telnet from ' + self.match_string_ip + \
                                        r':[\d]+$',
                                        'to_call'  : [ ] },
-            'failed set triangles' : { 'to_match' : r 'Failed setting triangles. Some indices are referencing out of bounds vertices. IndexCount: [\d]+, VertexCount: [\d]+$',
+            'executing cmd se'     : { 'to_match' : self.match_prefix + r'INF Executing command \'se ' + \
+                                       r'[\d]+ [\d]+\' by Telnet from ' + self.match_string_ip + \
+                                       r':[\d]+$',
+                                       'to_call'  : [ ] },
+            'failed set triangles' : { 'to_match' : r'Failed setting triangles. Some indices are referencing out of bounds vertices. IndexCount: [\d]+, VertexCount: [\d]+$',
                                        'to_call'  : [ ] },
             'falling tree'         : { 'to_match' : r'^[\d]+. id=[\d]+, FallingTree_[\d]+' + \
                                        r' \(EntityFallingTree\), pos=' +self.match_string_pos + r', rot=' + \
@@ -386,6 +401,8 @@ class parser ( threading.Thread ):
             'steam auth callback'  : { 'to_match' : self.match_prefix + r'INF \[Steamworks.NET\] ' + \
                                        r'Authentication callback\. ID: [\d]+, owner: [\d]+, result: .*$',
                                        'to_call'  : [ ] },
+            'steam drop client'    : { 'to_match' : self.match_prefix + r'INF \[Steamworks\.NET\] NET: Dropping client: [\d]+$',
+                                       'to_call'  : [ ] },
             'steam player connect' : { 'to_match' : self.match_prefix + r'INF \[NET\] PlayerConnected ' + \
                                        r'EntityID=-1, PlayerID=\'\', OwnerID=\'\', PlayerName=\'\'$',
                                        'to_call'  : [ ] },
@@ -404,6 +421,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'wave start'           : { 'to_match' : r'^' + self.match_string_date + r' INF Start a new wave ' + \
                                        r'\'[\w]+\'\. timeout=[\d]+s$',
+                                       'to_call'  : [ ] },
+            'telnet conn block'    : { 'to_match' : self.match_prefix + r'INF Telnet connection closed for too many login attempts: ' + self.match_string_ip + ':[\d]+$',
                                        'to_call'  : [ ] },
             'telnet conn from'     : { 'to_match' : self.match_prefix + r'INF Telnet connection from: ' + \
                                        self.match_string_ip + ':[\d]+$',
