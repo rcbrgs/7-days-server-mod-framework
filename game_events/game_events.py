@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.17"
+        self.__version__ = "0.2.18"
         self.changelog = {
+            '0.2.18' : "Making hornet event a little bit more frequent.",
             '0.2.17' : "Calling random.seed before every randint to get different values.",
             '0.2.16' : "Added randomness to cash prize for zeds.",
             '0.2.15' : "Updated message about prize for voting.",
@@ -99,8 +100,6 @@ class game_events ( threading.Thread ):
         # do not continue if mod just came up:
         if ( time.time ( ) - self.framework.load_time ) < 60:
             return
-        # Which position are we? Save it to pos.txt
-        #position_file = open ( "pos.txt", "r" )
         position = self.framework.rank.current_rank
         if position != -1:
             self.framework.console.say ( "Please vote for our server on http://7daystodie-servers.com/server/14698. We are currently # {} on the rank! Also, you gain 200$+1k per vote.".format ( position ) )
@@ -264,7 +263,7 @@ class game_events ( threading.Thread ):
         self.log.info ( "Tree was felled at ( {}, {} ).".format ( matches [ 0 ], matches [ 2 ] ) )
         chance_event = random.randint ( 1, 100 )
         self.log.info ( "chance_event = {}".format ( chance_event ) )
-        if chance_event < 2:
+        if chance_event < 5:
             self.log.info ( "Small swarm event triggered!" )
             nearest_player = self.framework.server.find_nearest_player_to_position ( ( float ( matches [ 0 ] ),
                                                                                    float ( matches [ 2 ] ) ) )

@@ -461,7 +461,6 @@ class parser ( threading.Thread ):
             self.framework.gt_info [ 'executing' ] [ 'condition' ] = True
             now = time.time ( )
             self.framework.gt_info [ 'executing' ] [ 'timestamp' ] = now
-            #if self.framework.gt_info [ 'sending' ] 'timestamp' ] != 0:
             self.framework.gt_info [ 'lag' ] = now - self.framework.gt_info [ 'sending' ] [ 'timestamp' ]
             self.log.debug ( 'gt executing' )
             if ( self.framework.gt_info [ 'lag' ] > 5 ):
@@ -573,8 +572,8 @@ class parser ( threading.Thread ):
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         begin = time.time ( )
         while self.queue_lock:
-            #self.log.info ( "{}.{} wants parser queue lock from {}.".format (
-            #    callee_class, callee, self.queue_lock ) )
+            self.log.debug ( "{}.{} wants parser queue lock from {}.".format (
+                callee_class, callee, self.queue_lock ) )
             time.sleep ( 0.01 )
             if time.time ( ) - begin > 60:
                 break

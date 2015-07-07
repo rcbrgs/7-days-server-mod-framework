@@ -24,8 +24,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.12'
+        self.__version__ = '0.4.13'
         self.changelog = {
+            '0.4.13' : "Logging before time events for debugging exception on update_gt.",
             '0.4.12' : "Better logging when running a mod command.",
             '0.4.11' : "Added get_nearest_player_to_position function.",
             '0.4.10' : "Simplified player positions being saved from floats to ints. Playerid now updated every id update.",
@@ -1019,6 +1020,7 @@ class server ( threading.Thread ):
         self.game_server.hour   = hour
         self.game_server.minute = minute
 
+        self.log.info ( "Checking for time events." )
         if ( previous_day != self.game_server.day ):
             self.framework.game_events.day_changed ( previous_day )
         if ( previous_hour != self.game_server.hour ):
