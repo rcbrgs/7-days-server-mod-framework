@@ -13,8 +13,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.5.0'
+        self.__version__ = '0.5.1'
         self.changelog = {
+            '0.5.1' : "Added header to status.",
             '0.5.0' : "Added status() to call each telnet's status().",
             '0.4.3' : "After shutdown sequence, logging level goes to debug.",
             '0.4.2' : "Soft shutdown refactor, using a more systematic approach.",
@@ -344,10 +345,15 @@ class orchestrator ( threading.Thread ):
         self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
     def status ( self ):
+        self.log.info ( "telnet listener status:" )
         self.telnet.status ( )
+        self.log.info ( "telnet commands status:" )
         self.console.telnet_client_commands.status ( )
+        self.log.info ( "telnet lp status:" )
         self.console.telnet_client_lp.status ( )
+        self.log.info ( "telnet le status:" )
         self.console.telnet_client_le.status ( )
+        self.log.info ( "telnet pm status:" )
         self.console.telnet_client_pm.status ( )
         
     def stop ( self ):
