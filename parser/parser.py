@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.20'
+        self.__version__ = '0.1.21'
         self.changelog = {
+            '0.1.21' : "Matcher for wanderer horde going for player.",
             '0.1.20' : "+Matcher for night horde finish.",
             '0.1.19' : "+Matcher for save file failure.",
             '0.1.18' : "More informative exception log.",
@@ -66,6 +67,8 @@ class parser ( threading.Thread ):
             'AI wanderer'          : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie' +\
                                        r' \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' was spawned and is moving ' + \
                                        r'towards pitstop.$',
+                                       'to_call'  : [ ] },
+            'AI wanderer player'   : { 'to_match' : self.match_prefix + r'INF AIDirector: Spawning wandering horde moving towards player \'\[type=EntityPlayer, name=.*, id=[\d]+\]$',
                                        'to_call'  : [ ] },
             'AI wander remove'     : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' is being removed from horde control.$',
                                        'to_call'  : [ ] },
