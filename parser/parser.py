@@ -72,6 +72,8 @@ class parser ( threading.Thread ):
                                        r' \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' was spawned and is moving ' + \
                                        r'towards pitstop.$',
                                        'to_call'  : [ ] },
+            'AI wander finish'     : { 'to_match' : self.match_prefix + r'INF AIDirector: Wandering Horde Spawn Finished \(all mobs spawned\)\.$',
+                                       'to_call'  : [ ] },
             'AI wanderer player'   : { 'to_match' : self.match_prefix + r'INF AIDirector: Spawning wandering horde moving towards player \'\[type=EntityPlayer, name=.*, id=[\d]+\]\'$',
                                        'to_call'  : [ ] },
             'AI wander remove'     : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' is being removed from horde control.$',

@@ -34,6 +34,7 @@ class telnet_client ( threading.Thread ):
         self.telnet_password = self.framework.preferences.telnet_password
         self.telnet_port     = self.framework.preferences.telnet_port
         self.timestamp_input = None
+        self.timestamp_input_previous = None
         
         self.telnet = telnetlib.Telnet ( timeout = 10 )
 
