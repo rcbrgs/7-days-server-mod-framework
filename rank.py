@@ -8,8 +8,9 @@ class rank ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.1.4'
+        self.__version__ = '0.1.5'
         self.changelog = {
+            '0.1.5' : "Wrapped rank update in an try clause so 404s wont crash the thread.",
             '0.1.4' : "Increased prize for voting.",
             '0.1.3' : "Jazzed up vote thank you. Added log about rank changing position.",
             '0.1.2' : "Increased prize for votes.",
@@ -46,7 +47,11 @@ class rank ( threading.Thread ):
         request = http.request ( 'GET', 'http://7daystodie-servers.com/server/14698' )
         soup = bs4.BeautifulSoup ( request.data )
         tds = soup.findAll ( "td" )
-        rank = int ( tds [ 29 ].contents [ 0 ] )
+        try:
+            rank = int ( tds [ 29 ].contents [ 0 ] )
+        except Exception as e:
+            self.log.error ( "Error parsing rank webpage: {}.".format ( e ) )
+            return
         self.current_rank = rank
         if self.previous_rank != self.current_rank:
             if self.previous_rank != -1:

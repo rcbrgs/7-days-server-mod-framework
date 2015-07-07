@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.31'
+        self.__version__ = '0.1.32'
         self.changelog = {
+            '0.1.32' : "Matcher scout horde spawn finish.",
             '0.1.31' : "Matcher steam drop client.",
             '0.1.30' : "Matcher biome snow znimas zombies.",
             '0.1.29' : "Matcher cmd se executing.",
@@ -73,6 +74,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'AI scout fail'        : { 'to_match' : self.match_prefix + r'INF AIDirector: Scout spawning failed,'+\
                                        r' FindHordeTargets\(\) returned false!',
+                                       'to_call'  : [ ] },
+            'AI scout finish'      : { 'to_match' : self.match_prefix + r'INF AIDirector: Scout Horde Spawn Finished \(all mobs spawned\)\.$',
                                        'to_call'  : [ ] },
             'AI scout remove'      : { 'to_match' : self.match_prefix + r'INF AIDirector: scout horde zombie \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' is being removed from horde control.$',
                                        'to_call'  : [ ] },
