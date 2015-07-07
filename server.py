@@ -666,6 +666,7 @@ class server ( threading.Thread ):
                         return
                 self.framework.console.say ( "Syntax error: %s." % msg_content [ 1 : ] )
             else:
+                self.log.info ( "Going for a translation." )
                 if 'translator'  in self.framework.mods.keys ( ):
                     self.framework.mods [ 'translator' ] [ 'reference' ].translate (
                     msg_origin, msg_content [ : ] )

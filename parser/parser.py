@@ -10,8 +10,10 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.18'
+        self.__version__ = '0.1.20'
         self.changelog = {
+            '0.1.20' : "+Matcher for night horde finish.",
+            '0.1.19' : "+Matcher for save file failure.",
             '0.1.18' : "More informative exception log.",
             '0.1.17' : "Fixed matcher claim to not false positive.",
             '0.1.16' : "Matcher wasteland day",
@@ -47,6 +49,8 @@ class parser ( threading.Thread ):
         self.telnet_output_matchers = {
             'add obs entity'       : { 'to_match' : self.match_prefix + r'INF Adding observed entity: ' +\
                                        r'[\d]+, ' + self.match_string_pos + r', [\d]+$',
+                                       'to_call'  : [ ] },
+            'AI night horde'       : { 'to_match' : self.match_prefix + r'INF AIDirector: Night Horde Spawn Finished \(all mobs spawned\).$',
                                        'to_call'  : [ ] },
             'AI scout horde'       : { 'to_match' : self.match_prefix + r'INF AIDirector: scout horde zombie' + \
                                        r' \'\[type=EntityZombie, name=spiderzombie, id=[\d]+\]\' was spawned' + \
@@ -109,7 +113,7 @@ class parser ( threading.Thread ):
             'biome waste day night': { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
-                                       r'ZombiesWasteland_Day: c=[\d]+/r=[\d]+ ZombiesWastelanNight_Night: c=[\d]+/r=[\d]+$',
+                                       r'ZombiesWasteland_Day: c=[\d]+/r=[\d]+ ZombiesWastelandNight_Night: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
             'biome waste night'    : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
@@ -162,6 +166,8 @@ class parser ( threading.Thread ):
                                        r', id=[\d]+\] fell off the world, id=[\d]+ pos=' + self.match_string_date,
                                        'to_call'  : [ ] },
             'block fell off'       : { 'to_match' : self.match_prefix + r'WRN Entity FallingBlock_[\d]+ \(EntityFallingBlock\) fell off the world, id=[\d]+ pos=' + self.match_string_pos + r'$',
+                                       'to_call'  : [ ] },
+            'could not save file'  : { 'to_match' : self.match_prefix + r'ERR Could not save file \'.*\': Sharing violation on path .*$',
                                        'to_call'  : [ ] },
             'item fell off'        : { 'to_match' : self.match_prefix + r'WRN Entity Item_[\d]+ \(EntityItem\) ' + \
                                        r'fell off the world, id=[\d]+ pos=' + self.match_string_pos + r'$',
@@ -281,6 +287,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'player disconnected'  : { 'to_match' : self.match_prefix + r'INF Player disconnected: EntityID=' + \
                                        r'-*[\d]+, PlayerID=\'[\d]+\', OwnerID=\'[\d]+\', PlayerName=\'.*\'$',
+                                       'to_call'  : [ ] },
+            'player cdonn after'   : { 'to_match' : self.match_prefix + r'INF Player .* disconnected after [\d]+\.[\d] minutes$',
                                        'to_call'  : [ ] },
             'player disconn error' : { 'to_match' : self.match_prefix + r'ERR DisconnectClient: Player ' + \
                                        r'[\d]+ not found$',

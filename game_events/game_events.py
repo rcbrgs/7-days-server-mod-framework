@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.16"
+        self.__version__ = "0.2.17"
         self.changelog = {
+            '0.2.17' : "Calling random.seed before every randint to get different values.",
             '0.2.16' : "Added randomness to cash prize for zeds.",
             '0.2.15' : "Updated message about prize for voting.",
             '0.2.14' : "Taunt",
@@ -51,7 +52,6 @@ class game_events ( threading.Thread ):
         self.stop ( )
 
     def run ( self ):
-        random.seed ( )
         
         while ( self.shutdown == False ):
             time.sleep ( self.framework.preferences.loop_wait )        
@@ -225,6 +225,7 @@ class game_events ( threading.Thread ):
             self.log.warning ( "calling p killd 100 zeds with id" )
             player = self.framework.server.get_player ( player )
 
+        random.seed ( time.time ( ) )
         money_before = player.cash
         for callback in self.registered_callbacks [ 'player_killed_100_zombies' ]:
             function = callback [ 0 ]
