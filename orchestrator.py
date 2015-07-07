@@ -13,8 +13,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.4.3'
+        self.__version__ = '0.5.0'
         self.changelog = {
+            '0.5.0' : "Added status() to call each telnet's status().",
             '0.4.3' : "After shutdown sequence, logging level goes to debug.",
             '0.4.2' : "Soft shutdown refactor, using a more systematic approach.",
             '0.4.1' : "Added a framework.rank object to scrape 7daystodie-servers.com. Initial work on soft shutdown for components.",
@@ -342,6 +343,13 @@ class orchestrator ( threading.Thread ):
         self.log.info ( "**************************   Stopping framework   ***************************" )
         self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
+    def status ( self ):
+        self.telnet.status ( )
+        self.console.telnet_client_commands.status ( )
+        self.console.telnet_client_lp.status ( )
+        self.console.telnet_client_le.status ( )
+        self.console.telnet_client_pm.status ( )
+        
     def stop ( self ):
         self.log.info ( "framework.stop" )
         pickle_file = open ( self.preferences.framework_state_file, 'wb' )

@@ -11,8 +11,9 @@ class telnet_client ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.4'
+        self.__version__ = '0.2.0'
         self.changelog = {
+            '0.2.0' : "Added status() to better monitor telnet behaviour.",
             '0.1.4' : "Making framework shutdown on write exception.",
             '0.1.3' : "Making shutdown on write exception.",
             '0.1.2' : "Catching error before exception for esthetic reason.",
@@ -32,8 +33,10 @@ class telnet_client ( threading.Thread ):
         self.telnet_ip       = self.framework.preferences.telnet_ip
         self.telnet_password = self.framework.preferences.telnet_password
         self.telnet_port     = self.framework.preferences.telnet_port
-       
+        self.timestamp_input = None
+        
         self.telnet = telnetlib.Telnet ( timeout = 10 )
+
 
     def __del__ ( self ):
         self.stop ( )
@@ -45,6 +48,8 @@ class telnet_client ( threading.Thread ):
                 continue
             try:
                 line = self.telnet.read_until ( b'\n', 5 )
+                self.timestamp_input_previous = self.timestamp_input
+                self.timestamp_input = time.time ( )
                 if isinstance ( line, int ):
                     self.log.info ( "line == {}. Shutting down imminent.".format ( line ) )
                     continue
@@ -107,7 +112,12 @@ class telnet_client ( threading.Thread ):
     def send_to_parser ( self, line ):
         self.parsers [ self.parsers_pointer ].enqueue ( line )
         self.parsers_pointer = ( self.parsers_pointer + 1 ) % len ( self.parsers )
-            
+
+    def status ( self ):
+        if self.timestamp_input_previous:
+            interval = self.timestamp_input - self.timestamp_input_previous
+            self.log.info ( "interval = {:.1f}s.".format ( interval ) )
+        
     def write ( self, msg ):
         if ( self.telnet.get_socket ( ) == 0 ):
             self.log.error ( "Can't get_socket()!" )
