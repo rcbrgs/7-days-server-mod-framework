@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.19"
+        self.__version__ = "0.3.0"
         self.changelog = {
+            '0.3.0'  : "Disabled map limitation.",
             '0.2.19' : "Typo in one of the taunts.",
             '0.2.18' : "Making hornet event a little bit more frequent.",
             '0.2.17' : "Calling random.seed before every randint to get different values.",
@@ -62,32 +63,32 @@ class game_events ( threading.Thread ):
         self.shutdown = True
 
     def check_position_triggers ( self, player = None ):
-        self.framework.get_db_lock ( )
+        #self.framework.get_db_lock ( )
         if not player:
             self.log.error ( "player None" )
         # map borders
-        if ( ( abs ( player.pos_x ) > 4400 ) or
-             ( abs ( player.pos_y ) > 4400 ) ):
-            if player.map_limit_beacon == None:
-                self.framework.console.pm ( player,
-                                            "You are beyond the 4.4km soft limit. Teleport destination saved." )
-                new_beacon =  self.framework.utils.get_coordinates ( player )
-                player.map_limit_beacon = copy.copy ( new_beacon )
-                self.log.info ( "Setting {}.map_limit_beacon to {}".format ( player.name_sane,
-                                                                             new_beacon ) )
-            if ( ( abs ( player.pos_x ) > 4500 ) or
-                 ( abs ( player.pos_y ) > 4500 ) ):
-                msg = '%s is beyond the 4.5km hard limit. Teleporting back to saved position."'
-                self.log.info ( msg % ( player.name_sane ) )
-                if ( abs ( player.map_limit_beacon [ 0 ] ) > 4500 or
-                     abs ( player.map_limit_beacon [ 1 ] ) > 4500 ):
-                    self.framework.console.pm ( player, "Your saved position also beyond hard limit; teleporting to starter base." )
-                    player.map_limit_beacon = ( 1500, 350, 67 )                    
-                self.framework.server.preteleport ( player,
-                                                    player.map_limit_beacon )
-        else:
-            player.map_limit_beacon = None
-        self.framework.let_db_lock ( )
+        #if ( ( abs ( player.pos_x ) > 4400 ) or
+        #     ( abs ( player.pos_y ) > 4400 ) ):
+        #    if player.map_limit_beacon == None:
+        #        self.framework.console.pm ( player,
+        #                                    "You are beyond the 4.4km soft limit. Teleport destination saved." )
+        #        new_beacon =  self.framework.utils.get_coordinates ( player )
+        #        player.map_limit_beacon = copy.copy ( new_beacon )
+        #        self.log.info ( "Setting {}.map_limit_beacon to {}".format ( player.name_sane,
+        #                                                                     new_beacon ) )
+        #    if ( ( abs ( player.pos_x ) > 4500 ) or
+        #         ( abs ( player.pos_y ) > 4500 ) ):
+        #        msg = '%s is beyond the 4.5km hard limit. Teleporting back to saved position."'
+        #        self.log.info ( msg % ( player.name_sane ) )
+        #        if ( abs ( player.map_limit_beacon [ 0 ] ) > 4500 or
+        #             abs ( player.map_limit_beacon [ 1 ] ) > 4500 ):
+        #            self.framework.console.pm ( player, "Your saved position also beyond hard limit; teleporting to starter base." )
+        #            player.map_limit_beacon = ( 1500, 350, 67 )                    
+        #        self.framework.server.preteleport ( player,
+        #                                            player.map_limit_beacon )
+        #else:
+        #    player.map_limit_beacon = None
+        #self.framework.let_db_lock ( )
 
         if 'sethome' not in self.framework.mods.keys ( ):
             return
@@ -270,6 +271,6 @@ class game_events ( threading.Thread ):
                                                                                    float ( matches [ 2 ] ) ) )
             self.log.info ( "Nearest {:.1f}m player is {}.".format (
                 nearest_player [ 1 ],
-                self.framework.server.get_player ( nearest_player [ 0 ] ) ) )
+                self.framework.server.get_player ( nearest_player [ 0 ] ).name_sane ) )
             self.framework.server.little_swarm ( self.framework.server.get_player ( nearest_player [ 0 ] ), 1 )
 

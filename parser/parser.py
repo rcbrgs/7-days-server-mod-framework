@@ -10,8 +10,10 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.25'
+        self.__version__ = '0.1.27'
         self.changelog = {
+            '0.1.27' : "Matcher failed triangles.",
+            '0.1.26' : "Matcher RPC. Refactored player online.",
             '0.1.25' : "Fixed ai horde towards player.",
             '0.1.24' : "Matcher for biome snow zombie. Kicking player more flexible.",
             '0.1.23' : "Fixed ent fell off matcher, added zombie waste night day, biome zombie, player dconn net.",
@@ -154,6 +156,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ self.framework.world_state.buffer_claimstones ] },
             'claim stone'          : { 'to_match' : r'\(([-+]*[\d]*), ([-+]*[\d]*), ([-+]*[\d]*)\)$',
                                        'to_call'  : [ self.framework.world_state.buffer_claimstones ] },
+            'couldnt RPC'          : { 'to_match' : r'^Couldn\'t send RPC function \'RPC_RawData\'$',
+                                       'to_call'  : [ ] },
             'created new player'   : { 'to_match' : self.match_prefix + r'INF Created new player entry for' + \
                                        r' ID: [\d]+$',
                                        'to_call'  : [ ] },
@@ -181,6 +185,8 @@ class parser ( threading.Thread ):
             'executing cmd give'   : { 'to_match' : self.match_prefix + r'INF Executing command \'give ' + \
                                        r'[\d]+ [\w\d]+ [\d]+\' by Telnet from ' + self.match_string_ip + \
                                        r':[\d]+$',
+                                       'to_call'  : [ ] },
+            'failed set triangles' : { 'to_match' : r 'Failed setting triangles. Some indices are referencing out of bounds vertices. IndexCount: [\d]+, VertexCount: [\d]+$',
                                        'to_call'  : [ ] },
             'falling tree'         : { 'to_match' : r'^[\d]+. id=[\d]+, FallingTree_[\d]+' + \
                                        r' \(EntityFallingTree\), pos=' +self.match_string_pos + r', rot=' + \
@@ -305,7 +311,7 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'player offline'       : { 'to_match' : self.match_prefix + r'INF Player set to offline: [\d]+$',
                                        'to_call'  : [ ] },
-            'player online'        : { 'to_match' : r'^' + self.match_string_date + r' INF Player set to online' + \
+            'player online'        : { 'to_match' : self.match_prefix + r'INF Player set to online' + \
                                        r': ([\d]+)$',
                                        'to_call'  : [ self.framework.server.set_steamid_online ] },
             'player connected'     : { 'to_match' : self.match_prefix + r'INF Player connected, entityid=[\d]+, ' +\

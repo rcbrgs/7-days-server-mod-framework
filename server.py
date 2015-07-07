@@ -24,8 +24,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.13'
+        self.__version__ = '0.4.14'
         self.changelog = {
+            '0.4.14' : "Fixed set steamid online",
             '0.4.13' : "Logging before time events for debugging exception on update_gt.",
             '0.4.12' : "Better logging when running a mod command.",
             '0.4.11' : "Added get_nearest_player_to_position function.",
@@ -910,7 +911,8 @@ class server ( threading.Thread ):
         self.console ( msg )
 
     def set_steamid_online ( self, matches ):
-        if matches [ 7 ] in self.players_info.keys ( ):
+        self.log.info ( "set steamid online {}".format ( matches [ 7 ] ) )
+        if int ( matches [ 7 ] ) in self.players_info.keys ( ):
             player = self.players_info [ steamid ]
             player.online = True
             self.log.info ( "Player {} set as online.".format ( player.name ) )
