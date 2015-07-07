@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.18"
+        self.__version__ = "0.2.19"
         self.changelog = {
+            '0.2.19' : "Typo in one of the taunts.",
             '0.2.18' : "Making hornet event a little bit more frequent.",
             '0.2.17' : "Calling random.seed before every randint to get different values.",
             '0.2.16' : "Added randomness to cash prize for zeds.",
@@ -171,7 +172,7 @@ class game_events ( threading.Thread ):
             ( "Hmmm. I think I can make a base out of {}'s gore blocks." ),
             ( "I want brains, and after eating {}'s, I'm still hungry!" ),
             ( "If you will keep dying that fast, I will start respawning you as a rabbit, {}." ),
-            ( "It was an uneven math, {}. That tree has more kills than you ever will." ),
+            ( "It was an uneven match, {}. That tree has more kills than you ever will." ),
             ( "Lemme guess, {}: you learned how to play with Lulu?" ),
             ( "Lol {}, are you role-playing a zombie?" ),
             ( "Player stew: one water, one potato and one {}." ),
