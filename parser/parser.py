@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.32'
+        self.__version__ = '0.1.33'
         self.changelog = {
+            '0.1.33' : "Another player disconnect output matcher.",
             '0.1.32' : "Matcher scout horde spawn finish.",
             '0.1.31' : "Matcher steam drop client.",
             '0.1.30' : "Matcher biome snow znimas zombies.",
@@ -344,6 +345,10 @@ class parser ( threading.Thread ):
                                        r'[\d]+ not found$',
                                        'to_call'  : [ ] },
             'player dconn NET'     : { 'to_match' : self.match_prefix + r'INF \[NET\] Player disconnected: ' + \
+                                       r'EntityID=' + \
+                                       r'-*[\d]+, PlayerID=\'[\d]+\', OwnerID=\'[\d]+\', PlayerName=\'.*\'$',
+                                       'to_call'  : [ ] },
+            'player dconn NET2'    : { 'to_match' : self.match_prefix + r'INF \[NET\] PlayerDisconnected ' + \
                                        r'EntityID=' + \
                                        r'-*[\d]+, PlayerID=\'[\d]+\', OwnerID=\'[\d]+\', PlayerName=\'.*\'$',
                                        'to_call'  : [ ] },
