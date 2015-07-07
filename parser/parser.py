@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.22'
+        self.__version__ = '0.1.23'
         self.changelog = {
+            '0.1.23' : "Fixed ent fell off matcher, added zombie waste night day, biome zombie, player dconn net.",
             '0.1.22' : "Added matcher for behaviour missing script.",
             '0.1.21' : "Matcher for wanderer horde going for player.",
             '0.1.20' : "+Matcher for night horde finish.",
@@ -101,6 +102,10 @@ class parser ( threading.Thread ):
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
                                        r'AnimalsSmall_Any: c=[\d]+/r=[\d]+ ZombiesAll_any: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
+            'biomed zom'          : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned' + \
+                                      r' [\w\d]+ pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                      r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ZombiesAll_Any: c=[\d]+/r=[\d]+$',
+                                      'to_call'  : [ ] },
             'biome zom ani'       : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
@@ -125,6 +130,11 @@ class parser ( threading.Thread ):
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
                                        r'ZombiesWastelanNight_Night: c=[\d]+/r=[\d]+$',
+                                       'to_call'  : [ ] },
+            'biome waste nit day'  : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+                                       r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
+                                       r'ZombiesWastelandNight_Night: c=[\d]+/r=[\d]+ ZombiesWasteland_Day: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
             'chunks saved'         : { 'to_match' : r'.* INF Saving (.*) of chunks took (.*)ms',
                                        'to_call'  : [ ] },
@@ -169,7 +179,8 @@ class parser ( threading.Thread ):
                                        r'dead=[\w]+,$',
                                        'to_call'  : [ self.framework.game_events.tree_felled ] }, 
             'fell off world'       : { 'to_match' : self.match_prefix + r'WRN Entity \[type=.*, name=.*' +\
-                                       r', id=[\d]+\] fell off the world, id=[\d]+ pos=' + self.match_string_date,
+                                       r', id=[\d]+\] fell off the world, id=[\d]+ pos=' + \
+                                       self.match_string_pos + r'$',
                                        'to_call'  : [ ] },
             'block fell off'       : { 'to_match' : self.match_prefix + r'WRN Entity FallingBlock_[\d]+ \(EntityFallingBlock\) fell off the world, id=[\d]+ pos=' + self.match_string_pos + r'$',
                                        'to_call'  : [ ] },
@@ -298,6 +309,10 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'player disconn error' : { 'to_match' : self.match_prefix + r'ERR DisconnectClient: Player ' + \
                                        r'[\d]+ not found$',
+                                       'to_call'  : [ ] },
+            'player dconn NET'     : { 'to_match' : self.match_prefix + r'INF \[NET\] Player disconnected: ' + \
+                                       r'EntityID=' + \
+                                       r'-*[\d]+, PlayerID=\'[\d]+\', OwnerID=\'[\d]+\', PlayerName=\'.*\'$',
                                        'to_call'  : [ ] },
             'player died'          : { 'to_match' : self.match_prefix + r'INF GMSG: Player (.*) died$',
                                        'to_call'  : [ self.framework.game_events.player_died ] },
