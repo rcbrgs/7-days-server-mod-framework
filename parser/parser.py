@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.23'
+        self.__version__ = '0.1.24'
         self.changelog = {
+            '0.1.24' : "Matcher for biome snow zombie. Kicking player more flexible.",
             '0.1.23' : "Fixed ent fell off matcher, added zombie waste night day, biome zombie, player dconn net.",
             '0.1.22' : "Added matcher for behaviour missing script.",
             '0.1.21' : "Matcher for wanderer horde going for player.",
@@ -96,6 +97,11 @@ class parser ( threading.Thread ):
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
                                        r'AnimalsAll_Any: c=[\d]+/r=[\d]+ ZombiesAll_Any: c=[\d]+/r=[\d]+$',
+                                       'to_call'  : [ ] },
+            'biome ani snow'      : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
+                                       r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
+                                       r'AnimalsAll_Any: c=[\d]+/r=[\d]+ SnowZombies_Any: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
             'biome sani zom'      : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
@@ -234,7 +240,7 @@ class parser ( threading.Thread ):
             'kicking executing'    : { 'to_match' : self.match_prefix + r'INF Executing command \'kick' + \
                                        r' [\d]+ .*\' by Telnet from ' + self.match_string_ip + r':[\d]+$',
                                        'to_call'  : [ ] },
-            'kicking player'       : { 'to_match' : self.match_prefix + r'INF Kicking player: goodbye$',
+            'kicking player'       : { 'to_match' : self.match_prefix + r'INF Kicking player: .*$',
                                        'to_call'  : [ ] },
 
             'le command executing' : { 'to_match' : self.match_string_date + \
