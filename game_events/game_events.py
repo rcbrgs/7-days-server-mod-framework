@@ -12,6 +12,7 @@ class game_events ( threading.Thread ):
         self.log = logging.getLogger ( __name__ )
         self.__version__ = "0.3.0"
         self.changelog = {
+            '0.3.1'  : "Added events for when player becomes citizen and senator.",
             '0.3.0'  : "Disabled map limitation.",
             '0.2.19' : "Typo in one of the taunts.",
             '0.2.18' : "Making hornet event a little bit more frequent.",
@@ -122,6 +123,13 @@ class game_events ( threading.Thread ):
             self.log.info ( self.framework.server.get_player_summary ( player ) )
         self.log.info ( self.framework.server.get_game_server_summary ( ) )
 
+    def player_can_propose ( self, player ):
+        self.framework.console.say ( "The community looks up to {} for guidance! {} can now propose referendums.".format ( player.name_sane, player.name_sane ) )
+        
+    def player_can_vote ( self, player ):
+        self.framework.console.say ( "The community recognizes {} as one of its voting citizens.".format (
+            player.name_sane ) )
+        
     def player_changed_name ( self, player ):
         self.log.info ( "Player {} changed name from {}.".format ( player.name_sane,
                                                                    player.attributes [ 'old names' ] ) )
@@ -175,6 +183,7 @@ class game_events ( threading.Thread ):
             ( "If you will keep dying that fast, I will start respawning you as a rabbit, {}." ),
             ( "It was an uneven match, {}. That tree has more kills than you ever will." ),
             ( "Lemme guess, {}: you learned how to play with Lulu?" ),
+            ( "Let's all hope {} lost his backpack to a bug!" ),
             ( "Lol {}, are you role-playing a zombie?" ),
             ( "Player stew: one water, one potato and one {}." ),
             ( "Quick everyone! {}'s backpack has two augers!!" ),
@@ -253,7 +262,7 @@ class game_events ( threading.Thread ):
 
         self.framework.server.give_karma ( player, 1 )
         self.framework.console.pm ( player, "You gained 1 karma for being online 1h!" )
-        
+
     def player_position_changed ( self, player ):
         for callback in self.registered_callbacks [ 'player_position_changed' ]:
             function = callback [ 0 ]

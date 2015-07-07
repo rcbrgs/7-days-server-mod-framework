@@ -24,8 +24,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.14'
+        self.__version__ = '0.4.15'
         self.changelog = {
+            '0.4.15' : "Added event calls for when player becomes voter and senator.",
             '0.4.14' : "Fixed set steamid online",
             '0.4.13' : "Logging before time events for debugging exception on update_gt.",
             '0.4.12' : "Better logging when running a mod command.",
@@ -742,6 +743,10 @@ class server ( threading.Thread ):
                                     ( player.name_sane,
                                       new_minutes ) )
                     events.append ( self.framework.game_events.player_played_one_hour )
+                if old_minutes == 4 and new_minutes == 5:
+                    events.append ( self.framework.game_events.player_can_vote )
+                if old_minutes == 9 and new_minutes == 10:
+                    events.append ( self.framework.game_events.player_can_vote )
                     
             else:
                 player.online_time = 0
