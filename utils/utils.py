@@ -80,12 +80,12 @@ class utils ( object ):
         y = code_coordinates [ 1 ]
         z = code_coordinates [ 2 ]
 
-        result = str ( abs ( x ) )
+        result = str ( round ( abs ( x ) ) )
         if x >= 0:
             result += "E, "
         else:
             result += "W, "
-        result += str ( abs ( y ) )
+        result += str ( round ( abs ( y ) ) )
         if y >= 0:
             result += "N"
         else:

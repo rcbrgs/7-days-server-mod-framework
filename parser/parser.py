@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.21'
+        self.__version__ = '0.1.22'
         self.changelog = {
+            '0.1.22' : "Added matcher for behaviour missing script.",
             '0.1.21' : "Matcher for wanderer horde going for player.",
             '0.1.20' : "+Matcher for night horde finish.",
             '0.1.19' : "+Matcher for save file failure.",
@@ -73,6 +74,8 @@ class parser ( threading.Thread ):
             'AI wander remove'     : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' is being removed from horde control.$',
                                        'to_call'  : [ ] },
             'allowing player'      : { 'to_match' : self.match_prefix + r'INF Allowing player with id [\d]+$',
+                                       'to_call'  : [ ] },
+            'behaviour'            : { 'to_match' : r'The referenced script on this Behaviour is missing!$',
                                        'to_call'  : [ ] },
             'biome animal'         : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
