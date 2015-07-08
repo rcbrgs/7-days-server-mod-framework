@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.35'
+        self.__version__ = '0.1.36'
         self.changelog = {
+            '0.1.36' : "snow zom matcher",
             '0.1.35' : "EAC backend matcher.",
             '0.1.34' : "AI wanderer stop matcher.",
             '0.1.33' : "Another player disconnect output matcher.",
@@ -129,6 +130,10 @@ class parser ( threading.Thread ):
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
                                        r'AnimalsSmall_Any: c=[\d]+/r=[\d]+ ZombiesAll_any: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
+            'biome snowzom'       : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned' + \
+                                      r' [\w\d]+ pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
+                                      r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ SnowZombies_Any: c=[\d]+/r=[\d]+$',
+                                      'to_call'  : [ ] },
             'biomed zom'          : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned' + \
                                       r' [\w\d]+ pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                       r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ZombiesAll_Any: c=[\d]+/r=[\d]+$',

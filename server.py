@@ -24,8 +24,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.16'
+        self.__version__ = '0.4.17'
         self.changelog = {
+            '0.4.17' : "Greet known player upon return.",
             '0.4.16' : "Fixed syntax for set_steamid_online.",
             '0.4.15' : "Added event calls for when player becomes voter and senator.",
             '0.4.14' : "Fixed set steamid online",
@@ -922,6 +923,7 @@ class server ( threading.Thread ):
             player = self.players_info [ int ( matches [ 7 ] ) ]
             player.online = True
             self.log.info ( "Player {} set as online.".format ( player.name ) )
+            self.framework.console.pm ( player, "Welcome back {}!".format ( player.name ) )
         
     def sos ( self, msg_origin, msg_contents ):
         origin = self.get_player ( msg_origin )

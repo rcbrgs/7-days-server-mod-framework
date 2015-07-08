@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.1"
+        self.__version__ = "0.3.2"
         self.changelog = {
+            '0.3.2'  : "More taunts.",
             '0.3.1'  : "Added events for when player becomes citizen and senator.",
             '0.3.0'  : "Disabled map limitation.",
             '0.2.19' : "Typo in one of the taunts.",
@@ -170,6 +171,7 @@ class game_events ( threading.Thread ):
     def player_died ( self, matches ):
         player_died_messages = [
             ( "{} is quite the tree-hugger!" ),
+            ( "{}, the price of femur is really good right now, you don't mind do you?" ),
             ( "{} was hunted down by a vicious sand block." ),
             ( "Again, {}!?" ),
             ( "Another {}-kill and without spending a single arrow." ),
@@ -185,6 +187,7 @@ class game_events ( threading.Thread ):
             ( "Lemme guess, {}: you learned how to play with Lulu?" ),
             ( "Let's all hope {} lost his backpack to a bug!" ),
             ( "Lol {}, are you role-playing a zombie?" ),
+            ( "Muwahaha evil lag monster strikes {} again!" ),
             ( "Player stew: one water, one potato and one {}." ),
             ( "Quick everyone! {}'s backpack has two augers!!" ),
             ( "That's not how a log spike is supposed to work, {}." ),
