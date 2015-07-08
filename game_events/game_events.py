@@ -169,7 +169,6 @@ class game_events ( threading.Thread ):
         
     def player_died ( self, matches ):
         player_died_messages = [
-            ( "{}: from cradle to the gravel." ),
             ( "{} is quite the tree-hugger!" ),
             ( "{} was hunted down by a vicious sand block." ),
             ( "Again, {}!?" ),

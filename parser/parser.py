@@ -10,8 +10,10 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.33'
+        self.__version__ = '0.1.35'
         self.changelog = {
+            '0.1.35' : "EAC backend matcher.",
+            '0.1.34' : "AI wanderer stop matcher.",
             '0.1.33' : "Another player disconnect output matcher.",
             '0.1.32' : "Matcher scout horde spawn finish.",
             '0.1.31' : "Matcher steam drop client.",
@@ -89,6 +91,10 @@ class parser ( threading.Thread ):
             'AI wanderer player'   : { 'to_match' : self.match_prefix + r'INF AIDirector: Spawning wandering horde moving towards player \'\[type=EntityPlayer, name=.*, id=[\d]+\]\'$',
                                        'to_call'  : [ ] },
             'AI wander remove'     : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' is being removed from horde control.$',
+                                       'to_call'  : [ ] },
+            'AI wander stop'       : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie \'\[type=.*, name=.*, id=[\d]+\]\' has wandered long enough and is going to endstop now.$',
+                                       'to_call'  : [ ] },
+            'AI wander trouble'    : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie \'\[type=.*, name=.*, id=[\d]\]\' reached pitstop and will wander around for awhile looking for trouble.$',
                                        'to_call'  : [ ] },
             'allowing player'      : { 'to_match' : self.match_prefix + r'INF Allowing player with id [\d]+$',
                                        'to_call'  : [ ] },
@@ -179,6 +185,8 @@ class parser ( threading.Thread ):
             'deny match'           : { 'to_match' : r'(.*) INF Player (.*) denied: ' + \
                                        r'(.*) has been banned until (.*)',
                                        'to_call'  : [ self.framework.game_events.player_denied ] },
+            'EAC backend conn'     : { 'to_match' : self.match_prefix + r'INF \[EAC\] Log: Backend connection established\.$',
+                                       'to_call'  : [ ] },
             'EAC callback'         : { 'to_match' : self.match_prefix + r'INF \[EAC\] UserStatusHandler callback.'+\
                                        r' Status: UserAuthenticated GUID: [\d]+ ReqKick: [\w]+ Message:.*$',
                                        'to_call'  : [ ] },
@@ -260,6 +268,8 @@ class parser ( threading.Thread ):
             'header A12'           : { 'to_match' : '\*\*\* Server version: Alpha 12 \(b56\) Compatibility Version: Alpha 12$',
                                        'to_call'  : [ ] },
             'icon'                 : { 'to_match' : self.match_prefix + r'INF Web:IconHandler:FileNotFound: ".*"$',
+                                       'to_call'  : [ ] },
+            'instantiate'          : { 'to_match' : self.math_prefix + r'WRN InstantiateEntities: ignoring [\d]+ as it is already added\.$',
                                        'to_call'  : [ ] },
             'inventory belt/bag'   : { 'to_match' : r'([\w]+) of player (.*):$',
                                        'to_call'  : [ self.framework.world_state.update_inventory ] },
