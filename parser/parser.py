@@ -207,6 +207,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'failed set triangles' : { 'to_match' : r'Failed setting triangles. Some indices are referencing out of bounds vertices. IndexCount: [\d]+, VertexCount: [\d]+$',
                                        'to_call'  : [ ] },
+            'failed mesh'          : { 'to_match' : r'Failed getting triangles. Submesh [\d]+ has no indices. Mesh asset path "" Mesh name ""$',
+                                       'to_call'  : [ ] },
             'falling tree'         : { 'to_match' : r'^[\d]+. id=[\d]+, FallingTree_[\d]+' + \
                                        r' \(EntityFallingTree\), pos=' +self.match_string_pos + r', rot=' + \
                                        self.match_string_pos + r', lifetime=[\d]+\.[\d]+, remote=[\w]+, ' + \

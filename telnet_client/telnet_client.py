@@ -57,7 +57,7 @@ class telnet_client ( threading.Thread ):
                 self.log.debug ( "Got line '{}'.".format ( line ) )
             except Exception as e:
                 self.log.error ( "in run: {}".format ( e ) )
-                self.shutdown = True
+                self.framework.shutdown = True
                 continue
             try:
                 line_string = ""
