@@ -1,17 +1,23 @@
 import copy
+import framework
 import inspect
 import logging
+import threading
 import time
 
-class world_state ( object ):
+class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.1.1'
+        self.__version__ = '0.2.2'
         self.changelog = {
+            '0.2.2' : "Put lp in world state control.",
+            '0.2.1' : "lp call cycle setup.",
+            '0.2.0' : "Initial work for lp info.",
             '0.1.1' : "Added blocking_get_inventory." }
-
+        self.daemon = True
         self.framework = framework
+        self.shutdown = False
         
         self.claimstones = { }
         self.claimstones_buffer = { }
@@ -33,9 +39,29 @@ class world_state ( object ):
         self.gt_timestamp = now
 
         self.le_timestamp = now
-
+        
         self.lp_timestamp = now
+        # player info
+        self.players = { }
+        
+        self.lp_queue = [ ]
+        self.lp_queue_lock = { 'callee'    : None,
+                               'timeout'   : 10,
+                               'timestamp' : None }
+        self.latest_lp_call = 0
+        self.lp_lag = 0.1
 
+    def run ( self ):
+        while not self.shutdown:
+            #time.sleep ( self.framework.preferences.loop_wait )
+            time.sleep ( 0.01 )
+
+            while ( len ( self.lp_queue ) ) > 0:
+                self.dequeue_lp ( )
+
+            self.prune_players ( )
+            self.decide_lp ( )
+        
     def buffer_claimstones ( self, match ):
         if len ( match ) == 1:
             if self.claimstones_buffer_total != 0:
@@ -219,3 +245,98 @@ class world_state ( object ):
                                               kind )
             if slot == 31:
                 self.inventory [ 'checking' ] = False
+
+    # Player info related:
+
+    def decide_lp ( self ):
+        self.lock_lp_queue ( )
+        current_length = len ( self.lp_queue )
+        self.unlock_lp_queue ( )
+        if current_length > 0:
+            return
+        now = time.time ( )
+        if now - self.latest_lp_call < self.lp_lag * 1.1:
+            self.log.debug ( "decide_lp: lp_lag ({:.2f}).".format ( self.lp_lag ) )
+            return
+        self.log.debug ( "decide_lp: call lp ({:.2f}).".format ( self.lp_lag ) )
+        self.latest_lp_call = time.time ( )
+        self.lp_lag += 1
+        lp_message = self.framework.console.telnet_wrapper ( "lp" )
+        self.framework.console.telnet_client_lp.write ( lp_message )
+
+    def footer_lp ( self, matches ):
+        total = int ( matches [ 0 ] )
+        if total == len ( list ( self.players.keys ( ) ) ):
+            self.lp_lag = time.time ( ) - self.latest_lp_call
+        
+    def buffer_lp ( self, matches ):
+        self.log.debug ( "buffer_lp: {}.".format ( matches [ 1 ] ) )
+        new_lp = framework.lp_data ( int ( matches [  0 ] ),
+                                     matches [  1 ],
+                                     float ( matches [  2 ] ),
+                                     float ( matches [  3 ] ), 
+                                     float ( matches [  4 ] ),
+                                     float ( matches [  5 ] ),
+                                     float ( matches [  6 ] ),
+                                     float ( matches [  7 ] ),
+                                     matches [  8 ],
+                                     int ( matches [  9 ] ),
+                                     int ( matches [ 10 ] ),
+                                     int ( matches [ 11 ] ),
+                                     int ( matches [ 12 ] ),
+                                     int ( matches [ 13 ] ),
+                                     int ( matches [ 14 ] ),
+                                     int ( matches [ 15 ] ),
+                                     matches [ 16 ],
+                                     int ( matches [ 17 ] ) )
+        self.enqueue_lp ( new_lp )
+        
+    def enqueue_lp ( self, lp_data ):
+        self.log.debug ( "enqueue_lp: {}.".format ( lp_data.name ) )
+        self.lock_lp_queue ( )
+        self.lp_queue.append ( lp_data )
+        self.unlock_lp_queue ( )
+
+    def dequeue_lp ( self ):
+        self.lock_lp_queue ( )
+        lp_data = None
+        if len ( self.lp_queue ) > 0:
+            lp_data = self.lp_queue.pop ( )
+        self.unlock_lp_queue ( )
+        if lp_data:
+            self.log.debug ( "dequeue_lp: {}.".format ( lp_data.name ) )
+            self.process_lp ( lp_data )
+
+    def process_lp ( self, lp_data ):
+        if lp_data.steamid not in list ( self.players.keys ( ) ):
+            self.players [ lp_data.steamid ] = { }
+        self.players [ lp_data.steamid ] = lp_data
+
+    def prune_players ( self ):
+        for steamid in list ( self.players.keys ( ) ):
+            if self.players [ steamid ].timestamp < time.time ( ) - 120:
+                del self.players [ steamid ]
+        
+    def lock_lp_queue ( self ):
+        callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        lock = self.lp_queue_lock
+        now = time.time ( )
+        
+        while ( lock [ 'callee' ] ):
+            if ( now - lock [ 'timestamp' ] > lock [ 'timeout' ] ):
+                self.log.error ( "Breaking lock due to timeout!" )
+                break
+            time.sleep ( 0.1 )
+              
+        lock [ 'callee'    ] = callee_function
+        lock [ 'timestamp' ] = now
+
+    def unlock_lp_queue ( self ):
+        callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        lock = self.lp_queue_lock
+        
+        if lock [ 'callee' ] != callee_function:
+            self.log.error ( "Lock being freed by another function than callee!" )
+        lock [ 'callee'    ] = None
+        lock [ 'timestamp' ] = None
+

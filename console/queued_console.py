@@ -11,8 +11,9 @@ class queued_console ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel = ( logging.INFO )
-        self.__version__ = "0.1.0"
+        self.__version__ = "0.1.1"
         self.changelog = {
+            '0.1.1' : "Cleanup for new lp cycle.",
             '0.1.0' : "Initial version." }
         
         self.framework = orchestrator
@@ -155,14 +156,6 @@ class queued_console ( threading.Thread ):
         self.llp_wrapper ( )
         
     def lp ( self ):
-        if self.framework.lp_info [ 'sent' ] [ 'condition' ]:
-            self.log.debug ( "Previous lp call not yet finished. Ignoring call for lp." )
-            return
-        
-        if time.time ( ) - self.framework.lp_info [ 'sent' ] [ 'timestamp' ] < self.framework.lp_info [ 'lag' ] * 1.1:
-            self.log.debug ( "lp timestamp less than 1.1 * lag recent. Ignoring call for lp." )
-            return
-
         command_call = queueable_call ( )
         command_call.function = self.lp_wrapper
         command_call.kill_timer = self.framework.preferences.loop_wait * 10
@@ -206,12 +199,6 @@ class queued_console ( threading.Thread ):
         self.framework.console.send ( "llp" )
 
     def lp_wrapper ( self ):    
-        if self.framework.server.clear_online_property:
-            self.framework.server.offline_players ( )
-        
-        self.timestamp_lp = time.time ( )
-        self.framework.lp_info [ 'sent' ] [ 'condition' ] = True
-        self.framework.lp_info [ 'sent' ] [ 'timestamp' ] = time.time ( )
         lp_message = self.telnet_wrapper ( "lp" )
         self.telnet_client_lp.write ( lp_message )
 
@@ -222,7 +209,6 @@ class queued_console ( threading.Thread ):
             printables.append ( self.framework.server.get_player_summary ( player ) )
             counter += 1
         if counter == int ( lp_finish_matcher [ 0 ] ):
-            self.timestamp_lp = time.time ( )
             for entry in printables:
                 if self.framework.verbose:
                     print ( entry )
@@ -301,14 +287,6 @@ class queued_console ( threading.Thread ):
             self.timestamp_gt = time.time ( )
         else:
             self.log.debug ( "gt unmatch ip" )
-
-    def wrapper_lp ( self, lp_matcher_groups ):
-        #self.log.warning ( "Calling deprecated wrapper_lp" )
-        if lp_matcher_groups [ 7 ] == self.framework.preferences.mod_ip:
-            self.log.debug ( "lp matched ip" )
-            self.timestamp_lp = time.time ( )
-        else:
-            self.log.debug ( "lp unmatch ip" )
 
     def wrapper_pm ( self, pm_matcher_groups ):
         interval = time.time ( ) - self.timestamp_pm

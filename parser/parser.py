@@ -10,8 +10,10 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.36'
+        self.__version__ = '0.1.38'
         self.changelog = {
+            '0.1.38' : "Logging when player disconnects.",
+            '0.1.37' : "Simplifying lp cycle.",
             '0.1.36' : "snow zom matcher",
             '0.1.35' : "EAC backend matcher.",
             '0.1.34' : "AI wanderer stop matcher.",
@@ -53,7 +55,7 @@ class parser ( threading.Thread ):
         self.daemon = True
         self.llp_current_player = None
         self.llp_total_recently_set = True
-        self.match_string_date = r'([0-9]{4})-([0-9]{2})-([0-9]{2}).+([0-9]{2}):([0-9]{2}):([0-9]{2}) ([0-9]+\.[0-9]+)' # 7 groups
+        self.match_string_date = r'([0-9]{4})-([0-9]{2})-([0-9]{2}).+([0-9]{2}):([0-9]{2}):([0-9]{2}) ([+-]*[0-9]+\.[0-9]+)' # 7 groups
         self.match_string_ip = r'([\d]+\.[\d]+\.[\d]+\.[\d]+)' # 1 group
         self.match_string_pos = r'\(([-+]*[\d]*\.[\d]), ([-+]*[\d]*\.[\d]), ([-+]*[\d]*\.[\d])\)'
         self.match_prefix = r'^' + self.match_string_date + r' '
@@ -274,12 +276,14 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'icon'                 : { 'to_match' : self.match_prefix + r'INF Web:IconHandler:FileNotFound: ".*"$',
                                        'to_call'  : [ ] },
-            'instantiate'          : { 'to_match' : self.math_prefix + r'WRN InstantiateEntities: ignoring [\d]+ as it is already added\.$',
+            'instantiate'          : { 'to_match' : self.match_prefix + r'WRN InstantiateEntities: ignoring [\d]+ as it is already added\.$',
                                        'to_call'  : [ ] },
             'inventory belt/bag'   : { 'to_match' : r'([\w]+) of player (.*):$',
                                        'to_call'  : [ self.framework.world_state.update_inventory ] },
             'inventory item'       : { 'to_match' : r'^Slot ([\d]+): ([\d]+) \* (.*)$',
                                        'to_call'  : [ self.framework.world_state.update_inventory ] },
+            'IOException'          : { 'to_match' : self.match_prefix + r'ERR IOException in ReadLine: Read failure$',
+                                       'to_call'  : [ ] },
             'item dropped'         : { 'to_match' : r'^Dropped item$',
                                        'to_call'  : [ ] },
             'kicking executing'    : { 'to_match' : self.match_prefix + r'INF Executing command \'kick' + \
@@ -318,15 +322,15 @@ class parser ( threading.Thread ):
             'lp command executing' : { 'to_match' : self.match_string_date + \
                                        r' INF Executing command \'lp\' by Telnet from ' + \
                                        self.match_string_ip + ':([\d]+)',
-                                       'to_call'  : [ self.command_lp_executing_parser ] },
+                                       'to_call'  : [ ] },
             'lp output'            : { 'to_match' : r'^[\d]+\. id=([\d]+), (.*), pos=' + \
                                        self.match_string_pos + r', rot=' + self.match_string_pos + \
                                        r', remote=([\w]+), health=([\d]+), deaths=([\d]+), zombies=([\d]+), ' + \
                                        r'players=([\d]+), score=([\d]+), level=(1), steamid=([\d]+), ip=' + \
                                        self.match_string_ip + r', ping=([\d]+)',
-                                       'to_call'  : [ self.command_lp_output_parser ] },
+                                       'to_call'  : [ self.command_lp_output_parser, self.framework.world_state.buffer_lp ] },
             'le/lp output footer'  : { 'to_match' : r'^Total of ([\d]+) in the game$',
-                                       'to_call'  : [ self.framework.le_lp_footer ] },
+                                       'to_call'  : [ self.framework.world_state.footer_lp ] },
             'mem output'           : { 'to_match' : r'[0-9]{4}-[0-9]{2}-[0-9]{2}.* INF Time: ([0-9]+.[0-9]+)m ' + \
                                        r'FPS: ([0-9]+.[0-9]+) Heap: ([0-9]+.[0-9]+)MB Max: ([0-9]+.[0-9]+)MB ' + \
                                        r'Chunks: ([0-9]+) CGO: ([0-9]+) Ply: ([0-9]+) Zom: (.*) Ent: ([\d]+) ' + \
@@ -344,6 +348,8 @@ class parser ( threading.Thread ):
                                        r' by Telnet from ' + self.match_string_ip + ':[\d]+$',
                                        'to_call'  : [ ] },
             'playerlogin'          : { 'to_match' : self.match_prefix + r'INF PlayerLogin: .*/Alpha 12$',
+                                       'to_call'  : [ ] },
+            'playername not found' : { 'to_match' : r'^Playername or entity/steamid id not found$',
                                        'to_call'  : [ ] },
             'player offline'       : { 'to_match' : self.match_prefix + r'INF Player set to offline: [\d]+$',
                                        'to_call'  : [ ] },
@@ -365,10 +371,10 @@ class parser ( threading.Thread ):
                                        r'EntityID=' + \
                                        r'-*[\d]+, PlayerID=\'[\d]+\', OwnerID=\'[\d]+\', PlayerName=\'.*\'$',
                                        'to_call'  : [ ] },
-            'player dconn NET2'    : { 'to_match' : self.match_prefix + r'INF \[NET\] PlayerDisconnected ' + \
+            'player dconn NET2'    : { 'to_match' : self.match_prefix + r'INF \[NET\] (PlayerDisconnected) ' + \
                                        r'EntityID=' + \
-                                       r'-*[\d]+, PlayerID=\'[\d]+\', OwnerID=\'[\d]+\', PlayerName=\'.*\'$',
-                                       'to_call'  : [ ] },
+                                       r'-*[\d]+, PlayerID=\'([\d]+)\', OwnerID=\'[\d]+\', PlayerName=\'(.*)\'$',
+                                       'to_call'  : [ self.log.info ] },
             'player died'          : { 'to_match' : self.match_prefix + r'INF GMSG: Player (.*) died$',
                                        'to_call'  : [ self.framework.game_events.player_died ] },
             'player kill'          : { 'to_match' : self.match_prefix + r'INF GMSG: Player (.*)' + \
@@ -402,6 +408,8 @@ class parser ( threading.Thread ):
                                        r' INF Executing command \'say ".*"\' by Telnet from ' + \
                                        self.match_string_ip + ':([\d]+)',
                                        'to_call'  : [ ] },
+            'socket exception'     : { 'to_match' : self.match_prefix + r'SocketException: An established connection was aborted by the software in your host machine.',
+                                       'to_call'  : [ ] },
             'spawn night horde'    : { 'to_match' : r'^' + self.match_string_date + \
                                        r' INF Spawning Night Horde for day [\d]+',
                                        'to_call'  : [ ] },
@@ -410,6 +418,8 @@ class parser ( threading.Thread ):
             'spawned'              : { 'to_match' : r'^' + self.match_string_date + r' INF Spawned ' + \
                                        r'\[type=EntityZombie[\w]*, name=(.*), id=[\d]+\] at ' + \
                                        self.match_string_pos + r' Day=[\d]+ TotalInWave=[\d]+ CurrentWave=[\d]+$',
+                                       'to_call'  : [ ] },
+            'spawn ent wrong pos'  : { 'to_match' : self.match_prefix + r'WRN Spawned entity with wrong pos: Item_[\d]+ \(EntityItem\) id=[\d]+ pos=' + self.match_string_pos + r'$',
                                        'to_call'  : [ ] },
             'spawn output'         : { 'to_match' : r'^Spawned [\w\d]+$',
                                        'to_call'  : [ ] },
@@ -567,19 +577,6 @@ class parser ( threading.Thread ):
             self.framework.le_info [ 'executing' ] [ 'condition' ] = True
             self.framework.le_info [ 'executing' ] [ 'timestamp' ] = time.time ( )
             self.log.debug ( 'le executing' )
-
-    def command_lp_executing_parser ( self, match ):
-        if self.framework.preferences.mod_ip == match [ 7 ]:
-            self.framework.lp_info [ 'sent'      ] [ 'condition' ] = False
-            self.framework.lp_info [ 'executing' ] [ 'condition' ] = True
-            now = time.time ( )
-            self.framework.lp_info [ 'executing' ] [ 'timestamp' ] = now
-            old_lag = self.framework.lp_info [ 'lag' ]
-            self.framework.lp_info [ 'lag' ] = now - self.framework.lp_info [ 'sent'      ] [ 'timestamp' ]
-            self.log.debug ( 'lp executing' )
-            if "{:.1f}".format ( self.framework.lp_info [ 'lag' ] ) != "{:.1f}".format ( old_lag ):            
-                if ( self.framework.lp_info [ 'lag' ] > 5 ):
-                    self.log.info ( "lp lag: {:.1f}s.".format ( self.framework.lp_info [ 'lag' ] ) )
 
     def command_lp_output_parser ( self, match ):
         self.log.debug ( str ( match ) )

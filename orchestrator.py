@@ -13,8 +13,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.5.1'
+        self.__version__ = '0.5.2'
         self.changelog = {
+            '0.5.2' : "Cleanup for new lp cycle.",
             '0.5.1' : "Added header to status.",
             '0.5.0' : "Added status() to call each telnet's status().",
             '0.4.3' : "After shutdown sequence, logging level goes to debug.",
@@ -48,15 +49,6 @@ class orchestrator ( threading.Thread ):
                             'timestamp' : 0 },
             'parsed'    : { 'condition' : False,
                             'timestamp' : 0 },
-            }
-        self.lp_info = {
-            'sent'      : { 'condition' : False,
-                            'timestamp' : 0 },
-            'executing' : { 'condition' : False,
-                            'timestamp' : 0 },
-            'parsed'    : { 'condition' : False,
-                            'timestamp' : 0 },
-            'lag'       : 0
             }
         self.pm_info = {
             'enqueueing' : { 'condition' : True,
@@ -118,6 +110,9 @@ class orchestrator ( threading.Thread ):
         self.console = framework.queued_console ( self )
         self.console.start ( )
         self.stop_on_shutdown.append ( self.console )
+
+        self.world_state.start ( )
+        self.stop_on_shutdown.append ( self.world_state )
 
         self.log.debug ( "Loading telnet." )
         self.telnet = framework.telnet_client ( framework = self )
@@ -192,29 +187,6 @@ class orchestrator ( threading.Thread ):
         self.ent_lock = callee_class + "." + callee
         self.log.debug ( "{:s} get entities db lock.".format ( callee ) )
 
-    def le_lp_footer ( self, matches ):
-        to_update = None
-        if ( self.le_info [ 'executing' ] [ 'condition' ] == True and
-             self.lp_info [ 'executing' ] [ 'condition' ] == False ):
-            to_update = 'le'
-        else:
-            if (  self.le_info [ 'executing' ] [ 'condition' ] == False and
-                  self.lp_info [ 'executing' ] [ 'condition' ] == True ):
-                to_update = 'lp'
-            else:
-                to_update = 'both'
-
-        if to_update == 'le' or to_update == 'both':
-            self.le_info [ 'sent'      ] [ 'condition' ] = False
-            self.le_info [ 'executing' ] [ 'condition' ] = False
-            self.le_info [ 'executing' ] [ 'timestamp' ] = time.time ( )
-            return
-
-        if to_update == 'lp' or to_update == 'both':
-            self.lp_info [ 'sent'      ] [ 'condition' ] = False
-            self.lp_info [ 'executing' ] [ 'condition' ] = False
-            self.lp_info [ 'executing' ] [ 'timestamp' ] = time.time ( )
-        
     def let_db_lock ( self ):
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         self.db_lock = None
@@ -244,7 +216,7 @@ class orchestrator ( threading.Thread ):
     def load_mod ( self, module_name ):
         full_module_name = module_name + "." + module_name
         
-        if ( full_module_name in self.mods ):
+        if full_module_name in list (  self.mods.keys ( ) ):
             self.log.info ( "mod %s already in self.mods." % full_module_name )
             return
         
@@ -309,16 +281,16 @@ class orchestrator ( threading.Thread ):
                     pass
                     self.world_state.le_timestamp = now
                     self.console.le ( )
-                if now - self.world_state.lp_timestamp > self.preferences.loop_wait:
-                    self.world_state.lp_timestamp = now
-                    self.console.lp ( )
+                #if now - self.world_state.lp_timestamp > self.preferences.loop_wait:
+                #    self.world_state.lp_timestamp = now
+                #    self.console.lp ( )
                 if now - self.world_state.llp_timestamp > self.preferences.loop_wait * 100:
                     self.world_state.llp_timestamp = now
                     self.console.llp ( )
 
                 self.log.debug ( "Resetting the commands pipelines if they are stuck." )
-                if time.time ( ) - self.lp_info [ 'sent' ] [ 'timestamp' ] > 60:
-                    self.lp_info [ 'sent' ] [ 'condition' ] = False
+                #if time.time ( ) - self.lp_info [ 'sent' ] [ 'timestamp' ] > 60:
+                #    self.lp_info [ 'sent' ] [ 'condition' ] = False
                     
                 time.sleep ( self.preferences.loop_wait )
                 count += 1
@@ -376,8 +348,7 @@ class orchestrator ( threading.Thread ):
 
         for component in self.stop_on_shutdown:
             self.log.info ( "Trying soft shutdown of {}.".format ( str ( component ) ) )
-            self.log.info ( "{} stop".format ( str ( component ) ) )
-            component.stop ( )
+            component.shutdown = True
             self.log.info ( "{} join".format ( str ( component ) ) )
             component.join ( )
         self.log.info ( "Shutdown sequence complete." )

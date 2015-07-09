@@ -24,8 +24,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.17'
+        self.__version__ = '0.4.18'
         self.changelog = {
+            '0.4.18' : "Adjustments to new lp cycle.",
             '0.4.17' : "Greet known player upon return.",
             '0.4.16' : "Fixed syntax for set_steamid_online.",
             '0.4.15' : "Added event calls for when player becomes voter and senator.",
@@ -134,8 +135,6 @@ class server ( threading.Thread ):
                                             " /me will print your info." ),
                           'help'        : ( self.command_help,
                                             " /help shows the list of commands." ),
-                          'players'     : ( self.print_players_info,
-                                            " /players prints players info." ),
                           'rules'       : ( self.command_rules,
                                             " /rules will print server rules." ),
                           'sos'         : ( self.sos,
@@ -160,6 +159,19 @@ class server ( threading.Thread ):
 
     def __del__ ( self ):
         self.log.warning ( "__del__" )
+        self.shutdown = True
+
+    def run ( self ):
+        while self.shutdown == False:
+            self.log.debug ( "Tick" )
+            time.sleep ( self.framework.preferences.loop_wait )
+
+        if self.chat != None:
+            self.chat.close ( )
+        self.log.info ( "Saving player db." )
+        pickle_file = open ( self.player_info_file, 'wb' )
+        pickle.dump ( self.players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
+                
 
     def command_about ( self, origin, message ):
         self.framework.console.say ( "This mod was initiated by Schabracke and is developed by rc." )
@@ -544,10 +556,6 @@ class server ( threading.Thread ):
         self.framework.console.say ( "%s module %s loaded." % ( self.__class__.__name__,
                                               self.__version__ ) )
         
-    def list_players ( self ):
-        for key in self.players_info.keys ( ):
-            print ( self.players_info [ key ].name )
-
     def list_nearby_tracks ( self, position ):
         result = [ ]
         for steamid in self.players_info.keys ( ):
@@ -571,7 +579,8 @@ class server ( threading.Thread ):
             
     def list_online_players ( self ):
         print ( "----+-----------+-----------------+-----+-----+---+-----+-----+" )
-        while self.framework.lp_info [ 'executing' ] [ 'condition' ]:
+        last_lp = self.framework.world_state.latest_lp_call
+        while self.framework.world_state.latest_lp_call == last_lp:
             time.sleep ( 0.1 )
         for player in self.get_online_players ( ):
             print ( self.get_player_summary ( player ) )
@@ -847,15 +856,6 @@ class server ( threading.Thread ):
         for event_function in events:
             event_function ( player )
 
-    def pm ( self, player_id = None, msg = None ):
-        self.log.warning ( "deprecated console call: {} {}.".format ( player_id, msg ) )
-        self.framework.console.pm ( self.get_player ( player_id ), msg )
-        
-    def print_players_info ( self, msg_origin, msg_content ):
-        for key in self.players_info.keys ( ):
-            if self.players_info [ key ].online:
-                self.command_me ( key, msg_content )
-
     def random_online_player ( self ):
         possibilities = [ ]
         for key in self.players_info.keys ( ):
@@ -866,17 +866,6 @@ class server ( threading.Thread ):
         random_index = random.randint ( 0, len ( possibilities ) - 1 )
         return self.get_player ( possibilities [ random_index ] )                
     
-    def run ( self ):
-        while self.shutdown == False:
-            self.log.debug ( "Tick" )
-            time.sleep ( self.framework.preferences.loop_wait )
-
-        if self.chat != None:
-            self.chat.close ( )
-        self.log.info ( "Saving player db." )
-        pickle_file = open ( self.player_info_file, 'wb' )
-        pickle.dump ( self.players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
-                
     def sanitize ( self, original ):
         result = original.replace ( '"', '_' )
         result = result.replace ( "'", '_' )

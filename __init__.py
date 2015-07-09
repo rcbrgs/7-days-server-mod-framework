@@ -1,6 +1,7 @@
 from .console          import ( queued_console )
 from .entity_info      import entity_info
 from .game_events      import game_events
+from .lp_data          import lp_data
 from .orchestrator     import orchestrator
 from .parser           import ( parser )
 from .player_info      import player_info
