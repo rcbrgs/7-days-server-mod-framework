@@ -74,9 +74,9 @@ class rank ( threading.Thread ):
             voter_player = self.framework.server.get_player ( voter_name )
             if voter_player:
                 self.players_votes [ voter_player.steamid ] = ( month, voter_votes )
-                self.log.info ( "{} voted {} times month {}.".format ( voter_name,
-                                                                       voter_votes,
-                                                                       month ) )
+                self.log.debug ( "{} voted {} times month {}.".format ( voter_name,
+                                                                        voter_votes,
+                                                                        month ) )
 
     def verify_votes_accounted ( self ):
         for player in self.framework.server.get_online_players ( ):

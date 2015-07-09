@@ -24,8 +24,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.18'
+        self.__version__ = '0.4.19'
         self.changelog = {
+            '0.4.19' : "Increased pre -> teleport interval from 3 to 4 due reports from players.",
             '0.4.18' : "Adjustments to new lp cycle.",
             '0.4.17' : "Greet known player upon return.",
             '0.4.16' : "Fixed syntax for set_steamid_online.",
@@ -112,6 +113,14 @@ class server ( threading.Thread ):
         self.external_commands = [ 'restart' ]
         self.framework = framework
         self.game_server = game_server_info ( )
+        self.help_items = {
+            'karma' : ( "Karma is a measure of how much we trust you, the player."
+                        " You gain 1 karma per hour played. You spend karma to teleport,"
+                        " sethome, and other actions." ),
+            'night' : ( "Night is when zombies run and you hide. In this server"
+                        " it happens between 0h and 6h." ),
+            }
+            
         self.latest_id_parse_call = time.time ( )
         self.latest_player_db_backup = 0
         self.player_db_save_timestamp = 0
@@ -179,6 +188,7 @@ class server ( threading.Thread ):
     
     def command_help ( self, msg_origin, msg_content ):
         if len ( msg_content ) > len ( "/help" ):
+            predicate = msg_content [ len ( "/help " ) : ]
             for key in self.commands.keys ( ):
                 if msg_content [ 6 : ] == key:
                     self.framework.console.say ( self.commands [ key ] [ 1 ] )
@@ -189,6 +199,10 @@ class server ( threading.Thread ):
                     if msg_content [ 6 : ] == key:
                         self.framework.console.say ( mod.commands [ key ] [ 1 ] )
                         return
+            for help_item in self.help_items.keys ( ):
+                if help_item == predicate:
+                    self.framework.console.say ( self.help_items [ help_item ] )
+                    return
 
         command_list = [ ]
         for key in self.commands.keys ( ):
@@ -993,7 +1007,7 @@ class server ( threading.Thread ):
                       str ( int ( where_to [ 1 ] ) )
         self.log.info ( "Preteleport {} ({})".format ( player.name_sane, logmsg ) )
         self.framework.console.send ( premsg )
-        time.sleep ( 3 )
+        time.sleep ( 4 )
         self.framework.console.send ( msg )
         player.pos_x = where_to [ 0 ]
         player.pos_y = where_to [ 1 ]
@@ -1003,6 +1017,7 @@ class server ( threading.Thread ):
         player.latest_teleport [ 'position' ] = where_to
 
     def update_gt ( self, day_match_groups ):
+        self.log.info ( "update_gt ( {} )".format ( day_match_groups ) )
         now = time.time ( )
         new_gt = { }
 

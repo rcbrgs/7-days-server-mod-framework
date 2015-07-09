@@ -10,8 +10,11 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.39'
+        self.__version__ = '0.1.42'
         self.changelog = {
+            '0.1.42' : "Hooked log to item dropping in void to better see shop working.",
+            '0.1.41' : "Matcher for scout-triggered horde finishing.",
+            '0.1.40' : "Made header matcher more flexible.",
             '0.1.39' : "Matcher for playerlogin more flexible.",
             '0.1.38' : "Logging when player disconnects.",
             '0.1.37' : "Simplifying lp cycle.",
@@ -85,6 +88,8 @@ class parser ( threading.Thread ):
             'AI scout finish'      : { 'to_match' : self.match_prefix + r'INF AIDirector: Scout Horde Spawn Finished \(all mobs spawned\)\.$',
                                        'to_call'  : [ ] },
             'AI scout remove'      : { 'to_match' : self.match_prefix + r'INF AIDirector: scout horde zombie \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' is being removed from horde control.$',
+                                       'to_call'  : [ ] },
+            'AI scout-trig fin'    : { 'to_match' : self.match_prefix + r'INF AIDirector: Scout-Triggered Horde Finished \(all mobs spawned\).$',
                                        'to_call'  : [ ] },
             'AI wanderer'          : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie' +\
                                        r' \'[type=[\w]+, name=[\w]+, id=[\d]+\]\' was spawned and is moving ' + \
@@ -251,8 +256,7 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ self.framework.server.update_gt ] },
             'header  0'            : { 'to_match' : r'^\*\*\* Connected with 7DTD server\.$',
                                        'to_call'  : [ ] },
-            'header  1'            : { 'to_match' : r'^\*\*\* Server version: Alpha 11\.6 \(b5\) Compatibility ' + \
-                                       r'Version: Alpha 11\.6$',
+            'header  1'            : { 'to_match' : r'^\*\*\* Server version: Alpha [\d]+\.[\d]+ \(.*\) Compatibility Version: Alpha [\d]+\.[\d]+.*$',
                                        'to_call'  : [ ] },
             'header  2'            : { 'to_match' : r'^\*\*\* Dedicated server only build$',
                                        'to_call'  : [ ] },
@@ -372,10 +376,10 @@ class parser ( threading.Thread ):
                                        r'EntityID=' + \
                                        r'-*[\d]+, PlayerID=\'[\d]+\', OwnerID=\'[\d]+\', PlayerName=\'.*\'$',
                                        'to_call'  : [ ] },
-            'player dconn NET2'    : { 'to_match' : self.match_prefix + r'INF \[NET\] (PlayerDisconnected) ' + \
+            'player dconn NET2'    : { 'to_match' : self.match_prefix + r'INF \[NET\] PlayerDisconnected ' + \
                                        r'EntityID=' + \
                                        r'-*[\d]+, PlayerID=\'([\d]+)\', OwnerID=\'[\d]+\', PlayerName=\'(.*)\'$',
-                                       'to_call'  : [ self.log.info ] },
+                                       'to_call'  : [ self.framework.game_events.player_disconnected ] },
             'player died'          : { 'to_match' : self.match_prefix + r'INF GMSG: Player (.*) died$',
                                        'to_call'  : [ self.framework.game_events.player_died ] },
             'player kill'          : { 'to_match' : self.match_prefix + r'INF GMSG: Player (.*)' + \
@@ -420,8 +424,8 @@ class parser ( threading.Thread ):
                                        r'\[type=EntityZombie[\w]*, name=(.*), id=[\d]+\] at ' + \
                                        self.match_string_pos + r' Day=[\d]+ TotalInWave=[\d]+ CurrentWave=[\d]+$',
                                        'to_call'  : [ ] },
-            'spawn ent wrong pos'  : { 'to_match' : self.match_prefix + r'WRN Spawned entity with wrong pos: Item_[\d]+ \(EntityItem\) id=[\d]+ pos=' + self.match_string_pos + r'$',
-                                       'to_call'  : [ ] },
+            'spawn ent wrong pos'  : { 'to_match' : self.match_prefix + r'WRN Spawned entity with wrong pos: Item_[\d]+ \((EntityItem)\) id=([\d]+) pos=' + self.match_string_pos + r'$',
+                                       'to_call'  : [ self.log.info ] },
             'spawn output'         : { 'to_match' : r'^Spawned [\w\d]+$',
                                        'to_call'  : [ ] },
             'spider spawn horde'   : { 'to_match' : self.match_prefix + r'INF Spider scout spawned a zombie' + \

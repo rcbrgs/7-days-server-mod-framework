@@ -104,6 +104,7 @@ class game_events ( threading.Thread ):
         if ( time.time ( ) - self.framework.load_time ) < 60:
             return
         position = self.framework.rank.current_rank
+        self.log.info ( "position = {}".format ( position ) )
         if position != -1:
             self.framework.console.say ( "Please vote for our server on http://7daystodie-servers.com/server/14698. We are currently # {} on the rank! Also, you gain 200$+1k per vote.".format ( position ) )
 
@@ -218,9 +219,9 @@ class game_events ( threading.Thread ):
         self.log.debug ( "{} detected.".format ( player.name_sane ) )
 
     def player_disconnected ( self, player_disconnection_match_group ):
-        player = self.framework.server.get_player ( player_disconnection_match_group [ 8 ] )
+        player = self.framework.server.get_player ( int ( player_disconnection_match_group [ 7 ] ) )
         if not player:
-            self.log.error ( "Could not get_player from disconnected player's name {}!".format (
+            self.log.error ( "Could not get_player from disconnected player's '{}' steamid!".format (
                 player_disconnection_match_group [ 8 ] ) )
             return
         player.online = False
