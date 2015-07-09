@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.2"
+        self.__version__ = "0.3.3"
         self.changelog = {
+            '0.3.3'  : "Refactoring 100 kills prize to get it to randomize.",
             '0.3.2'  : "More taunts.",
             '0.3.1'  : "Added events for when player becomes citizen and senator.",
             '0.3.0'  : "Disabled map limitation.",
@@ -45,9 +46,7 @@ class game_events ( threading.Thread ):
         self.registered_callbacks = {
             'player_connected'           : [ ],
             'player_detected'            : [ ],
-            'player_killed_100_zombies'  : [ ( self.framework.server.give_cash,
-                                               { 'amount' : random.randint ( 50, 150 ) } ),
-                                             ],
+            'player_killed_100_zombies'  : [ ],
             'player_played_one_hour'     : [ ],
             'player_position_changed'    : [ ( self.check_position_triggers,
                                                { } ) ],
@@ -237,14 +236,15 @@ class game_events ( threading.Thread ):
             self.log.warning ( "calling p killd 100 zeds with id" )
             player = self.framework.server.get_player ( player )
 
-        random.seed ( time.time ( ) )
-        money_before = player.cash
         for callback in self.registered_callbacks [ 'player_killed_100_zombies' ]:
             function = callback [ 0 ]
             kwargs   = callback [ 1 ]
             kwargs [ 'player' ] = player
             function ( **kwargs )
 
+        money_before = player.cash
+        random.seed ( time.time ( ) )
+        self.framework.server.give_cash ( player, random.randint ( 50, 150 ) )
         self.framework.console.say ( "{} gained {} cash for killing 100 zombies!".format ( player.name_sane,
                                                                                            player.cash -\
                                                                                            money_before ) )
