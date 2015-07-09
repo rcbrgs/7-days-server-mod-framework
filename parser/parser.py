@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.38'
+        self.__version__ = '0.1.39'
         self.changelog = {
+            '0.1.39' : "Matcher for playerlogin more flexible.",
             '0.1.38' : "Logging when player disconnects.",
             '0.1.37' : "Simplifying lp cycle.",
             '0.1.36' : "snow zom matcher",
@@ -347,7 +348,7 @@ class parser ( threading.Thread ):
             'player kicked'        : { 'to_match' : self.match_prefix + r'INF Executing command \'kick [\d]+\'' + \
                                        r' by Telnet from ' + self.match_string_ip + ':[\d]+$',
                                        'to_call'  : [ ] },
-            'playerlogin'          : { 'to_match' : self.match_prefix + r'INF PlayerLogin: .*/Alpha 12$',
+            'playerlogin'          : { 'to_match' : self.match_prefix + r'INF PlayerLogin: .*/Alpha [\d]+\.[\d]+$',
                                        'to_call'  : [ ] },
             'playername not found' : { 'to_match' : r'^Playername or entity/steamid id not found$',
                                        'to_call'  : [ ] },
