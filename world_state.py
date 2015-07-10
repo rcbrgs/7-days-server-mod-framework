@@ -9,8 +9,10 @@ class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.2.2'
+        self.__version__ = '0.2.4'
         self.changelog = {
+            '0.2.4' : "Added stop method.",
+            '0.2.3' : "Fixed typo on get_inventory.",
             '0.2.2' : "Put lp in world state control.",
             '0.2.1' : "lp call cycle setup.",
             '0.2.0' : "Initial work for lp info.",
@@ -40,7 +42,7 @@ class world_state ( threading.Thread ):
 
         self.le_timestamp = now
         
-        self.lp_timestamp = now
+        #self.lp_timestamp = now
         # player info
         self.players = { }
         
@@ -61,7 +63,10 @@ class world_state ( threading.Thread ):
 
             self.prune_players ( )
             self.decide_lp ( )
-        
+
+    def stop ( self ):
+        self.shutdown = True
+            
     def buffer_claimstones ( self, match ):
         if len ( match ) == 1:
             if self.claimstones_buffer_total != 0:
@@ -209,8 +214,8 @@ class world_state ( threading.Thread ):
                 break
             time.sleep ( 0.1 )
               
-        self.claimstones_lock [ 'callee'    ] = callee_function
-        self.claimstones_lock [ 'timestamp' ] = now
+        self.inventory_lock [ 'callee'    ] = callee_function
+        self.inventory_lock [ 'timestamp' ] = now
 
     def let_inventory ( self ):
         callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name

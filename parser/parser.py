@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.42'
+        self.__version__ = '0.1.43'
         self.changelog = {
+            '0.1.43' : "No good position for horde.",
             '0.1.42' : "Hooked log to item dropping in void to better see shop working.",
             '0.1.41' : "Matcher for scout-triggered horde finishing.",
             '0.1.40' : "Made header matcher more flexible.",
@@ -73,6 +74,8 @@ class parser ( threading.Thread ):
                                        r'[\d]+, ' + self.match_string_pos + r', [\d]+$',
                                        'to_call'  : [ ] },
             'AI night horde'       : { 'to_match' : self.match_prefix + r'INF AIDirector: Night Horde Spawn Finished \(all mobs spawned\).$',
+                                       'to_call'  : [ ] },
+            'AI no good spot'      : { 'to_match' : self.match_prefix + r'INF AIDirector: Could not find a valid position to spawn wandering horde \(trying again in 1 hour\)$',
                                        'to_call'  : [ ] },
             'AI scout horde'       : { 'to_match' : self.match_prefix + r'INF AIDirector: scout horde zombie' + \
                                        r' \'\[type=EntityZombie, name=spiderzombie, id=[\d]+\]\' was spawned' + \
@@ -414,6 +417,8 @@ class parser ( threading.Thread ):
                                        self.match_string_ip + ':([\d]+)',
                                        'to_call'  : [ ] },
             'socket exception'     : { 'to_match' : self.match_prefix + r'SocketException: An established connection was aborted by the software in your host machine.',
+                                       'to_call'  : [ ] },
+            'spawn feral horde'    : { 'to_match' : self.match_prefix + r'INF Spawning Feral Horde\.$',
                                        'to_call'  : [ ] },
             'spawn night horde'    : { 'to_match' : r'^' + self.match_string_date + \
                                        r' INF Spawning Night Horde for day [\d]+',

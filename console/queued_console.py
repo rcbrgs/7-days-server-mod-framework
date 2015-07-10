@@ -11,8 +11,9 @@ class queued_console ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel = ( logging.INFO )
-        self.__version__ = "0.1.1"
+        self.__version__ = "0.1.2"
         self.changelog = {
+            '0.1.2' : "More logging on stop().",
             '0.1.1' : "Cleanup for new lp cycle.",
             '0.1.0' : "Initial version." }
         
@@ -74,12 +75,16 @@ class queued_console ( threading.Thread ):
 
     def stop ( self ):
         telnet_wait = 7
+        self.log.info ( ".telnet_client_commands.stop ( )" )
         self.telnet_client_commands.stop ( )
         time.sleep ( telnet_wait )
+        self.log.info ( ".telnet_client_le.stop ( )" )
         self.telnet_client_le.stop ( )
         time.sleep ( telnet_wait )
+        self.log.info ( ".telnet_client_lp.stop ( )" )
         self.telnet_client_lp.stop ( )
         time.sleep ( telnet_wait )
+        self.log.info ( ".telnet_client_pm.stop ( )" )
         self.telnet_client_pm.stop ( )
         time.sleep ( telnet_wait )
         self.shutdown = True

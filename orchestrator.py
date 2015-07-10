@@ -74,6 +74,71 @@ class orchestrator ( threading.Thread ):
         self.verbose = False
         self.world_state = framework.world_state ( self )
         
+    def run ( self ):            
+        self.server.offline_players ( )
+        count = 1
+
+        try:
+            while self.shutdown == False:
+                self.log.debug ( "Tick" )
+                
+                for mod_key in self.mods.keys ( ):
+                    mod = self.mods [ mod_key ] [ 'reference' ]
+                    if mod.is_alive ( ) == False:
+                        self.log.warning ( "mod %s is dead, restarting." % str ( mod ) )
+                        self.shutdown = True
+                        break
+                    
+                        old_version = mod.__version__
+                        module_name = mod.__class__.__name__
+                        mod.shutdown = True
+                        mod.join ( )
+                        mod_instance = self.load_mod ( module_name )
+                        if mod_instance == None:
+                            continue
+                        mod_instance.start ( )
+                        new_version = mod_instance.__version__
+                        if old_version != new_version:
+                            self.log.info ( "Mod %s updated to v%s. Changelog: %s" %
+                                            ( mod_key, old_version, new_version,
+                                              mod_instance.changelog [ new_version ] ) )
+
+                if count % 100 == 0:
+                    self.server.offline_players ( )
+                            
+                self.log.debug ( "Asking server for updates." )
+                now = time.time ( )
+                if now - self.world_state.gt_timestamp > self.preferences.loop_wait:
+                    self.world_state.gt_timestamp = now
+                    self.console.gt ( )
+                if now - self.world_state.le_timestamp > self.preferences.loop_wait:
+                    pass
+                    self.world_state.le_timestamp = now
+                    self.console.le ( )
+                #if now - self.world_state.lp_timestamp > self.preferences.loop_wait:
+                #    self.world_state.lp_timestamp = now
+                #    self.console.lp ( )
+                if now - self.world_state.llp_timestamp > self.preferences.loop_wait * 100:
+                    self.world_state.llp_timestamp = now
+                    self.console.llp ( )
+
+                self.log.debug ( "Resetting the commands pipelines if they are stuck." )
+                #if time.time ( ) - self.lp_info [ 'sent' ] [ 'timestamp' ] > 60:
+                #    self.lp_info [ 'sent' ] [ 'condition' ] = False
+                    
+                time.sleep ( self.preferences.loop_wait )
+                count += 1
+        except Exception as e:
+            self.log.critical ( "Shutting down mod framework due to unhandled exception: %s." % str ( e ) )
+            exception_info = sys.exc_info ( )
+            self.log.critical ( traceback.print_tb ( exception_info [ 2 ] ) )
+
+        self.shutdown = True
+        self.stop ( )
+
+        self.log.info ( "**************************   Stopping framework   ***************************" )
+        self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )
+
     def config ( self, preferences_file_name ):
         self.silence = False
         self.shutdown = False
@@ -120,13 +185,13 @@ class orchestrator ( threading.Thread ):
         self.telnet.open_connection ( )
         time.sleep ( 9 )
         self.server.start ( )
-        #self.stop_on_shutdown.append ( self.server )
+        self.stop_on_shutdown.append ( self.server )
         self.telnet.start ( )
         self.stop_on_shutdown.append ( self.telnet )
         self.telnet.write ( "loglevel ALL true\n".encode ( 'utf-8') )
 
         self.game_events.start ( )
-        #self.stop_on_shutdown.append ( self.game_events )
+        self.stop_on_shutdown.append ( self.game_events )
 
         self.utils = framework.utils ( )
 
@@ -240,82 +305,6 @@ class orchestrator ( threading.Thread ):
                          module_name )
         return mod_instance
 
-    def run ( self ):            
-        self.server.offline_players ( )
-        count = 1
-
-        try:
-            while self.shutdown == False:
-                self.log.debug ( "Tick" )
-                
-                for mod_key in self.mods.keys ( ):
-                    mod = self.mods [ mod_key ] [ 'reference' ]
-                    if mod.is_alive ( ) == False:
-                        self.log.warning ( "mod %s is dead, restarting." % str ( mod ) )
-                        self.shutdown = True
-                        break
-                    
-                        old_version = mod.__version__
-                        module_name = mod.__class__.__name__
-                        mod.shutdown = True
-                        mod.join ( )
-                        mod_instance = self.load_mod ( module_name )
-                        if mod_instance == None:
-                            continue
-                        mod_instance.start ( )
-                        new_version = mod_instance.__version__
-                        if old_version != new_version:
-                            self.log.info ( "Mod %s updated to v%s. Changelog: %s" %
-                                            ( mod_key, old_version, new_version,
-                                              mod_instance.changelog [ new_version ] ) )
-
-                if count % 100 == 0:
-                    self.server.offline_players ( )
-                            
-                self.log.debug ( "Asking server for updates." )
-                now = time.time ( )
-                if now - self.world_state.gt_timestamp > self.preferences.loop_wait:
-                    self.world_state.gt_timestamp = now
-                    self.console.gt ( )
-                if now - self.world_state.le_timestamp > self.preferences.loop_wait:
-                    pass
-                    self.world_state.le_timestamp = now
-                    self.console.le ( )
-                #if now - self.world_state.lp_timestamp > self.preferences.loop_wait:
-                #    self.world_state.lp_timestamp = now
-                #    self.console.lp ( )
-                if now - self.world_state.llp_timestamp > self.preferences.loop_wait * 100:
-                    self.world_state.llp_timestamp = now
-                    self.console.llp ( )
-
-                self.log.debug ( "Resetting the commands pipelines if they are stuck." )
-                #if time.time ( ) - self.lp_info [ 'sent' ] [ 'timestamp' ] > 60:
-                #    self.lp_info [ 'sent' ] [ 'condition' ] = False
-                    
-                time.sleep ( self.preferences.loop_wait )
-                count += 1
-        except Exception as e:
-            self.log.critical ( "Shutting down mod framework due to unhandled exception: %s." % str ( e ) )
-            exception_info = sys.exc_info ( )
-            self.log.critical ( traceback.print_tb ( exception_info [ 2 ] ) )
-            self.shutdown = True
-
-        for mod_key in self.mods.keys ( ):
-            mod = self.mods [ mod_key ] [ 'reference' ]
-            self.log.info ( "mod %s stop" % str ( mod ) )
-            mod.stop ( )
-            self.log.info ( "mod %s join" % str ( mod ) )
-            if mod.is_alive ( ):
-                mod.join ( )
-        self.log.info ( "All mods stopped." )
-
-        self.telnet.close_connection ( )
-        self.telnet.stop ( )
-        self.telnet.join ( )
-
-        self.log.info ( "**************************   Stopping framework   ***************************" )
-        self.log.debug ( "</%s>" % ( sys._getframe ( ).f_code.co_name ) )
-
     def status ( self ):
         self.log.info ( "telnet listener status:" )
         self.telnet.status ( )
@@ -330,6 +319,8 @@ class orchestrator ( threading.Thread ):
         
     def stop ( self ):
         self.log.info ( "framework.stop" )
+        if self.shutdown:
+            self.log.setLevel ( logging.DEBUG )
         pickle_file = open ( self.preferences.framework_state_file, 'wb' )
         pickle.dump ( self.framework_state, pickle_file, pickle.HIGHEST_PROTOCOL )
 
@@ -341,16 +332,16 @@ class orchestrator ( threading.Thread ):
             mod = self.mods [ mod_key ] [ 'reference' ]
             self.log.info ( "mod %s stop" % str ( mod ) )
             mod.stop ( )
-            self.log.info ( "mod %s join" % str ( mod ) )
             if mod.is_alive ( ):
-                mod.join ( )
+                self.log.info ( "mod %s still alive" % str ( mod ) )
+                #mod.join ( )
         self.log.info ( "All mods stopped." )
 
         for component in self.stop_on_shutdown:
             self.log.info ( "Trying soft shutdown of {}.".format ( str ( component ) ) )
-            component.shutdown = True
-            self.log.info ( "{} join".format ( str ( component ) ) )
-            component.join ( )
+            component.stop ( )
+            #self.log.info ( "{} join".format ( str ( component ) ) )
+            #component.join ( )
         self.log.info ( "Shutdown sequence complete." )
         self.log.setLevel ( logging.DEBUG )
 

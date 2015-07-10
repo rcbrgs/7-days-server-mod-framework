@@ -65,7 +65,8 @@ class server ( threading.Thread ):
             '0.3.0'  : "Added pm wrapper function.",
             '0.2.0'  : "Upgraded player_info to v3, with stubs to new attributes.",
             '0.1.2'  : "Fixed framework.mods being called as list, but now is dict." }
-
+        self.shutdown = False
+        
         self.log.info ( "Server module initializing." )
 
         self.chat = None
@@ -121,11 +122,9 @@ class server ( threading.Thread ):
                         " it happens between 0h and 6h." ),
             }
             
-        self.latest_id_parse_call = time.time ( )
+        #self.latest_id_parse_call = time.time ( )
         self.latest_player_db_backup = 0
         self.player_db_save_timestamp = 0
-        self.shutdown = False
-
         self.preferences = self.framework.preferences
         self.chat_log_file = self.preferences.chat_log_file
         self.player_info_file = self.preferences.player_info_file
@@ -1017,7 +1016,7 @@ class server ( threading.Thread ):
         player.latest_teleport [ 'position' ] = where_to
 
     def update_gt ( self, day_match_groups ):
-        self.log.info ( "update_gt ( {} )".format ( day_match_groups ) )
+        self.log.debug ( "update_gt ( {} )".format ( day_match_groups ) )
         now = time.time ( )
         new_gt = { }
 
@@ -1045,7 +1044,7 @@ class server ( threading.Thread ):
         self.log.info ( "Game date: {} {:02d}:{:02d}.".format ( day, hour, minute ) )
         
     def update_id ( self, id_fields ):
-        self.latest_id_parse_call = time.time ( )
+        #self.latest_id_parse_call = time.time ( )
 
         playerid = int ( id_fields [ 0 ] )
         playername =     id_fields [ 1 ]

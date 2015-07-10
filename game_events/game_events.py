@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.3"
+        self.__version__ = "0.3.4"
         self.changelog = {
+            '0.3.4'  : "100 kills prize is at least 100 now.",
             '0.3.3'  : "Refactoring 100 kills prize to get it to randomize.",
             '0.3.2'  : "More taunts.",
             '0.3.1'  : "Added events for when player becomes citizen and senator.",
@@ -245,7 +246,7 @@ class game_events ( threading.Thread ):
 
         money_before = player.cash
         random.seed ( time.time ( ) )
-        self.framework.server.give_cash ( player, random.randint ( 50, 150 ) )
+        self.framework.server.give_cash ( player, random.randint ( 100, 150 ) )
         self.framework.console.say ( "{} gained {} cash for killing 100 zombies!".format ( player.name_sane,
                                                                                            player.cash -\
                                                                                            money_before ) )
