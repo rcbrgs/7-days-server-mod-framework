@@ -46,7 +46,8 @@ import atexit
 
 def stop ( ):
     log.info ( "Closing everything for shutdown." )
-    maestro.stop ( )
+    if not maestro.shutdown:
+        maestro.stop ( )
     maestro.join ( )
 
 atexit.register ( stop )

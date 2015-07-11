@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.43'
+        self.__version__ = '0.1.44'
         self.changelog = {
+            '0.1.44' : "Matcher for failed collision data.",
             '0.1.43' : "No good position for horde.",
             '0.1.42' : "Hooked log to item dropping in void to better see shop working.",
             '0.1.41' : "Matcher for scout-triggered horde finishing.",
@@ -230,6 +231,8 @@ class parser ( threading.Thread ):
                                        r':[\d]+$',
                                        'to_call'  : [ ] },
             'failed set triangles' : { 'to_match' : r'Failed setting triangles. Some indices are referencing out of bounds vertices. IndexCount: [\d]+, VertexCount: [\d]+$',
+                                       'to_call'  : [ ] },
+            'failed extract'       : { 'to_match' : r'Failed to extract collision data: Submesh [\d]+ uses unsupported primitive type "Unknown type". Please use either "TriangleStrip" or "Triangles". Mesh asset path "" Mesh name ""$',
                                        'to_call'  : [ ] },
             'failed mesh'          : { 'to_match' : r'Failed getting triangles. Submesh [\d]+ has no indices. Mesh asset path "" Mesh name ""$',
                                        'to_call'  : [ ] },

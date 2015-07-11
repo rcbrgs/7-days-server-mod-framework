@@ -74,6 +74,11 @@ class orchestrator ( threading.Thread ):
         self.verbose = False
         self.world_state = framework.world_state ( self )
         
+    def __del__ ( self ):
+        self.log.error ( "<framework>.__del__ being called instead of stop!" )
+        if not self.shutdown:
+            self.stop ( )
+
     def run ( self ):            
         self.server.offline_players ( )
         count = 1
@@ -345,6 +350,3 @@ class orchestrator ( threading.Thread ):
         self.log.info ( "Shutdown sequence complete." )
         self.log.setLevel ( logging.DEBUG )
 
-    def __del__ ( self ):
-        self.log.info ( "<framework>.__del__" )
-        self.stop ( )

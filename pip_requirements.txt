@@ -1,2 +1,5 @@
 beautifulsoup4
+google_translate_api
+ipython3
+pygeoip
 urllib3

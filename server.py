@@ -24,8 +24,12 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.19'
+        self.__version__ = '0.4.23'
         self.changelog = {
+            '0.4.23' : "Added preteleport timeout of 2 mins.",
+            '0.4.22' : "Fixed Y / height mismatch on preteleport.",
+            '0.4.21' : "Made pre/teleport interval dynamic, based on position data.",
+            '0.4.20' : "Adjusted teleport to be (much) closer to destination, trying to fix A12 tp.",
             '0.4.19' : "Increased pre -> teleport interval from 3 to 4 due reports from players.",
             '0.4.18' : "Adjustments to new lp cycle.",
             '0.4.17' : "Greet known player upon return.",
@@ -1002,15 +1006,36 @@ class server ( threading.Thread ):
                      str ( int ( where_to [ 2 ] ) + 1 ) + " " + \
                      str ( int ( where_to [ 1 ] ) )
             premsg += str ( int ( where_to [ 0 ] ) ) + " " + \
-                      str ( int ( where_to [ 2 ] ) - 5000 ) + " " + \
+                      str ( int ( where_to [ 2 ] ) - 5 ) + " " + \
                       str ( int ( where_to [ 1 ] ) )
-        self.log.info ( "Preteleport {} ({})".format ( player.name_sane, logmsg ) )
+            prelogmsg = str ( int ( where_to [ 0 ] ) ) + " " + \
+                str ( int ( where_to [ 2 ] ) - 5 ) + " " + \
+                str ( int ( where_to [ 1 ] ) )
+        self.log.info ( "Preteleport {} ({})".format ( player.name_sane, prelogmsg ) )
         self.framework.console.send ( premsg )
-        time.sleep ( 4 )
+        counter = 0
+        while abs ( round ( self.framework.world_state.players [ player.steamid ].pos_x ) - \
+                        round ( where_to [ 0 ] ) ) > 2:
+            self.log.info ( "Preteleport sleeping due X {} diff {}.".format ( 
+                    self.framework.world_state.players [ player.steamid ].pos_x, where_to [ 0 ] ) )
+            time.sleep ( 1 )
+            counter += 1
+            if counter > 120:
+                break
+        while abs ( round ( self.framework.world_state.players [ player.steamid ].pos_y ) - \
+                        round ( where_to [ 1 ] ) ) > 2:
+            self.log.info ( "Preteleport sleeping due Y {} diff {}.".format ( 
+                    self.framework.world_state.players [ player.steamid ].pos_y, where_to [ 1 ] ) )
+            time.sleep ( 1 )
+            counter += 1
+            if counter > 120:
+                break
+
+        self.log.info ( "   teleport {} ({})".format ( player.name_sane, logmsg ) )
         self.framework.console.send ( msg )
-        player.pos_x = where_to [ 0 ]
-        player.pos_y = where_to [ 1 ]
-        player.pos_z = where_to [ 2 ]
+        #player.pos_x = where_to [ 0 ]
+        #player.pos_y = where_to [ 1 ]
+        #player.pos_z = where_to [ 2 ]
         player.latest_teleport = { }
         player.latest_teleport [ 'timestamp' ] = time.time ( )
         player.latest_teleport [ 'position' ] = where_to

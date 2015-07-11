@@ -8,8 +8,9 @@ class rank ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.1.5'
+        self.__version__ = '0.1.6'
         self.changelog = {
+            '0.1.6' : "Refactor of bs4 call to get rid of warning.",
             '0.1.5' : "Wrapped rank update in an try clause so 404s wont crash the thread.",
             '0.1.4' : "Increased prize for voting.",
             '0.1.3' : "Jazzed up vote thank you. Added log about rank changing position.",
@@ -45,7 +46,7 @@ class rank ( threading.Thread ):
     def update_current_rank ( self ):
         http = urllib3.PoolManager()
         request = http.request ( 'GET', 'http://7daystodie-servers.com/server/14698' )
-        soup = bs4.BeautifulSoup ( request.data )
+        soup = bs4.BeautifulSoup ( request.data, "html.parser" )
         tds = soup.findAll ( "td" )
         try:
             rank = int ( tds [ 29 ].contents [ 0 ] )
@@ -63,7 +64,7 @@ class rank ( threading.Thread ):
     def update_players_votes ( self ):
         http = urllib3.PoolManager()
         request = http.request ( 'GET', 'http://7daystodie-servers.com/server/14698/vote' )
-        soup = bs4.BeautifulSoup ( request.data )
+        soup = bs4.BeautifulSoup ( request.data, "html.parser" )
         tds = soup.findAll ( "td" )
         number_of_voters = int ( len ( tds ) / 2 )
         month = time.strftime ( "%Y-%m" )
