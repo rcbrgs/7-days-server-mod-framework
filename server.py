@@ -1,3 +1,7 @@
+"""
+The scope for this module is to facilitate actions by a developer or admin. So functionalities that are "one step above" the low-level wrappers belong here. For example, a wrapper around lp doesnt belong here; a wrapper to yield a list of online players does.
+"""
+
 import copy
 import framework
 from framework.player_info import player_info_v5 as player_info
@@ -133,11 +137,6 @@ class server ( threading.Thread ):
         self.player_info_file = self.preferences.player_info_file
         self.geoip = pygeoip.GeoIP ( self.preferences.geoip_file, pygeoip.MEMORY_CACHE )
         
-        #self.day = None
-        #self.hour = None
-        #self.minute = None
-        #self.time = None
-
         self.commands = { 'curse'       : ( self.curse_player,
                                             " /curse player_name prints an unfriendly message." ),
                           'me'          : ( self.command_me,
