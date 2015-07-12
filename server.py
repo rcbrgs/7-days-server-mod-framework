@@ -21,8 +21,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.42'
+        self.__version__ = '0.4.43'
         self.changelog = {
+            '0.4.43' : "Fixed offline_lagged_players calling lp.",
             '0.4.42' : "Refactored offline_players into offline_lagged_players.",
             '0.4.41' : "Fixed preteleport never getting positive because distance increases as player falls.",
             '0.4.40' : "Fixed dequeue not sending right info to preteleport.",
@@ -618,7 +619,6 @@ class server ( threading.Thread ):
             if time.time ( ) - player.timestamp_latest_update > self.framework.world_state.lp_lag * 10:
                 player.online = False
         self.framework.let_db_lock ( )
-        self.framework.console.lp ( )
 
     def output_starter_base ( self, msg_origin, msg_content ):
         self.framework.console.say ( "To teleport to the starterbase, type /gostart." )
