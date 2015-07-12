@@ -441,7 +441,7 @@ class parser ( threading.Thread ):
                                        r'\[type=[\w]+, name=(.*), id=[\d]+\] at ' + \
                                        self.match_string_pos + r' Day=[\d]+ TotalInWave=[\d]+ CurrentWave=[\d]+$',
                                        'to_call'  : [ ] },
-            'spawn ent wrong pos'  : { 'to_match' : self.match_prefix + r'WRN Spawned entity with wrong pos: Item_[\d]+ \((EntityItem)\) id=([\d]+) pos=' + self.match_string_pos + r'$',
+            'spawn ent wrong pos'  : { 'to_match' : self.match_prefix + r'WRN Spawned entity with wrong pos: Item_([\d]+) \((EntityItem)\) id=([\d]+) pos=' + self.match_string_pos + r'$',
                                        'to_call'  : [ self.log.info ] },
             'spawn output'         : { 'to_match' : r'^Spawned [\w\d]+$',
                                        'to_call'  : [ ] },

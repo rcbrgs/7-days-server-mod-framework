@@ -5,6 +5,7 @@ The scope for this module is to facilitate actions by a developer or admin. So f
 import copy
 import framework
 from framework.player_info import player_info_v5 as player_info
+import inspect
 import logging
 import math
 import pickle
@@ -20,8 +21,14 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.36'
+        self.__version__ = '0.4.42'
         self.changelog = {
+            '0.4.42' : "Refactored offline_players into offline_lagged_players.",
+            '0.4.41' : "Fixed preteleport never getting positive because distance increases as player falls.",
+            '0.4.40' : "Fixed dequeue not sending right info to preteleport.",
+            '0.4.39' : "Fixed import inspect for queue lock.",
+            '0.4.38' : "Fixed preteleport dequeueing call.",
+            '0.4.37' : "Moved preteleport to a separate queue. Move command_rules to chat_commands module.",
             '0.4.36' : "Fixed preteleport using wrong syntax for utils.get_coordinates.",
             '0.4.35' : "Preteleport now handles when player disconnects.",
             '0.4.34' : "Updated entity table to values of A12. Lol.",
@@ -139,6 +146,11 @@ class server ( threading.Thread ):
         self.latest_player_db_backup = 0
         self.player_db_save_timestamp = 0
         self.preferences = self.framework.preferences
+        self.preteleport_queue = [ ]
+        self.preteleport_queue_lock = { 'callee'    : None,
+                                        'timeout'   : 10,
+                                        'timestamp' : None }
+
         self.chat_log_file = self.preferences.chat_log_file
         self.player_info_file = self.preferences.player_info_file
         self.geoip = pygeoip.GeoIP ( self.preferences.geoip_file, pygeoip.MEMORY_CACHE )
@@ -149,8 +161,6 @@ class server ( threading.Thread ):
                                             " /me will print your info." ),
                           'help'        : ( self.command_help,
                                             " /help shows the list of commands." ),
-                          'rules'       : ( self.command_rules,
-                                            " /rules will print server rules." ),
                           'sos'         : ( self.sos,
                                             " /sos will ask players to help you." ),
                           'starterbase' : ( self.output_starter_base,
@@ -181,6 +191,8 @@ class server ( threading.Thread ):
         while not self.shutdown:
             self.log.debug ( "Tick" )
             time.sleep ( self.framework.preferences.loop_wait )
+
+            self.dequeue_preteleport ( )
 
         if self.chat != None:
             self.chat.close ( )
@@ -264,16 +276,6 @@ class server ( threading.Thread ):
         self.framework.console.pm ( player, msg )
         self.log.debug ( "me: end" )
 
-    def command_rules ( self, origin, message ):
-        self.framework.console.say ( "rules are: 1. [FF0000]PVE[FFFFFF] only." )
-        self.framework.console.say ( "                2. No base raping or looting." )
-        self.framework.console.say ( "                3. Do not build / claim inside cities or POIs." )
-        self.framework.console.say ( "                4. First person below an air drop crate is its owner." )
-        self.framework.console.say ( "Admins are: [400000]Schabracke[FFFFFF], AzoSento, and Chakotay." )
-        #self.framework.console.say ( " /sethome sets a 50m radius where only people you invite can stay." )
-        self.framework.console.say ( "Drop on death: everything. Drop on exit: nothing." )
-        #self.framework.console.say ( "Player killers are automatically imprisoned." )
-        
     def curse_player ( self, msg_origin, msg_content ):
         target = self.get_player ( msg_content [ 7 : ] )
         if target != None:
@@ -573,7 +575,8 @@ class server ( threading.Thread ):
             time.sleep ( 0.1 )
         for player in self.get_online_players ( ):
             pos = self.framework.utils.get_coordinates ( player )
-            print ( "{} {}".format ( self.get_player_summary ( player ), pos ) )
+            pos_string = "({: >5.0f} {: >5.0f} {: >4.0f})".format ( pos [ 0 ], pos [ 1 ], pos [ 2 ] )
+            print ( "{} {}".format ( self.get_player_summary ( player ), pos_string ) )
 
     def mod_status ( self, msg_origin, msg_content ):
         self.greet ( )
@@ -608,11 +611,12 @@ class server ( threading.Thread ):
             self.log.info ( "%s.online == %s" % ( player.name_sane, str ( player.online ) ) )
             return
         
-    def offline_players ( self ):
+    def offline_lagged_players ( self ):
         online_players = self.get_online_players ( )
         self.framework.get_db_lock ( )
         for player in online_players:
-            player.online = False
+            if time.time ( ) - player.timestamp_latest_update > self.framework.world_state.lp_lag * 10:
+                player.online = False
         self.framework.let_db_lock ( )
         self.framework.console.lp ( )
 
@@ -949,6 +953,14 @@ class server ( threading.Thread ):
 
     def preteleport ( self, player, where_to ):
         """
+        Adds teleportation event to teleport queue.
+        """
+        self.lock_preteleport_queue ( )
+        self.preteleport_queue.append ( ( player, where_to ) )
+        self.unlock_preteleport_queue ( )
+
+    def process_preteleport ( self, player, where_to ):
+        """
         The where_to argument expects a tuple with coordinates ( +E/-W, +N/-S, height ).
         """
         if not isinstance ( player, player_info ):
@@ -993,13 +1005,14 @@ class server ( threading.Thread ):
         distance = distance_threshold + 1
         try:
             while ( distance > distance_threshold ):
-                self.log.info ( "b4 distance calc: player = {}".format ( player ) )
+                self.log.debug ( "b4 distance calc: player = {}".format ( player ) )
                 distance = self.framework.utils.calculate_distance ( 
-                    self.framework.utils.get_coordinates ( player ), where_to )
-                self.log.info ( "Preteleport sleeping due distance {}.".format ( distance ) )
+                    ( player.pos_x, player.pos_y ), ( where_to [ 0 ], where_to [ 1 ] ) )
+                self.log.info ( "Preteleport sleeping due distance {:.1f} from {} to {}.".format ( 
+                        distance, self.framework.utils.get_coordinates ( player ), where_to ) )
                 time.sleep ( 1 )
                 counter += 1
-                if counter > 120:
+                if counter > 60:
                     self.log.warning ( "Preteleport broke after timeout." )
                     break
                 if not player.online:
@@ -1013,6 +1026,45 @@ class server ( threading.Thread ):
         player.latest_teleport = { }
         player.latest_teleport [ 'timestamp' ] = time.time ( )
         player.latest_teleport [ 'position' ] = where_to
+
+    def lock_preteleport_queue ( self ):
+        callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        lock = self.preteleport_queue_lock
+        now = time.time ( )
+        
+        while ( lock [ 'callee' ] ):
+            if ( now - lock [ 'timestamp' ] > lock [ 'timeout' ] ):
+                self.log.error ( "Breaking lock due to timeout!" )
+                break
+            time.sleep ( 0.1 )
+              
+        lock [ 'callee'    ] = callee_function
+        lock [ 'timestamp' ] = now
+
+    def unlock_preteleport_queue ( self ):
+        callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        lock = self.preteleport_queue_lock
+        
+        if lock [ 'callee' ] != callee_function:
+            self.log.error ( "Lock being freed by another function than callee!" )
+        lock [ 'callee'    ] = None
+        lock [ 'timestamp' ] = None
+
+    def enqueue_preteleport ( self, preteleport_data ):
+        self.log.debug ( "enqueue_preteleport: {}.".format ( preteleport_data.name ) )
+        self.lock_preteleport_queue ( )
+        self.preteleport_queue.append ( preteleport_data )
+        self.unlock_preteleport_queue ( )
+
+    def dequeue_preteleport ( self ):
+        self.lock_preteleport_queue ( )
+        preteleport_data = None
+        if len ( self.preteleport_queue ) > 0:
+            preteleport_data = self.preteleport_queue.pop ( )
+        self.unlock_preteleport_queue ( )
+        if preteleport_data:
+            self.log.debug ( "Dequeue preteleport for {}.".format ( preteleport_data [ 0 ].name_sane ) )
+            self.process_preteleport ( preteleport_data [ 0 ], preteleport_data [ 1 ] )
 
     def update_id ( self, id_fields ):
         #self.latest_id_parse_call = time.time ( )

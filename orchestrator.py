@@ -13,8 +13,10 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.5.2'
+        self.__version__ = '0.5.4'
         self.changelog = {
+            '0.5.4' : "Removed initial call to offline_players.",
+            '0.5.3' : "Instead of calling offline_players ever 100 cycles, call offline_lagged_players all cycles.",
             '0.5.2' : "Cleanup for new lp cycle.",
             '0.5.1' : "Added header to status.",
             '0.5.0' : "Added status() to call each telnet's status().",
@@ -72,7 +74,6 @@ class orchestrator ( threading.Thread ):
             self.stop ( )
 
     def run ( self ):            
-        self.server.offline_players ( )
         count = 1
 
         try:
@@ -100,8 +101,7 @@ class orchestrator ( threading.Thread ):
                                             ( mod_key, old_version, new_version,
                                               mod_instance.changelog [ new_version ] ) )
 
-                if count % 100 == 0:
-                    self.server.offline_players ( )
+                self.server.offline_lagged_players ( )
                             
                 self.log.debug ( "Asking server for updates." )
                 now = time.time ( )
