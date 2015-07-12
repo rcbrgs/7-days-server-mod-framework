@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.4"
+        self.__version__ = "0.3.5"
         self.changelog = {
+            '0.3.5'  : "Refactor for gt in world_state.",
             '0.3.4'  : "100 kills prize is at least 100 now.",
             '0.3.3'  : "Refactoring 100 kills prize to get it to randomize.",
             '0.3.2'  : "More taunts.",
@@ -118,13 +119,13 @@ class game_events ( threading.Thread ):
         if ( time.time ( ) - self.framework.load_time ) < 60:
             return
 
-        day = self.framework.server.game_server.day
-        hour = self.framework.server.game_server.hour
-        minute = self.framework.server.game_server.minute
+        day = self.framework.world_state.game_server.day
+        hour = self.framework.world_state.game_server.hour
+        minute = self.framework.world_state.game_server.minute
         self.log.info ( ">>>>>  day %d, %02dh%02d  <<<<<" % ( day, hour, minute ) )
         for player in self.framework.server.get_online_players ( ):
             self.log.info ( self.framework.server.get_player_summary ( player ) )
-        self.log.info ( self.framework.server.get_game_server_summary ( ) )
+        self.log.info ( self.framework.world_state.get_game_server_summary ( ) )
 
     def player_can_propose ( self, player ):
         self.framework.console.say ( "The community looks up to {} for guidance! {} can now propose referendums.".format ( player.name_sane, player.name_sane ) )

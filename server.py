@@ -11,21 +11,21 @@ import sys
 import threading
 import time
 
-class game_server_info ( object ):
-    def __init__ ( self ):
-        self.day = 0
-        self.hour = 0
-        self.mem = ( { }, 0 )
-        self.minute = 0
-        self.time = ( 0, 0, 0 )
-
 class server ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.23'
+        self.__version__ = '0.4.31'
         self.changelog = {
+            '0.4.31' : "Moved command_about out of here.",
+            '0.4.30' : "Catching exceptions during preteleport.",
+            '0.4.29' : "Moved gt and mem stuff to world_state.",
+            '0.4.28' : "Added exception capture during preteleport console.send.",
+            '0.4.27' : "New airdrop rule.",
+            '0.4.26' : "Tweaked preteleport to positive with threshold 20m.",
+            '0.4.25' : "Created whiner () function to punish sakis if he whines again.",
+            '0.4.24' : "Increased preteleport detection threshold to 10m.",
             '0.4.23' : "Added preteleport timeout of 2 mins.",
             '0.4.22' : "Fixed Y / height mismatch on preteleport.",
             '0.4.21' : "Made pre/teleport interval dynamic, based on position data.",
@@ -117,16 +117,15 @@ class server ( threading.Thread ):
         # Other programs might have /keywords that we want to ignore. Put those here.
         self.external_commands = [ 'restart' ]
         self.framework = framework
-        self.game_server = game_server_info ( )
         self.help_items = {
             'karma' : ( "Karma is a measure of how much we trust you, the player."
                         " You gain 1 karma per hour played. You spend karma to teleport,"
                         " sethome, and other actions." ),
             'night' : ( "Night is when zombies run and you hide. In this server"
                         " it happens between 0h and 6h." ),
+            'shop'  : ( "The shop is run by a mighty Ogre. Possible exits are N, E and SE." ),
             }
             
-        #self.latest_id_parse_call = time.time ( )
         self.latest_player_db_backup = 0
         self.player_db_save_timestamp = 0
         self.preferences = self.framework.preferences
@@ -134,14 +133,12 @@ class server ( threading.Thread ):
         self.player_info_file = self.preferences.player_info_file
         self.geoip = pygeoip.GeoIP ( self.preferences.geoip_file, pygeoip.MEMORY_CACHE )
         
-        self.day = None
-        self.hour = None
-        self.minute = None
-        self.time = None
+        #self.day = None
+        #self.hour = None
+        #self.minute = None
+        #self.time = None
 
-        self.commands = { 'about'       : ( self.command_about,
-                                            " /about will tell you where to get this mod." ),
-                          'curse'       : ( self.curse_player,
+        self.commands = { 'curse'       : ( self.curse_player,
                                             " /curse player_name prints an unfriendly message." ),
                           'me'          : ( self.command_me,
                                             " /me will print your info." ),
@@ -170,11 +167,13 @@ class server ( threading.Thread ):
             self.players_info = { }
 
     def __del__ ( self ):
-        self.log.warning ( "__del__" )
-        self.shutdown = True
+        if not self.shutdown:
+            self.log.error ( "__del__ being called before stop!" )
+            self.shutdown = True
+            self.stop ( )
 
     def run ( self ):
-        while self.shutdown == False:
+        while not self.shutdown:
             self.log.debug ( "Tick" )
             time.sleep ( self.framework.preferences.loop_wait )
 
@@ -183,12 +182,7 @@ class server ( threading.Thread ):
         self.log.info ( "Saving player db." )
         pickle_file = open ( self.player_info_file, 'wb' )
         pickle.dump ( self.players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
-                
-
-    def command_about ( self, origin, message ):
-        self.framework.console.say ( "This mod was initiated by Schabracke and is developed by rc." )
-        self.framework.console.say ( "http://github.com/rcbrgs/7-days-server-mod-framework." )
-    
+                  
     def command_help ( self, msg_origin, msg_content ):
         if len ( msg_content ) > len ( "/help" ):
             predicate = msg_content [ len ( "/help " ) : ]
@@ -269,7 +263,7 @@ class server ( threading.Thread ):
         self.framework.console.say ( "rules are: 1. [FF0000]PVE[FFFFFF] only." )
         self.framework.console.say ( "                2. No base raping or looting." )
         self.framework.console.say ( "                3. Do not build / claim inside cities or POIs." )
-        #self.framework.console.say ( "All offenses are punishable by permabans, admins judge fairly." )
+        self.framework.console.say ( "                4. First person below an air drop crate is its owner." )
         self.framework.console.say ( "Admins are: [400000]Schabracke[FFFFFF], AzoSento, and Chakotay." )
         #self.framework.console.say ( " /sethome sets a 50m radius where only people you invite can stay." )
         self.framework.console.say ( "Drop on death: everything. Drop on exit: nothing." )
@@ -322,28 +316,6 @@ class server ( threading.Thread ):
             ) )
         self.framework.let_ent_lock ( )
 
-    def display_game_server ( self ):
-        print ( self.get_game_server_summary ( ) )
-
-    def get_game_info_lock ( self ):
-        pass
-    
-    def let_game_info_lock ( self ):
-        pass
-    
-    def get_game_server_summary ( self ):
-        mi = self.game_server.mem [ 0 ]
-        if 'time' not in mi.keys ( ):
-            return
-        staleness = time.time ( ) - self.game_server.mem [ 1 ]
-        msg = "{:.1f}s {:s}m {:s}/{:s}MB {:s}chu {:s}cgo {:s}p/{:s}z/{:s}i/{:s}({:s})e.".format (
-            staleness,
-            str ( mi [ 'time' ] ), str ( mi [ 'heap' ] ), str ( mi [ 'max' ] ), str ( mi [ 'chunks' ] ),
-            str ( mi [ 'cgo' ] ), str ( mi [ 'players' ] ), str ( mi [ 'zombies' ] ), str ( mi [ 'items' ] ),
-            str ( mi [ 'entities_1' ] ), str ( mi [ 'entities_2' ] ) ) 
-
-        return msg
-                
     def find_nearest_player ( self, steamid ):
         player_distances = { }
         player_inverted_directions = { }
@@ -916,7 +888,6 @@ class server ( threading.Thread ):
         self.framework.console.pm ( player, "{:.1f}m {} (height: {:.1f}m)".format ( distance,
                                                                                     bearing,
                                                                                     player.pos_z - ent_position [ 2 ] ) )
-        #self.framework.console.pm ( player, "{}".format ( self.framework.utils.get_map_coordinates ( ent_position ) ) )
         return distance
             
     def show_inventory ( self, player ):
@@ -1012,24 +983,34 @@ class server ( threading.Thread ):
                 str ( int ( where_to [ 2 ] ) - 5 ) + " " + \
                 str ( int ( where_to [ 1 ] ) )
         self.log.info ( "Preteleport {} ({})".format ( player.name_sane, prelogmsg ) )
-        self.framework.console.send ( premsg )
+        try:
+            self.framework.console.send ( premsg )
+        except Exception as e:
+            self.log.error ( "Exception during console.send: {}".format ( premsg ) )
+            return
         counter = 0
-        while abs ( round ( self.framework.world_state.players [ player.steamid ].pos_x ) - \
-                        round ( where_to [ 0 ] ) ) > 2:
-            self.log.info ( "Preteleport sleeping due X {} diff {}.".format ( 
-                    self.framework.world_state.players [ player.steamid ].pos_x, where_to [ 0 ] ) )
-            time.sleep ( 1 )
-            counter += 1
-            if counter > 120:
-                break
-        while abs ( round ( self.framework.world_state.players [ player.steamid ].pos_y ) - \
-                        round ( where_to [ 1 ] ) ) > 2:
-            self.log.info ( "Preteleport sleeping due Y {} diff {}.".format ( 
-                    self.framework.world_state.players [ player.steamid ].pos_y, where_to [ 1 ] ) )
-            time.sleep ( 1 )
-            counter += 1
-            if counter > 120:
-                break
+        try:
+            while abs ( round ( self.framework.world_state.players [ player.steamid ].pos_x ) - \
+                            round ( where_to [ 0 ] ) ) > 20:
+                self.log.info ( "Preteleport sleeping due X {} diff {}.".format ( 
+                        self.framework.world_state.players [ player.steamid ].pos_x, where_to [ 0 ] ) )
+                time.sleep ( 1 )
+                counter += 1
+                if counter > 120:
+                    break
+        except Exception as e:
+            self.log.error ( "Error during preteleport: {}".format ( e ) )
+        try:
+            while abs ( round ( self.framework.world_state.players [ player.steamid ].pos_y ) - \
+                            round ( where_to [ 1 ] ) ) > 20:
+                self.log.info ( "Preteleport sleeping due Y {} diff {}.".format ( 
+                        self.framework.world_state.players [ player.steamid ].pos_y, where_to [ 1 ] ) )
+                time.sleep ( 1 )
+                counter += 1
+                if counter > 120:
+                    break
+        except Exception as e:
+            self.log.error ( "Error during preteleport: {}".format ( e ) )
 
         self.log.info ( "   teleport {} ({})".format ( player.name_sane, logmsg ) )
         self.framework.console.send ( msg )
@@ -1040,34 +1021,6 @@ class server ( threading.Thread ):
         player.latest_teleport [ 'timestamp' ] = time.time ( )
         player.latest_teleport [ 'position' ] = where_to
 
-    def update_gt ( self, day_match_groups ):
-        self.log.debug ( "update_gt ( {} )".format ( day_match_groups ) )
-        now = time.time ( )
-        new_gt = { }
-
-        previous_day = self.game_server.day
-        previous_hour = self.game_server.hour
-        previous_minute = self.game_server.minute
-        
-        day    = int ( day_match_groups [ 0 ] )
-        hour   = int ( day_match_groups [ 1 ] )
-        minute = int ( day_match_groups [ 2 ] )
-            
-        self.game_server.time   = ( day, hour, minute )
-        self.game_server.day    = day
-        self.game_server.hour   = hour
-        self.game_server.minute = minute
-
-        self.log.info ( "Checking for time events." )
-        if ( previous_day != self.game_server.day ):
-            self.framework.game_events.day_changed ( previous_day )
-        if ( previous_hour != self.game_server.hour ):
-            self.framework.game_events.hour_changed ( previous_hour )
-
-        self.game_server.gt = ( new_gt, now )
-
-        self.log.info ( "Game date: {} {:02d}:{:02d}.".format ( day, hour, minute ) )
-        
     def update_id ( self, id_fields ):
         #self.latest_id_parse_call = time.time ( )
 
@@ -1164,23 +1117,6 @@ class server ( threading.Thread ):
         self.framework.server.entities [ le_id ] = entity
         self.framework.let_ent_lock ( ) 
 
-    def update_mem ( self, match ):
-        now =  time.time ( )
-        new_mem_info = { } 
-        new_mem_info [ 'time'       ] = match [ 0  ]
-        new_mem_info [ 'fps'        ] = match [ 1  ]
-        new_mem_info [ 'heap'       ] = match [ 2  ]
-        new_mem_info [ 'max'        ] = match [ 3  ]
-        new_mem_info [ 'chunks'     ] = match [ 4  ]
-        new_mem_info [ 'cgo'        ] = match [ 5  ]
-        new_mem_info [ 'players'    ] = match [ 6  ]
-        new_mem_info [ 'zombies'    ] = match [ 7  ]
-        new_mem_info [ 'entities_1' ] = match [ 8  ]
-        new_mem_info [ 'entities_2' ] = match [ 9  ]
-        new_mem_info [ 'items'      ] = match [ 10 ]
-            
-        self.game_server.mem = ( new_mem_info, now )
-        
     def update_players_pickle ( self ):
         import framework
         new_players_info = { }
@@ -1536,3 +1472,8 @@ class server ( threading.Thread ):
             self.framework.console.se ( player, 'hornet', 2 )
             if count != waves - 1:
                 time.sleep ( rythm )
+
+    def whiner ( self, player ):
+        player.cash  = round ( player.cash * 0.9 )
+        player.karma = round ( player.karma * 0.9 )
+        self.framework.console.pm ( "You have been fined 10% of you cash and karma for whining." )

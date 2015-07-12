@@ -10,8 +10,11 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.44'
+        self.__version__ = '0.1.47'
         self.changelog = {
+            '0.1.47' : "Made logged lagging lines less spammy.",
+            '0.1.46' : "Tweaked two matchers not capturing all events.",
+            '0.1.45' : "Hooked parser to increase lag when parsing storm begins.",
             '0.1.44' : "Matcher for failed collision data.",
             '0.1.43' : "No good position for horde.",
             '0.1.42' : "Hooked log to item dropping in void to better see shop working.",
@@ -178,7 +181,7 @@ class parser ( threading.Thread ):
             'biome waste night'    : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
                                        r'=[\d]+ XZ=[+-]*[\d]+/[+-]*[\d]+ ' + \
-                                       r'ZombiesWastelanNight_Night: c=[\d]+/r=[\d]+$',
+                                       r'ZombiesWastelandNight_Night: c=[\d]+/r=[\d]+$',
                                        'to_call'  : [ ] },
             'biome waste nit day'  : { 'to_match' : self.match_prefix + r'INF BiomeSpawnManager spawned ' + \
                                        r'.* pos=' + self.match_string_pos + r' id=[\d]+ CBD=BiomeId' + \
@@ -230,6 +233,8 @@ class parser ( threading.Thread ):
                                        r'[\d]+ [\d]+\' by Telnet from ' + self.match_string_ip + \
                                        r':[\d]+$',
                                        'to_call'  : [ ] },
+            'executing version'    : { 'to_match' : self.match_prefix + r'INF Executing command \'version\' from client [\d]+$',
+                                       'to_call'  : [ ] },
             'failed set triangles' : { 'to_match' : r'Failed setting triangles. Some indices are referencing out of bounds vertices. IndexCount: [\d]+, VertexCount: [\d]+$',
                                        'to_call'  : [ ] },
             'failed extract'       : { 'to_match' : r'Failed to extract collision data: Submesh [\d]+ uses unsupported primitive type "Unknown type". Please use either "TriangleStrip" or "Triangles". Mesh asset path "" Mesh name ""$',
@@ -259,7 +264,7 @@ class parser ( threading.Thread ):
                                        self.match_string_ip + ':([\d]+)',
                                        'to_call'  : [ self.command_gt_executing_parser ] },
             'gt command output'    : { 'to_match' : r'Day ([0-9]+), ([0-9]{2}):([0-9]{2})',
-                                       'to_call'  : [ self.framework.server.update_gt ] },
+                                       'to_call'  : [ self.framework.world_state.update_gt ] },
             'header  0'            : { 'to_match' : r'^\*\*\* Connected with 7DTD server\.$',
                                        'to_call'  : [ ] },
             'header  1'            : { 'to_match' : r'^\*\*\* Server version: Alpha [\d]+\.[\d]+ \(.*\) Compatibility Version: Alpha [\d]+\.[\d]+.*$',
@@ -346,7 +351,7 @@ class parser ( threading.Thread ):
                                        r'FPS: ([0-9]+.[0-9]+) Heap: ([0-9]+.[0-9]+)MB Max: ([0-9]+.[0-9]+)MB ' + \
                                        r'Chunks: ([0-9]+) CGO: ([0-9]+) Ply: ([0-9]+) Zom: (.*) Ent: ([\d]+) ' + \
                                        r'\(([\d]+)\) Items: ([0-9]+)',
-                                       'to_call'  : [ self.framework.server.update_mem ] },
+                                       'to_call'  : [ self.framework.world_state.update_mem ] },
             'message player'       : { 'to_match' : r'Message to player ".*" sent with sender "Server"',
                                        'to_call'  : [ ] },
             'not found'            : { 'to_match' : r'^Playername or entity ID not found.$',
@@ -429,7 +434,7 @@ class parser ( threading.Thread ):
             'spawn wander horde'   : { 'to_match' : self.match_prefix + r'INF Spawning Wandering Horde.$',
                                        'to_call'  : [ ] },
             'spawned'              : { 'to_match' : r'^' + self.match_string_date + r' INF Spawned ' + \
-                                       r'\[type=EntityZombie[\w]*, name=(.*), id=[\d]+\] at ' + \
+                                       r'\[type=[\w]+, name=(.*), id=[\d]+\] at ' + \
                                        self.match_string_pos + r' Day=[\d]+ TotalInWave=[\d]+ CurrentWave=[\d]+$',
                                        'to_call'  : [ ] },
             'spawn ent wrong pos'  : { 'to_match' : self.match_prefix + r'WRN Spawned entity with wrong pos: Item_[\d]+ \((EntityItem)\) id=([\d]+) pos=' + self.match_string_pos + r'$',
@@ -537,10 +542,14 @@ class parser ( threading.Thread ):
             match_delay = time.time ( ) - match_timestamp
             delay = time.time ( ) - line [ 'timestamp' ]
             if delay > 15:
-                self.log.info ( "Line {} matched {} in {:.1f}s, parsed in {:.1f}.".format ( line,
-                                                                                            matched_key,
-                                                                                            match_delay,
-                                                                                            delay ) )
+                self.framework.world_state.lp_lag += 15
+                #self.log.info ( "Line {} matched {} in {:.1f}s, parsed in {:.1f}.".format ( line,
+                #                                                                            matched_key,
+                #                                                                            match_delay,
+                #                                                                            delay ) )
+                self.log.info ( "Line matched {} in {:.1f}s, parsed in {:.1f}.".format ( matched_key,
+                                                                                         match_delay,
+                                                                                         delay ) )
 
     def stop ( self ):
         self.shutdown = True
@@ -573,12 +582,12 @@ class parser ( threading.Thread ):
         hour    = int ( match [ 1 ] )
         minutes = int ( match [ 2 ] )
         self.framework.server.get_game_info_lock ( )
-        self.framework.server.game_server.day = day
-        self.framework.server.game_server.hour = hour
-        #if minutes % 15 == 0 and minutes != self.framework.server.game_server.minute:
+        self.framework.world_state.game_server.day = day
+        self.framework.world_state.game_server.hour = hour
+        #if minutes % 15 == 0 and minutes != self.framework.world_state.game_server.minute:
         self.log.info ( "Game date: {} {:02d}:{:02d}.".format ( day, hour, minutes ) )
-        self.framework.server.game_server.minute = minutes
-        self.framework.server.game_server.time = ( day, hour, minutes )
+        self.framework.world_state.game_server.minute = minutes
+        self.framework.world_state.game_server.time = ( day, hour, minutes )
         self.framework.server.let_game_info_lock ( )
 
     def command_le_output_parser ( self, match ):

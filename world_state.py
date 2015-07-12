@@ -5,12 +5,23 @@ import logging
 import threading
 import time
 
+class game_server_info ( object ):
+    def __init__ ( self ):
+        self.day = 0
+        self.hour = 0
+        self.mem = ( { }, 0 )
+        self.minute = 0
+        self.time = ( 0, 0, 0 )
+
 class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.2.4'
+        self.__version__ = '0.2.7'
         self.changelog = {
+            '0.2.7' : "Added mem and gt stuff here.",
+            '0.2.6' : "Added lp_lag logging.",
+            '0.2.5' : "Loosened lp cycle from 110 to 150% of lag estimation due to occasional lp storm.",
             '0.2.4' : "Added stop method.",
             '0.2.3' : "Fixed typo on get_inventory.",
             '0.2.2' : "Put lp in world state control.",
@@ -29,6 +40,8 @@ class world_state ( threading.Thread ):
         self.claimstones_lock = { 'callee'    : None,
                                   'timeout'   : 10,
                                   'timestamp' : None }
+
+        self.game_server = game_server_info ( )
 
         self.inventory = { }
         self.inventory_lock = { 'callee'    : None,
@@ -55,7 +68,6 @@ class world_state ( threading.Thread ):
 
     def run ( self ):
         while not self.shutdown:
-            #time.sleep ( self.framework.preferences.loop_wait )
             time.sleep ( 0.01 )
 
             while ( len ( self.lp_queue ) ) > 0:
@@ -260,10 +272,10 @@ class world_state ( threading.Thread ):
         if current_length > 0:
             return
         now = time.time ( )
-        if now - self.latest_lp_call < self.lp_lag * 1.1:
+        if now - self.latest_lp_call < self.lp_lag * 1.5:
             self.log.debug ( "decide_lp: lp_lag ({:.2f}).".format ( self.lp_lag ) )
             return
-        self.log.debug ( "decide_lp: call lp ({:.2f}).".format ( self.lp_lag ) )
+        self.log.info ( "decide_lp: call lp ({:.2f}).".format ( self.lp_lag ) )
         self.latest_lp_call = time.time ( )
         self.lp_lag += 1
         lp_message = self.framework.console.telnet_wrapper ( "lp" )
@@ -273,6 +285,7 @@ class world_state ( threading.Thread ):
         total = int ( matches [ 0 ] )
         if total == len ( list ( self.players.keys ( ) ) ):
             self.lp_lag = time.time ( ) - self.latest_lp_call
+            self.log.info ( "lp_lag = {:.2f}s".format ( self.lp_lag ) )
         
     def buffer_lp ( self, matches ):
         self.log.debug ( "buffer_lp: {}.".format ( matches [ 1 ] ) )
@@ -345,3 +358,72 @@ class world_state ( threading.Thread ):
         lock [ 'callee'    ] = None
         lock [ 'timestamp' ] = None
 
+    # gt
+
+    def display_game_server ( self ):
+        print ( self.get_game_server_summary ( ) )
+
+    def get_game_info_lock ( self ):
+        pass
+    
+    def let_game_info_lock ( self ):
+        pass
+    
+    def get_game_server_summary ( self ):
+        mi = self.game_server.mem [ 0 ]
+        if 'time' not in mi.keys ( ):
+            return
+        staleness = time.time ( ) - self.game_server.mem [ 1 ]
+        msg = "{:.1f}s {:s}m {:s}/{:s}MB {:s}chu {:s}cgo {:s}p/{:s}z/{:s}i/{:s}({:s})e.".format (
+            staleness,
+            str ( mi [ 'time' ] ), str ( mi [ 'heap' ] ), str ( mi [ 'max' ] ), str ( mi [ 'chunks' ] ),
+            str ( mi [ 'cgo' ] ), str ( mi [ 'players' ] ), str ( mi [ 'zombies' ] ), str ( mi [ 'items' ] ),
+            str ( mi [ 'entities_1' ] ), str ( mi [ 'entities_2' ] ) ) 
+
+        return msg
+                
+    def update_gt ( self, day_match_groups ):
+        self.log.debug ( "update_gt ( {} )".format ( day_match_groups ) )
+        now = time.time ( )
+        new_gt = { }
+
+        previous_day = self.game_server.day
+        previous_hour = self.game_server.hour
+        previous_minute = self.game_server.minute
+        
+        day    = int ( day_match_groups [ 0 ] )
+        hour   = int ( day_match_groups [ 1 ] )
+        minute = int ( day_match_groups [ 2 ] )
+            
+        self.game_server.time   = ( day, hour, minute )
+        self.game_server.day    = day
+        self.game_server.hour   = hour
+        self.game_server.minute = minute
+
+        self.log.info ( "Checking for time events." )
+        if ( previous_day != self.game_server.day ):
+            self.framework.game_events.day_changed ( previous_day )
+        if ( previous_hour != self.game_server.hour ):
+            self.framework.game_events.hour_changed ( previous_hour )
+
+        self.game_server.gt = ( new_gt, now )
+
+        self.log.info ( "Game date: {} {:02d}:{:02d}.".format ( day, hour, minute ) )
+        
+    def update_mem ( self, match ):
+        now =  time.time ( )
+        new_mem_info = { } 
+        new_mem_info [ 'time'       ] = match [ 0  ]
+        new_mem_info [ 'fps'        ] = match [ 1  ]
+        new_mem_info [ 'heap'       ] = match [ 2  ]
+        new_mem_info [ 'max'        ] = match [ 3  ]
+        new_mem_info [ 'chunks'     ] = match [ 4  ]
+        new_mem_info [ 'cgo'        ] = match [ 5  ]
+        new_mem_info [ 'players'    ] = match [ 6  ]
+        new_mem_info [ 'zombies'    ] = match [ 7  ]
+        new_mem_info [ 'entities_1' ] = match [ 8  ]
+        new_mem_info [ 'entities_2' ] = match [ 9  ]
+        new_mem_info [ 'items'      ] = match [ 10 ]
+            
+        self.game_server.mem = ( new_mem_info, now )
+        
