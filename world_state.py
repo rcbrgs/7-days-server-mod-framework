@@ -17,8 +17,12 @@ class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.2.7'
+        self.__version__ = '0.3.2'
         self.changelog = {
+            '0.3.2' : "Throttled down gt calls by limiting to 1 per loop_wait.",
+            '0.3.1' : "Fixed non-existing telnet object being called.",
+            '0.3.0' : "Integrated gt code here.",
+            '0.2.8' : "Simplified interface by removing unnecessary lock.",
             '0.2.7' : "Added mem and gt stuff here.",
             '0.2.6' : "Added lp_lag logging.",
             '0.2.5' : "Loosened lp cycle from 110 to 150% of lag estimation due to occasional lp storm.",
@@ -50,15 +54,19 @@ class world_state ( threading.Thread ):
 
         now = time.time ( )
         self.llp_timestamp = 0
-
-        self.gt_timestamp = now
-
         self.le_timestamp = now
         
-        #self.lp_timestamp = now
-        # player info
+        # game time
+        self.gt_timestamp = now
+        self.gt_queue = [ ]
+        self.gt_queue_lock = { 'callee'    : None,
+                               'timeout'   : 10,
+                               'timestamp' : None }
+        self.latest_gt_call = 0
+        self.gt_lag = 0.1
+
+        # list players
         self.players = { }
-        
         self.lp_queue = [ ]
         self.lp_queue_lock = { 'callee'    : None,
                                'timeout'   : 10,
@@ -75,6 +83,7 @@ class world_state ( threading.Thread ):
 
             self.prune_players ( )
             self.decide_lp ( )
+            self.decide_gt ( )
 
     def stop ( self ):
         self.shutdown = True
@@ -214,7 +223,23 @@ class world_state ( threading.Thread ):
         inventory = self.inventory
         self.let_inventory ( )
         return inventory
+
+    def display_game_server ( self ):
+        print ( self.get_game_server_summary ( ) )
         
+    def get_game_server_summary ( self ):
+        mi = self.game_server.mem [ 0 ]
+        if 'time' not in mi.keys ( ):
+            return
+        staleness = time.time ( ) - self.game_server.mem [ 1 ]
+        msg = "{:.1f}s {:s}m {:s}/{:s}MB {:s}chu {:s}cgo {:s}p/{:s}z/{:s}i/{:s}({:s})e.".format (
+            staleness,
+            str ( mi [ 'time' ] ), str ( mi [ 'heap' ] ), str ( mi [ 'max' ] ), str ( mi [ 'chunks' ] ),
+            str ( mi [ 'cgo' ] ), str ( mi [ 'players' ] ), str ( mi [ 'zombies' ] ), str ( mi [ 'items' ] ),
+            str ( mi [ 'entities_1' ] ), str ( mi [ 'entities_2' ] ) ) 
+
+        return msg
+                
     # /API
         
     def get_inventory ( self ):
@@ -262,6 +287,83 @@ class world_state ( threading.Thread ):
                                               kind )
             if slot == 31:
                 self.inventory [ 'checking' ] = False
+
+    # get time:
+
+    def decide_gt ( self ):
+        """
+        Verifies if it is appropriate to send a new gt call, and does so accordingly.
+        """
+        self.lock_gt_queue ( )
+        current_length = len ( self.gt_queue )
+        self.unlock_gt_queue ( )
+        if current_length > 0:
+            return
+        now = time.time ( )
+        if now - self.latest_gt_call < self.framework.preferences.loop_wait:
+            return
+        if now - self.latest_gt_call < self.gt_lag * 1.5:
+            self.log.debug ( "decide_gt: gt_lag ({:.2f}).".format ( self.gt_lag ) )
+            return
+        self.log.info ( "decide_gt: call gt ({:.2f}).".format ( self.gt_lag ) )
+        self.latest_gt_call = now
+        self.gt_lag += 1
+        gt_message = self.framework.console.telnet_wrapper ( "gt" )
+        self.framework.console.telnet_client_commands.write ( gt_message )
+
+    def process_gt ( self, day_match_groups ):
+        self.log.debug ( "update_gt ( {} )".format ( day_match_groups ) )
+        now = time.time ( )
+        new_gt = { }
+
+        previous_day = self.game_server.day
+        previous_hour = self.game_server.hour
+        previous_minute = self.game_server.minute
+        
+        day    = int ( day_match_groups [ 0 ] )
+        hour   = int ( day_match_groups [ 1 ] )
+        minute = int ( day_match_groups [ 2 ] )
+            
+        self.game_server.time   = ( day, hour, minute )
+        self.game_server.day    = day
+        self.game_server.hour   = hour
+        self.game_server.minute = minute
+
+        self.log.info ( "Checking for time events." )
+        if ( previous_day != self.game_server.day ):
+            self.framework.game_events.day_changed ( previous_day )
+        if ( previous_hour != self.game_server.hour ):
+            self.framework.game_events.hour_changed ( previous_hour )
+
+        self.game_server.gt = ( new_gt, now )
+
+        self.log.info ( "Game date: {} {:02d}:{:02d}.".format ( day, hour, minute ) )
+        
+        self.gt_lag = time.time ( ) - self.latest_gt_call
+        self.log.info ( "gt_lag = {:.2f}s".format ( self.gt_lag ) )
+
+    def lock_gt_queue ( self ):
+        callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        lock = self.gt_queue_lock
+        now = time.time ( )
+        
+        while ( lock [ 'callee' ] ):
+            if ( now - lock [ 'timestamp' ] > lock [ 'timeout' ] ):
+                self.log.error ( "Breaking lock due to timeout!" )
+                break
+            time.sleep ( 0.1 )
+              
+        lock [ 'callee'    ] = callee_function
+        lock [ 'timestamp' ] = now
+
+    def unlock_gt_queue ( self ):
+        callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        lock = self.gt_queue_lock
+        
+        if lock [ 'callee' ] != callee_function:
+            self.log.error ( "Lock being freed by another function than callee!" )
+        lock [ 'callee'    ] = None
+        lock [ 'timestamp' ] = None
 
     # Player info related:
 
@@ -358,58 +460,8 @@ class world_state ( threading.Thread ):
         lock [ 'callee'    ] = None
         lock [ 'timestamp' ] = None
 
-    # gt
+    # mem
 
-    def display_game_server ( self ):
-        print ( self.get_game_server_summary ( ) )
-
-    def get_game_info_lock ( self ):
-        pass
-    
-    def let_game_info_lock ( self ):
-        pass
-    
-    def get_game_server_summary ( self ):
-        mi = self.game_server.mem [ 0 ]
-        if 'time' not in mi.keys ( ):
-            return
-        staleness = time.time ( ) - self.game_server.mem [ 1 ]
-        msg = "{:.1f}s {:s}m {:s}/{:s}MB {:s}chu {:s}cgo {:s}p/{:s}z/{:s}i/{:s}({:s})e.".format (
-            staleness,
-            str ( mi [ 'time' ] ), str ( mi [ 'heap' ] ), str ( mi [ 'max' ] ), str ( mi [ 'chunks' ] ),
-            str ( mi [ 'cgo' ] ), str ( mi [ 'players' ] ), str ( mi [ 'zombies' ] ), str ( mi [ 'items' ] ),
-            str ( mi [ 'entities_1' ] ), str ( mi [ 'entities_2' ] ) ) 
-
-        return msg
-                
-    def update_gt ( self, day_match_groups ):
-        self.log.debug ( "update_gt ( {} )".format ( day_match_groups ) )
-        now = time.time ( )
-        new_gt = { }
-
-        previous_day = self.game_server.day
-        previous_hour = self.game_server.hour
-        previous_minute = self.game_server.minute
-        
-        day    = int ( day_match_groups [ 0 ] )
-        hour   = int ( day_match_groups [ 1 ] )
-        minute = int ( day_match_groups [ 2 ] )
-            
-        self.game_server.time   = ( day, hour, minute )
-        self.game_server.day    = day
-        self.game_server.hour   = hour
-        self.game_server.minute = minute
-
-        self.log.info ( "Checking for time events." )
-        if ( previous_day != self.game_server.day ):
-            self.framework.game_events.day_changed ( previous_day )
-        if ( previous_hour != self.game_server.hour ):
-            self.framework.game_events.hour_changed ( previous_hour )
-
-        self.game_server.gt = ( new_gt, now )
-
-        self.log.info ( "Game date: {} {:02d}:{:02d}.".format ( day, hour, minute ) )
-        
     def update_mem ( self, match ):
         now =  time.time ( )
         new_mem_info = { } 

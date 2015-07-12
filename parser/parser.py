@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.47'
+        self.__version__ = '0.1.48'
         self.changelog = {
+            '0.1.48' : "Refactored for simplified interface with server.",
             '0.1.47' : "Made logged lagging lines less spammy.",
             '0.1.46' : "Tweaked two matchers not capturing all events.",
             '0.1.45' : "Hooked parser to increase lag when parsing storm begins.",
@@ -262,9 +263,9 @@ class parser ( threading.Thread ):
             'gt command executing' : { 'to_match' : self.match_string_date + \
                                        r' INF Executing command \'gt\' by Telnet from ' + \
                                        self.match_string_ip + ':([\d]+)',
-                                       'to_call'  : [ self.command_gt_executing_parser ] },
+                                       'to_call'  : [ ] },
             'gt command output'    : { 'to_match' : r'Day ([0-9]+), ([0-9]{2}):([0-9]{2})',
-                                       'to_call'  : [ self.framework.world_state.update_gt ] },
+                                       'to_call'  : [ self.framework.world_state.process_gt ] },
             'header  0'            : { 'to_match' : r'^\*\*\* Connected with 7DTD server\.$',
                                        'to_call'  : [ ] },
             'header  1'            : { 'to_match' : r'^\*\*\* Server version: Alpha [\d]+\.[\d]+ \(.*\) Compatibility Version: Alpha [\d]+\.[\d]+.*$',
@@ -563,32 +564,6 @@ class parser ( threading.Thread ):
         self.unlock_queue ( )
 
     # \API
-
-    def command_gt_executing_parser ( self, match ):
-        if self.framework.preferences.mod_ip == match [ 7 ]:
-            self.framework.gt_info [ 'sending'   ] [ 'condition' ] = False
-            self.framework.gt_info [ 'executing' ] [ 'condition' ] = True
-            now = time.time ( )
-            self.framework.gt_info [ 'executing' ] [ 'timestamp' ] = now
-            self.framework.gt_info [ 'lag' ] = now - self.framework.gt_info [ 'sending' ] [ 'timestamp' ]
-            self.log.debug ( 'gt executing' )
-            if ( self.framework.gt_info [ 'lag' ] > 5 ):
-                self.log.info ( "gt lag: {:.1f}s.".format ( self.framework.gt_info [ 'lag' ] ) )
-
-    def command_gt_output_parser ( self, match ):
-        self.log.warning ( "DEPRECATED" )
-        self.log.info ( "gt parser" )
-        day     = int ( match [ 0 ] )
-        hour    = int ( match [ 1 ] )
-        minutes = int ( match [ 2 ] )
-        self.framework.server.get_game_info_lock ( )
-        self.framework.world_state.game_server.day = day
-        self.framework.world_state.game_server.hour = hour
-        #if minutes % 15 == 0 and minutes != self.framework.world_state.game_server.minute:
-        self.log.info ( "Game date: {} {:02d}:{:02d}.".format ( day, hour, minutes ) )
-        self.framework.world_state.game_server.minute = minutes
-        self.framework.world_state.game_server.time = ( day, hour, minutes )
-        self.framework.server.let_game_info_lock ( )
 
     def command_le_output_parser ( self, match ):
         self.log.debug ( str ( match ) )

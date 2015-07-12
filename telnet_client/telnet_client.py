@@ -12,8 +12,9 @@ class telnet_client ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.4'
+        self.__version__ = '0.2.5'
         self.changelog = {
+            '0.2.5' : "Improved treating 0 socket write exception.",
             '0.2.4' : "Silenced spammy loggings.",
             '0.2.3' : "Fixed logging time outs incorrectly.",
             '0.2.2' : "More logging on chomp() to understand issue.",
@@ -144,8 +145,10 @@ class telnet_client ( threading.Thread ):
         
     def write ( self, msg ):
         if ( self.telnet.get_socket ( ) == 0 ):
-            self.log.error ( "Can't get_socket()!" )
-            self.framework.shutdown = True
+            if not self.shutdown:
+                self.log.error ( "Can't get_socket()!" )
+                self.framework.shutdown = True
+            self.log.warning ( "Socket 0 for msg '{}'.".format ( msg ) )
             return
         try:
             self.telnet.write ( msg )

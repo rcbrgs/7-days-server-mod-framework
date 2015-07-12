@@ -35,13 +35,6 @@ class orchestrator ( threading.Thread ):
             '0.2.1' : "Fixing errors regarding self.mods change.",
             '0.2.0' : "Changed self.mods to be a dict, and output changelog during updates." }
 
-        self.gt_info = {
-            'sending'   : { 'condition' : False,
-                            'timestamp' : 0 },
-            'executing' : { 'condition' : False,
-                            'timestamp' : 0 },
-            'lag'       : 0
-            }
         self.le_info = {
             'sent'      : { 'condition' : False,
                             'timestamp' : 0 },
@@ -67,7 +60,6 @@ class orchestrator ( threading.Thread ):
         self.framework_state = None
         self.items_lock = None
         self.load_time = time.time ( )
-        self.lock_gt = None
         self.mods = { }
         self.rank = framework.rank ( self )
         self.stop_on_shutdown = [ ]
@@ -113,24 +105,14 @@ class orchestrator ( threading.Thread ):
                             
                 self.log.debug ( "Asking server for updates." )
                 now = time.time ( )
-                if now - self.world_state.gt_timestamp > self.preferences.loop_wait:
-                    self.world_state.gt_timestamp = now
-                    self.console.gt ( )
                 if now - self.world_state.le_timestamp > self.preferences.loop_wait:
                     pass
                     self.world_state.le_timestamp = now
                     self.console.le ( )
-                #if now - self.world_state.lp_timestamp > self.preferences.loop_wait:
-                #    self.world_state.lp_timestamp = now
-                #    self.console.lp ( )
                 if now - self.world_state.llp_timestamp > self.preferences.loop_wait * 100:
                     self.world_state.llp_timestamp = now
                     self.console.llp ( )
 
-                self.log.debug ( "Resetting the commands pipelines if they are stuck." )
-                #if time.time ( ) - self.lp_info [ 'sent' ] [ 'timestamp' ] > 60:
-                #    self.lp_info [ 'sent' ] [ 'condition' ] = False
-                    
                 time.sleep ( self.preferences.loop_wait )
                 count += 1
         except Exception as e:
@@ -266,22 +248,6 @@ class orchestrator ( threading.Thread ):
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         self.ent_lock = None
         self.log.debug ( "{:s} let entities db lock.".format ( callee ) )
-
-    def lock_gt_get ( self, callee ):
-        if not self.lock_gt:
-            self.lock_gt = callee
-            return True
-        if self.lock_gt != callee:
-            return False
-        return True
-
-    def lock_gt_let ( self, callee ):
-        if not self.lock_gt:
-            return
-        if self.lock_gt != callee:
-            return
-        self.lock_gt = None
-        return
 
     def load_mod ( self, module_name ):
         full_module_name = module_name + "." + module_name

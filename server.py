@@ -20,8 +20,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.31'
+        self.__version__ = '0.4.32'
         self.changelog = {
+            '0.4.32' : "Removed position update from teleport, it is not its responsibility.",
             '0.4.31' : "Moved command_about out of here.",
             '0.4.30' : "Catching exceptions during preteleport.",
             '0.4.29' : "Moved gt and mem stuff to world_state.",
@@ -944,9 +945,6 @@ class server ( threading.Thread ):
                    str ( int ( where_to [ 2 ] ) ) + " " + \
                    str ( int ( where_to [ 1 ] ) )
         self.console ( msg )
-        player.pos_x = where_to [ 0 ]
-        player.pos_y = where_to [ 1 ]
-        player.pos_z = where_to [ 2 ]
 
     def preteleport ( self, player, where_to ):
         """
