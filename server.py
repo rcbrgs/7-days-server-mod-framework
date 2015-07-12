@@ -20,8 +20,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.32'
+        self.__version__ = '0.4.33'
         self.changelog = {
+            '0.4.33' : "Removed console().",
             '0.4.32' : "Removed position update from teleport, it is not its responsibility.",
             '0.4.31' : "Moved command_about out of here.",
             '0.4.30' : "Catching exceptions during preteleport.",
@@ -269,11 +270,6 @@ class server ( threading.Thread ):
         self.framework.console.say ( "Drop on death: everything. Drop on exit: nothing." )
         #self.framework.console.say ( "Player killers are automatically imprisoned." )
         
-    def console ( self, message ):
-        self.log.warning ( "deprecated console call: {}".format ( message ) )
-        self.framework.console.send ( message )
-        return
-
     def curse_player ( self, msg_origin, msg_content ):
         target = self.get_player ( msg_content [ 7 : ] )
         if target != None:
@@ -539,7 +535,7 @@ class server ( threading.Thread ):
     def give_player_stuff ( self, player, stuff, quantity ):
         msg = 'give ' + str ( player.steamid ) + ' ' + stuff + ' ' + str ( quantity )
         self.log.info ( msg )
-        self.console ( msg )
+        self.framework.console.send ( msg )
 
     def greet ( self ):
         self.framework.console.say ( "%s module %s loaded." % ( self.__class__.__name__,
@@ -892,7 +888,7 @@ class server ( threading.Thread ):
             
     def show_inventory ( self, player ):
         msg = "showinventory " + str ( player )
-        self.console ( msg )
+        self.framework.console.send ( msg )
 
     def set_steamid_online ( self, matches ):
         self.log.info ( "set steamid online {}".format ( matches [ 7 ] ) )
@@ -910,17 +906,17 @@ class server ( threading.Thread ):
                 helper = self.get_player ( key )
                 bearings = self.calculate_bearings ( origin, helper )
                 msg = 'pm %s "Go %.1fm in direction %d degrees (N is zero ) to help %s if you can!"'
-                self.console ( msg % ( helper.name_sane,
-                                       bearings [ 0 ],
-                                       bearings [ 1 ],
-                                       origin.name_sane ) )
+                self.framework.console.send ( msg % ( helper.name_sane,
+                                                      bearings [ 0 ],
+                                                      bearings [ 1 ],
+                                                      origin.name_sane ) )
 
     def spawn_player_stuff ( self,
                              steamid,
                              stuff ):
         msg = 'se ' + steamid + ' ' + str ( stuff )
         self.log.debug ( msg )
-        self.console ( msg )
+        self.framework.console.send ( msg )
 
     def stop ( self ):
         self.shutdown = True
@@ -944,7 +940,7 @@ class server ( threading.Thread ):
             msg += str ( int ( where_to [ 0 ] ) ) + " " + \
                    str ( int ( where_to [ 2 ] ) ) + " " + \
                    str ( int ( where_to [ 1 ] ) )
-        self.console ( msg )
+        self.framework.console.send ( msg )
 
     def preteleport ( self, player, where_to ):
         """

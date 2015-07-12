@@ -223,8 +223,9 @@ class game_events ( threading.Thread ):
     def player_disconnected ( self, player_disconnection_match_group ):
         player = self.framework.server.get_player ( int ( player_disconnection_match_group [ 7 ] ) )
         if not player:
-            self.log.error ( "Could not get_player from disconnected player's '{}' steamid!".format (
-                player_disconnection_match_group [ 8 ] ) )
+            self.log.error ( "Could not get_player from disconnected player's '{}' steamid {}!".format (
+                player_disconnection_match_group [ 8 ],
+                player_disconnection_match_group [ 7 ] ) )
             return
         player.online = False
         self.log.info ( "{:s} disconnected.".format ( player.name_sane ) )

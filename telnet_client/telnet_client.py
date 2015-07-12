@@ -85,6 +85,8 @@ class telnet_client ( threading.Thread ):
             line = self.telnet.read_until ( b'\n', 5 )
         except Exception as e:
             self.log.error ( "Exception in chomp: {}".format ( e ) )
+            self.log.error ( "type ( self.telnet ) == {}".format ( type ( self.telnet ) ) )
+            self.log.error ( "type ( line ) == {}".format ( type ( line ) ) )
             self.framework.shutdown = True
             return
         self.log.debug ( "chomp: no exception" )

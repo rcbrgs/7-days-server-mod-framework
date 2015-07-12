@@ -17,8 +17,9 @@ class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.3.2'
+        self.__version__ = '0.3.3'
         self.changelog = {
+            '0.3.3' : "decide_lp and footer_lp less spammy: only log if lag > loop_wait.",
             '0.3.2' : "Throttled down gt calls by limiting to 1 per loop_wait.",
             '0.3.1' : "Fixed non-existing telnet object being called.",
             '0.3.0' : "Integrated gt code here.",
@@ -305,7 +306,8 @@ class world_state ( threading.Thread ):
         if now - self.latest_gt_call < self.gt_lag * 1.5:
             self.log.debug ( "decide_gt: gt_lag ({:.2f}).".format ( self.gt_lag ) )
             return
-        self.log.info ( "decide_gt: call gt ({:.2f}).".format ( self.gt_lag ) )
+        if self.gt_lag > self.framework.preferences.loop_wait:
+            self.log.info ( "decide_gt: call gt ({:.2f}).".format ( self.gt_lag ) )
         self.latest_gt_call = now
         self.gt_lag += 1
         gt_message = self.framework.console.telnet_wrapper ( "gt" )
@@ -329,7 +331,7 @@ class world_state ( threading.Thread ):
         self.game_server.hour   = hour
         self.game_server.minute = minute
 
-        self.log.info ( "Checking for time events." )
+        self.log.debug ( "Checking for time events." )
         if ( previous_day != self.game_server.day ):
             self.framework.game_events.day_changed ( previous_day )
         if ( previous_hour != self.game_server.hour ):
@@ -340,7 +342,8 @@ class world_state ( threading.Thread ):
         self.log.info ( "Game date: {} {:02d}:{:02d}.".format ( day, hour, minute ) )
         
         self.gt_lag = time.time ( ) - self.latest_gt_call
-        self.log.info ( "gt_lag = {:.2f}s".format ( self.gt_lag ) )
+        if self.gt_lag > self.framework.preferences.loop_wait:
+            self.log.info ( "gt_lag = {:.2f}s".format ( self.gt_lag ) )
 
     def lock_gt_queue ( self ):
         callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
@@ -377,7 +380,8 @@ class world_state ( threading.Thread ):
         if now - self.latest_lp_call < self.lp_lag * 1.5:
             self.log.debug ( "decide_lp: lp_lag ({:.2f}).".format ( self.lp_lag ) )
             return
-        self.log.info ( "decide_lp: call lp ({:.2f}).".format ( self.lp_lag ) )
+        if self.lp_lag > self.framework.preferences.loop_wait:
+            self.log.info ( "decide_lp: call lp ({:.2f}).".format ( self.lp_lag ) )
         self.latest_lp_call = time.time ( )
         self.lp_lag += 1
         lp_message = self.framework.console.telnet_wrapper ( "lp" )
@@ -387,7 +391,8 @@ class world_state ( threading.Thread ):
         total = int ( matches [ 0 ] )
         if total == len ( list ( self.players.keys ( ) ) ):
             self.lp_lag = time.time ( ) - self.latest_lp_call
-            self.log.info ( "lp_lag = {:.2f}s".format ( self.lp_lag ) )
+            if self.lp_lag > self.framework.preferences.loop_wait:
+                self.log.info ( "lp_lag = {:.2f}s".format ( self.lp_lag ) )
         
     def buffer_lp ( self, matches ):
         self.log.debug ( "buffer_lp: {}.".format ( matches [ 1 ] ) )
