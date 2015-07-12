@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.48'
+        self.__version__ = '0.1.49'
         self.changelog = {
+            '0.1.49' : "Tweaked entityitem fell off the world matcher to get more data.",
             '0.1.48' : "Refactored for simplified interface with server.",
             '0.1.47' : "Made logged lagging lines less spammy.",
             '0.1.46' : "Tweaked two matchers not capturing all events.",
@@ -77,6 +78,8 @@ class parser ( threading.Thread ):
         self.telnet_output_matchers = {
             'add obs entity'       : { 'to_match' : self.match_prefix + r'INF Adding observed entity: ' +\
                                        r'[\d]+, ' + self.match_string_pos + r', [\d]+$',
+                                       'to_call'  : [ ] },
+            'AI air drop paths'    : { 'to_match' : self.match_prefix + r'INF AIAirDrop: Computed flight paths for 1 aircraft$',
                                        'to_call'  : [ ] },
             'AI night horde'       : { 'to_match' : self.match_prefix + r'INF AIDirector: Night Horde Spawn Finished \(all mobs spawned\).$',
                                        'to_call'  : [ ] },
@@ -255,8 +258,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'could not save file'  : { 'to_match' : self.match_prefix + r'ERR Could not save file \'.*\': Sharing violation on path .*$',
                                        'to_call'  : [ ] },
-            'item fell off'        : { 'to_match' : self.match_prefix + r'WRN Entity Item_[\d]+ \(EntityItem\) ' + \
-                                       r'fell off the world, id=[\d]+ pos=' + self.match_string_pos + r'$',
+            'item fell off'        : { 'to_match' : self.match_prefix + r'WRN Entity Item_([\d]+) \(EntityItem\) ' + \
+                                       r'fell off the world, id=([\d]+) pos=' + self.match_string_pos + r'$',
                                        'to_call'  : [ ] },
             'gmsg'                 : { 'to_match' : self.match_string_date + r' INF GMSG: (.*: .*)$',
                                        'to_call'  : [ self.framework.server.parse_gmsg ] },

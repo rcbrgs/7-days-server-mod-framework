@@ -20,8 +20,11 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.33'
+        self.__version__ = '0.4.36'
         self.changelog = {
+            '0.4.36' : "Fixed preteleport using wrong syntax for utils.get_coordinates.",
+            '0.4.35' : "Preteleport now handles when player disconnects.",
+            '0.4.34' : "Updated entity table to values of A12. Lol.",
             '0.4.33' : "Removed console().",
             '0.4.32' : "Removed position update from teleport, it is not its responsibility.",
             '0.4.31' : "Moved command_about out of here.",
@@ -83,8 +86,9 @@ class server ( threading.Thread ):
         self.clear_online_property = False
         self.entities = { }
         self.entity_db = {
-            'animalPig'         : { 'entityid' : 28, 'is_animal' : True  },
-            'animalRabbit'      : { 'entityid' : 27, 'is_animal' : True  },
+            'animalBear'        : { 'entityid' : 27, 'is_animal' : True  },
+            'animalPig'         : { 'entityid' : 29, 'is_animal' : True  },
+            'animalRabbit'      : { 'entityid' : 28, 'is_animal' : True  },
             'animalStag'        : { 'entityid' : 26, 'is_animal' : True  },
             'burntzombie'       : { 'entityid' : 12, 'is_animal' : False },
             'car_Blue'          : { 'entityid' : 22, 'is_animal' : False },
@@ -96,13 +100,13 @@ class server ( threading.Thread ):
             'fatzombie'         : { 'entityid' : 19, 'is_animal' : False },
             'fatzombiecop'      : { 'entityid' : 18, 'is_animal' : False },
             'hornet'            : { 'entityid' : 20, 'is_animal' : False },
+            'minibike'          : { 'entityid' : 34, 'is_animal' : False },
             'sc_General'        : { 'entityid' : 31, 'is_animal' : False },
-            'sc_MeleeWeapons'   : { 'entityid' : 30, 'is_animal' : False },
             'snowzombie01'      : { 'entityid' : 8 , 'is_animal' : False },
             'snowzombie02'      : { 'entityid' : 9 , 'is_animal' : False },
             'snowzombie03'      : { 'entityid' : 10, 'is_animal' : False },
             'spiderzombie'      : { 'entityid' : 11, 'is_animal' : False },
-            'supplyPlane'       : { 'entityid' : 29, 'is_animal' : False },
+            'supplyPlane'       : { 'entityid' : 30, 'is_animal' : False },
             'zombie01'          : { 'entityid' : 6 , 'is_animal' : False },
             'zombie02'          : { 'entityid' : 17, 'is_animal' : False },
             'zombie04'          : { 'entityid' : 1 , 'is_animal' : False },
@@ -568,7 +572,8 @@ class server ( threading.Thread ):
         while self.framework.world_state.latest_lp_call == last_lp:
             time.sleep ( 0.1 )
         for player in self.get_online_players ( ):
-            print ( self.get_player_summary ( player ) )
+            pos = self.framework.utils.get_coordinates ( player )
+            print ( "{} {}".format ( self.get_player_summary ( player ), pos ) )
 
     def mod_status ( self, msg_origin, msg_content ):
         self.greet ( )
@@ -975,41 +980,36 @@ class server ( threading.Thread ):
             prelogmsg = str ( int ( where_to [ 0 ] ) ) + " " + \
                 str ( int ( where_to [ 2 ] ) - 5 ) + " " + \
                 str ( int ( where_to [ 1 ] ) )
-        self.log.info ( "Preteleport {} ({})".format ( player.name_sane, prelogmsg ) )
+        self.log.info ( "Preteleport {} ({}) from ({} {} {}).".format ( 
+                player.name_sane, prelogmsg, player.pos_x, player.pos_y, player.pos_z ) )
         try:
             self.framework.console.send ( premsg )
         except Exception as e:
             self.log.error ( "Exception during console.send: {}".format ( premsg ) )
             return
+
         counter = 0
+        distance_threshold = 20
+        distance = distance_threshold + 1
         try:
-            while abs ( round ( self.framework.world_state.players [ player.steamid ].pos_x ) - \
-                            round ( where_to [ 0 ] ) ) > 20:
-                self.log.info ( "Preteleport sleeping due X {} diff {}.".format ( 
-                        self.framework.world_state.players [ player.steamid ].pos_x, where_to [ 0 ] ) )
+            while ( distance > distance_threshold ):
+                self.log.info ( "b4 distance calc: player = {}".format ( player ) )
+                distance = self.framework.utils.calculate_distance ( 
+                    self.framework.utils.get_coordinates ( player ), where_to )
+                self.log.info ( "Preteleport sleeping due distance {}.".format ( distance ) )
                 time.sleep ( 1 )
                 counter += 1
                 if counter > 120:
+                    self.log.warning ( "Preteleport broke after timeout." )
                     break
-        except Exception as e:
-            self.log.error ( "Error during preteleport: {}".format ( e ) )
-        try:
-            while abs ( round ( self.framework.world_state.players [ player.steamid ].pos_y ) - \
-                            round ( where_to [ 1 ] ) ) > 20:
-                self.log.info ( "Preteleport sleeping due Y {} diff {}.".format ( 
-                        self.framework.world_state.players [ player.steamid ].pos_y, where_to [ 1 ] ) )
-                time.sleep ( 1 )
-                counter += 1
-                if counter > 120:
+                if not player.online:
+                    self.log.warning ( "Preteleport broke because of player going offline." )
                     break
         except Exception as e:
             self.log.error ( "Error during preteleport: {}".format ( e ) )
 
         self.log.info ( "   teleport {} ({})".format ( player.name_sane, logmsg ) )
         self.framework.console.send ( msg )
-        #player.pos_x = where_to [ 0 ]
-        #player.pos_y = where_to [ 1 ]
-        #player.pos_z = where_to [ 2 ]
         player.latest_teleport = { }
         player.latest_teleport [ 'timestamp' ] = time.time ( )
         player.latest_teleport [ 'position' ] = where_to

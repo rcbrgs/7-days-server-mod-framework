@@ -215,6 +215,7 @@ class orchestrator ( threading.Thread ):
                 self.console.say ( "Mod %s updated to %s: %s" %
                                    ( str ( component ), str ( new_version ),
                                      str ( self.framework_state [ component ] [ 'changelog' ] ) ) )
+        self.console.say ( "Mods up." )
             
     def get_db_lock ( self ):
         callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
@@ -290,6 +291,7 @@ class orchestrator ( threading.Thread ):
         
     def stop ( self ):
         self.log.info ( "framework.stop" )
+        self.console.say ( "Mods going down." )
         if self.shutdown:
             self.log.setLevel ( logging.DEBUG )
         pickle_file = open ( self.preferences.framework_state_file, 'wb' )

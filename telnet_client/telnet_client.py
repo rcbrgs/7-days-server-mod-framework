@@ -12,8 +12,9 @@ class telnet_client ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.5'
+        self.__version__ = '0.2.6'
         self.changelog = {
+            '0.2.6' : "Refactored chomp to use regex to try to get rid of gt timeouts.",
             '0.2.5' : "Improved treating 0 socket write exception.",
             '0.2.4' : "Silenced spammy loggings.",
             '0.2.3' : "Fixed logging time outs incorrectly.",
@@ -27,7 +28,9 @@ class telnet_client ( threading.Thread ):
             '0.1.0' : "Initial commit." }
         self.daemon = True
         self.framework = framework
-        
+
+        self.output_matchers = [ re.compile ( b'^.*\n' ),
+                                 re.compile ( b'^Day [\d]+, [\d]{2}:[\d]{2} ' ) ]
         self.matchers = { }
         self.shutdown = False
         self.parsers = [ parser ( framework ) ]
@@ -46,8 +49,8 @@ class telnet_client ( threading.Thread ):
     def run ( self ):
         while not self.shutdown:
             if not self.check_connection ( ):
-                self.log.error ( "run: check_connection if False, shutting down." )
-                self.shutdown = True
+                self.log.error ( "run: check_connection is False, shutting down." )
+                self.stop ( )
                 continue
 
             line = self.chomp ( )
@@ -82,11 +85,16 @@ class telnet_client ( threading.Thread ):
     def chomp ( self ):
         self.log.debug ( "chomp() started" )
         try:
-            line = self.telnet.read_until ( b'\n', 5 )
+            result = self.telnet.expect ( self.output_matchers, 5 )
+            if len ( result ) == 3:
+                line = result [ 2 ]
+                if result [ 0 ] == 1:
+                    self.log.debug ( "Appending newline to normalize gt telnet output." )
+                    line += b'\n'
         except Exception as e:
             self.log.error ( "Exception in chomp: {}".format ( e ) )
             self.log.error ( "type ( self.telnet ) == {}".format ( type ( self.telnet ) ) )
-            self.log.error ( "type ( line ) == {}".format ( type ( line ) ) )
+            #self.log.error ( "type ( line ) == {}".format ( type ( line ) ) )
             self.framework.shutdown = True
             return
         self.log.debug ( "chomp: no exception" )
