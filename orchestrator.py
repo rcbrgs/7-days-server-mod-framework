@@ -13,8 +13,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.5.4'
+        self.__version__ = '0.5.5'
         self.changelog = {
+            '0.5.5' : "Removed le calls.",
             '0.5.4' : "Removed initial call to offline_players.",
             '0.5.3' : "Instead of calling offline_players ever 100 cycles, call offline_lagged_players all cycles.",
             '0.5.2' : "Cleanup for new lp cycle.",
@@ -37,14 +38,6 @@ class orchestrator ( threading.Thread ):
             '0.2.1' : "Fixing errors regarding self.mods change.",
             '0.2.0' : "Changed self.mods to be a dict, and output changelog during updates." }
 
-        self.le_info = {
-            'sent'      : { 'condition' : False,
-                            'timestamp' : 0 },
-            'executing' : { 'condition' : False,
-                            'timestamp' : 0 },
-            'parsed'    : { 'condition' : False,
-                            'timestamp' : 0 },
-            }
         self.pm_info = {
             'enqueueing' : { 'condition' : True,
                             'timestamp' : 0 },
@@ -58,7 +51,6 @@ class orchestrator ( threading.Thread ):
             }
 
         self.db_lock = None
-        self.ent_lock = None
         self.framework_state = None
         self.items_lock = None
         self.load_time = time.time ( )
@@ -105,10 +97,10 @@ class orchestrator ( threading.Thread ):
                             
                 self.log.debug ( "Asking server for updates." )
                 now = time.time ( )
-                if now - self.world_state.le_timestamp > self.preferences.loop_wait:
-                    pass
-                    self.world_state.le_timestamp = now
-                    self.console.le ( )
+                #if now - self.world_state.le_timestamp > self.preferences.loop_wait:
+                #    pass
+                #    self.world_state.le_timestamp = now
+                #    self.console.le ( )
                 if now - self.world_state.llp_timestamp > self.preferences.loop_wait * 100:
                     self.world_state.llp_timestamp = now
                     self.console.llp ( )
@@ -292,8 +284,6 @@ class orchestrator ( threading.Thread ):
     def stop ( self ):
         self.log.info ( "framework.stop" )
         self.console.say ( "Mods going down." )
-        if self.shutdown:
-            self.log.setLevel ( logging.DEBUG )
         pickle_file = open ( self.preferences.framework_state_file, 'wb' )
         pickle.dump ( self.framework_state, pickle_file, pickle.HIGHEST_PROTOCOL )
 

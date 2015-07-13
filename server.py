@@ -136,11 +136,17 @@ class server ( threading.Thread ):
         self.external_commands = [ 'restart' ]
         self.framework = framework
         self.help_items = {
+            'democracy' : ( "Honestly, the admins cannot be online all the time. So veteran"
+                            " players can create proposals and vote on those proposals, "
+                            "regarding punishing players." ),
             'karma' : ( "Karma is a measure of how much we trust you, the player."
                         " You gain 1 karma per hour played. You spend karma to teleport,"
                         " sethome, and other actions." ),
             'night' : ( "Night is when zombies run and you hide. In this server"
                         " it happens between 0h and 6h." ),
+            'prison' : ( "Or swiss prison will rehabilitate you: if you try to invade bases,"
+                         " you go to prison, to meditate on your evil ways. If you kill another"
+                         " player, you fo to prison, until we decide you can go outside your cage." ),
             'shop'  : ( "The shop is run by a mighty Ogre. Possible exits are N, E and SE." ),
             }
             
@@ -577,7 +583,13 @@ class server ( threading.Thread ):
         for player in self.get_online_players ( ):
             pos = self.framework.utils.get_coordinates ( player )
             pos_string = "({: >5.0f} {: >5.0f} {: >4.0f})".format ( pos [ 0 ], pos [ 1 ], pos [ 2 ] )
-            print ( "{} {}".format ( self.get_player_summary ( player ), pos_string ) )
+            pos_mod = ""
+            if len ( player.positions ) > 1:
+                diff_x = player.pos_x - player.positions [ -2 ] [ 0 ]
+                diff_y = player.pos_y - player.positions [ -2 ] [ 1 ]
+                diff_z = player.pos_z - player.positions [ -2 ] [ 2 ]
+                pos_mod = "({: >3.0f} {: >3.0f} {: >3.0f})".format ( diff_x, diff_y, diff_z )
+            print ( "{} {} {}".format ( self.get_player_summary ( player ), pos_string, pos_mod ) )
 
     def mod_status ( self, msg_origin, msg_content ):
         self.greet ( )
@@ -1008,7 +1020,7 @@ class server ( threading.Thread ):
                 self.log.debug ( "b4 distance calc: player = {}".format ( player ) )
                 distance = self.framework.utils.calculate_distance ( 
                     ( player.pos_x, player.pos_y ), ( where_to [ 0 ], where_to [ 1 ] ) )
-                self.log.info ( "Preteleport sleeping due distance {:.1f} from {} to {}.".format ( 
+                self.log.debug ( "Preteleport sleeping due distance {:.1f} from {} to {}.".format ( 
                         distance, self.framework.utils.get_coordinates ( player ), where_to ) )
                 time.sleep ( 1 )
                 counter += 1

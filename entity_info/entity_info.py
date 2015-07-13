@@ -6,6 +6,7 @@ class entity_info ( object ):
         self.pos_y = None
         self.pos_z = None
         self.rot_x = None
+        self.rot_y = None
         self.rot_z = None
         self.lifetime = None
         self.remote = None

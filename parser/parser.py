@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.49'
+        self.__version__ = '0.1.50'
         self.changelog = {
+            '0.1.50' : "Refactored to use new entity loop.",
             '0.1.49' : "Tweaked entityitem fell off the world matcher to get more data.",
             '0.1.48' : "Refactored for simplified interface with server.",
             '0.1.47' : "Made logged lagging lines less spammy.",
@@ -315,12 +316,12 @@ class parser ( threading.Thread ):
             'le command executing' : { 'to_match' : self.match_string_date + \
                                        r' INF Executing command \'le\' by Telnet from ' + \
                                        self.match_string_ip + ':([\d]+)',
-                                       'to_call'  : [ self.command_le_executing_parser ] },
+                                       'to_call'  : [ ] },
             'le output'            : { 'to_match' : r'^[\d]+\. id=([\d]+), \[type=[\w]+, name=(.*),' +\
                                        r' id=[\d]+\], pos=' + self.match_string_pos + r', rot=' + \
                                        self.match_string_pos + r', lifetime=(.*), remote=([\w]+),' + \
                                        r' dead=([\w]+), health=([\d]+)',
-                                       'to_call'  : [ self.command_le_output_parser ] },
+                                       'to_call'  : [ self.framework.world_state.buffer_le ] },
             'le item output'       : { 'to_match' : r'^[\d]+\. id=([\d]+), Item_[\d]+ \(EntityItem\), ' + \
                                        r'pos=' + self.match_string_pos + r', rot=' + \
                                        self.match_string_pos + r', lifetime=(.*), remote=([\w])+,' + \
@@ -567,16 +568,6 @@ class parser ( threading.Thread ):
         self.unlock_queue ( )
 
     # \API
-
-    def command_le_output_parser ( self, match ):
-        self.log.debug ( str ( match ) )
-        self.framework.server.update_le ( match )
-
-    def command_le_executing_parser ( self, match ):
-        if self.framework.preferences.mod_ip == match [ 7 ]:
-            self.framework.le_info [ 'executing' ] [ 'condition' ] = True
-            self.framework.le_info [ 'executing' ] [ 'timestamp' ] = time.time ( )
-            self.log.debug ( 'le executing' )
 
     def command_lp_output_parser ( self, match ):
         self.log.debug ( str ( match ) )

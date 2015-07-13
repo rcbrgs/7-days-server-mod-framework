@@ -17,8 +17,9 @@ class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.3.3'
+        self.__version__ = '0.4.0'
         self.changelog = {
+            '0.4.0' : "Moved entity info to here.",
             '0.3.3' : "decide_lp and footer_lp less spammy: only log if lag > loop_wait.",
             '0.3.2' : "Throttled down gt calls by limiting to 1 per loop_wait.",
             '0.3.1' : "Fixed non-existing telnet object being called.",
@@ -66,6 +67,15 @@ class world_state ( threading.Thread ):
         self.latest_gt_call = 0
         self.gt_lag = 0.1
 
+        # le
+        self.entities = { }
+        self.le_queue = [ ]
+        self.le_queue_lock = { 'callee'    : None,
+                               'timeout'   : 10,
+                               'timestamp' : None }
+        self.latest_le_call = 0
+        self.le_lag = 0.1
+
         # list players
         self.players = { }
         self.lp_queue = [ ]
@@ -79,11 +89,18 @@ class world_state ( threading.Thread ):
         while not self.shutdown:
             time.sleep ( 0.01 )
 
-            while ( len ( self.lp_queue ) ) > 0:
+            if len ( self.lp_queue ) > 0:
                 self.dequeue_lp ( )
+            else:
+                self.prune_players ( )
+                self.decide_lp ( )
 
-            self.prune_players ( )
-            self.decide_lp ( )
+            if len ( self.le_queue ) > 0:
+                self.dequeue_le ( )
+            else:
+                self.prune_entities ( )
+                self.decide_le ( )
+
             self.decide_gt ( )
 
     def stop ( self ):
@@ -368,6 +385,94 @@ class world_state ( threading.Thread ):
         lock [ 'callee'    ] = None
         lock [ 'timestamp' ] = None
 
+    # le
+
+    def decide_le ( self ):
+        self.lock_le_queue ( )
+        current_length = len ( self.le_queue )
+        self.unlock_le_queue ( )
+        if current_length > 0:
+            return
+        now = time.time ( )
+        if now - self.latest_le_call < self.le_lag * 1.5:
+            self.log.debug ( "decide_le: le_lag ({:.2f}).".format ( self.le_lag ) )
+            return
+        if self.le_lag > self.framework.preferences.loop_wait:
+            self.log.info ( "decide_le: call le ({:.2f}).".format ( self.le_lag ) )
+        self.latest_le_call = time.time ( )
+        self.le_lag += 1
+        le_message = self.framework.console.telnet_wrapper ( "le" )
+        self.framework.console.telnet_client_le.write ( le_message )
+
+    def buffer_le ( self, matches ):
+        self.log.debug ( "buffer_le: {}.".format ( matches ) )
+        new_le = framework.entity_info ( )
+        new_le.entity_id = int ( matches [ 0 ] )
+        new_le.entity_type = matches [ 1 ]
+        new_le.pos_x = matches [ 2 ]
+        new_le.pos_y = matches [ 4 ]
+        new_le.pos_z = matches [ 3 ]
+        new_le.rot_x = matches [ 5 ]
+        new_le.rot_y = matches [ 7 ]
+        new_le.rot_z = matches [ 6 ]
+        new_le.lifetime = matches [ 8 ]
+        new_le.remote = matches [ 9 ]
+        new_le.dead = matches [ 10 ]
+        new_le.health = int ( matches [ 11 ] )
+        new_le.timestamp = time.time ( )
+        self.enqueue_le ( new_le )
+        
+    def enqueue_le ( self, le_data ):
+        self.log.debug ( "enqueue_le: {}.".format ( le_data.entity_type ) )
+        self.lock_le_queue ( )
+        self.le_queue.append ( le_data )
+        self.unlock_le_queue ( )
+
+    def dequeue_le ( self ):
+        self.lock_le_queue ( )
+        le_data = None
+        if len ( self.le_queue ) > 0:
+            le_data = self.le_queue.pop ( )
+        self.unlock_le_queue ( )
+        if le_data:
+            self.log.debug ( "dequeue_le: {}.".format ( le_data.entity_type ) )
+            self.process_le ( le_data )
+
+    def process_le ( self, le_data ):
+        self.entities [ le_data.entity_id ] = le_data
+
+    def prune_entities ( self ):
+        to_delete = [ ]
+        for entityid in list ( self.entities.keys ( ) ):
+            if self.entities [ entityid ].timestamp < time.time ( ) - 120:
+                to_delete.append ( entityid )
+        for entityid in to_delete:
+            del self.entities [ entityid ]
+        
+    def lock_le_queue ( self ):
+        callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        lock = self.le_queue_lock
+        now = time.time ( )
+        
+        while ( lock [ 'callee' ] ):
+            if ( now - lock [ 'timestamp' ] > lock [ 'timeout' ] ):
+                self.log.error ( "Breaking lock due to timeout!" )
+                break
+            time.sleep ( 0.1 )
+              
+        lock [ 'callee'    ] = callee_function
+        lock [ 'timestamp' ] = now
+
+    def unlock_le_queue ( self ):
+        callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
+        lock = self.le_queue_lock
+        
+        if lock [ 'callee' ] != callee_function:
+            self.log.error ( "Lock being freed by another function than callee!" )
+        lock [ 'callee'    ] = None
+        lock [ 'timestamp' ] = None
+
+
     # Player info related:
 
     def decide_lp ( self ):
@@ -389,10 +494,16 @@ class world_state ( threading.Thread ):
 
     def footer_lp ( self, matches ):
         total = int ( matches [ 0 ] )
-        if total == len ( list ( self.players.keys ( ) ) ):
+        num_players = len ( list ( self.players.keys ( ) ) )
+        num_entities = len ( list ( self.entities.keys ( ) ) )
+        if total > num_players - 2 and total < num_players + 2:
             self.lp_lag = time.time ( ) - self.latest_lp_call
             if self.lp_lag > self.framework.preferences.loop_wait:
                 self.log.info ( "lp_lag = {:.2f}s".format ( self.lp_lag ) )
+        if total > num_entities - 5 and total < num_entities + 5:
+            self.le_lag = time.time ( ) - self.latest_le_call
+            if self.le_lag > self.framework.preferences.loop_wait:
+                self.log.info ( "le_lag = {:.2f}s".format ( self.le_lag ) )
         
     def buffer_lp ( self, matches ):
         self.log.debug ( "buffer_lp: {}.".format ( matches [ 1 ] ) )
