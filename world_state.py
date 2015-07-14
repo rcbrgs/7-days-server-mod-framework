@@ -283,7 +283,7 @@ class world_state ( threading.Thread ):
         self.framework.console.send ( "si {}".format ( player.steamid ) )
 
     def update_inventory ( self, matches ):
-        self.log.info ( "update inventory ( {} )".format ( matches ) )
+        self.log.debug ( "update inventory ( {} )".format ( matches ) )
         if len ( matches ) == 2:
             player = self.framework.server.get_player ( matches [ 1 ] )
             if not player:
