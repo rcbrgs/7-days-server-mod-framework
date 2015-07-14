@@ -17,8 +17,9 @@ class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.3'
+        self.__version__ = '0.4.4'
         self.changelog = {
+            '0.4.4' : "Handler for exception on possible race condition.",
             '0.4.3' : "Tweaked gt lag.",
             '0.4.2' : "Tweaked le_lag and lp_lag calculations and default values.",
             '0.4.1' : "Refactored le and lp lags to be more inertial on their adjustment.",
@@ -452,9 +453,12 @@ class world_state ( threading.Thread ):
         now = time.time ( )
         
         while ( lock [ 'callee' ] ):
-            if ( now - lock [ 'timestamp' ] > lock [ 'timeout' ] ):
-                self.log.error ( "Breaking lock due to timeout!" )
-                break
+            try:
+                if ( now - lock [ 'timestamp' ] > lock [ 'timeout' ] ):
+                    self.log.error ( "Breaking lock due to timeout!" )
+                    break
+            except:
+                self.log.info ( "lock callee exists but not timestamp." )
             time.sleep ( 0.1 )
               
         lock [ 'callee'    ] = callee_function

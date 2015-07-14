@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.51'
+        self.__version__ = '0.1.52'
         self.changelog = {
+            '0.1.52' : "+Matcher for server: any header.",
             '0.1.51' : "Added matcher for web static not found.",
             '0.1.50' : "Refactored to use new entity loop.",
             '0.1.49' : "Tweaked entityitem fell off the world matcher to get more data.",
@@ -278,6 +279,8 @@ class parser ( threading.Thread ):
             'header  2'            : { 'to_match' : r'^\*\*\* Dedicated server only build$',
                                        'to_call'  : [ ] },
             'header  3'            : { 'to_match' : r'^Server IP:   ' + self.match_string_ip + r'$',
+                                       'to_call'  : [ ] },
+            'header server ip any' : { 'to_match' : r'^Server IP:   Any$',
                                        'to_call'  : [ ] },
             'header  4'            : { 'to_match' : r'^Server port: [\d]+$',
                                        'to_call'  : [ ] },
