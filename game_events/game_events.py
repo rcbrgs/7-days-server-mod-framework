@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.5"
+        self.__version__ = "0.3.6"
         self.changelog = {
+            '0.3.6'  : "Use preferences' rank url and message instead of hardcoded values.",
             '0.3.5'  : "Refactor for gt in world_state.",
             '0.3.4'  : "100 kills prize is at least 100 now.",
             '0.3.3'  : "Refactoring 100 kills prize to get it to randomize.",
@@ -108,7 +109,8 @@ class game_events ( threading.Thread ):
         position = self.framework.rank.current_rank
         self.log.info ( "position = {}".format ( position ) )
         if position != -1:
-            self.framework.console.say ( "Please vote for our server on http://7daystodie-servers.com/server/14698. We are currently # {} on the rank! Also, you gain 200$+1k per vote.".format ( position ) )
+            self.framework.console.say ( self.framework.preferences.rank_msg )
+            self.framework.console.say ( self.framework.preferences.rank_url )
 
         self.log.info ( "Calling shop.increase_stock ( )" )
         if 'shop' in list ( self.framework.mods.keys ( ) ):

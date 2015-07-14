@@ -5,8 +5,9 @@ class preferences ( object ):
     def __init__ ( self, preferences_file_name ):
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.2'
+        self.__version__ = '0.1.3'
         self.changelog = {
+            '0.1.3' : "Added rank url and message variables.",
             '0.1.2' : "Added mod_ip attribute.",
             '0.1.1' : "Added support for framework state file." }
         
@@ -25,6 +26,8 @@ class preferences ( object ):
             self.mod_ip = ""
             self.mods = { }
             self.player_info_file = ""
+            self.rank_url = ""
+            self.rank_message = ""
             self.teleport_lag_cushion = 3
             self.telnet_ip = ""
             self.telnet_password = ""
@@ -99,6 +102,14 @@ class preferences ( object ):
                     self.prisoners_file = splitted [ 1 ].strip ( ).encode ( 'unicode-escape' )
                 continue
 
+            if ( left_hand == "rank_url" ):
+                self.rank_url = splitted [ 1 ].strip ( )
+                continue
+            
+            if ( left_hand == "rank_message" ):
+                self.rank_message = splitted [ 1 ].strip ( )
+                continue
+            
             if ( left_hand == "teleport_lag_cushion" ):
                 self.teleport_lag_cushion = int ( splitted [ 1 ].strip ( ) )
                 continue
@@ -160,6 +171,8 @@ class preferences ( object ):
         self.log.info ( "mod_ip = %s" % str ( self.mod_ip ) )
         self.log.info ( "mods = %s" % str ( self.mods ) )
         self.log.info ( "player_info_file = %s" % ( self.player_info_file ) )
+        self.log.info ( "rank_url = %s" % ( self.rank_url ) )
+        self.log.info ( "rank_message = %s" % ( self.rank_message ) )
         self.log.info ( "teleport_lag_cushion = %d" % self.teleport_lag_cushion )
         self.log.info ( "telnet_ip = %s" % ( self.telnet_ip ) )
         #print ( "telnet_password = %s" % ( self.telnet_password ) )
