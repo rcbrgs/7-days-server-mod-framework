@@ -17,23 +17,13 @@ class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.0'
+        self.__version__ = '0.4.3'
         self.changelog = {
+            '0.4.3' : "Tweaked gt lag.",
+            '0.4.2' : "Tweaked le_lag and lp_lag calculations and default values.",
+            '0.4.1' : "Refactored le and lp lags to be more inertial on their adjustment.",
             '0.4.0' : "Moved entity info to here.",
-            '0.3.3' : "decide_lp and footer_lp less spammy: only log if lag > loop_wait.",
-            '0.3.2' : "Throttled down gt calls by limiting to 1 per loop_wait.",
-            '0.3.1' : "Fixed non-existing telnet object being called.",
-            '0.3.0' : "Integrated gt code here.",
-            '0.2.8' : "Simplified interface by removing unnecessary lock.",
-            '0.2.7' : "Added mem and gt stuff here.",
-            '0.2.6' : "Added lp_lag logging.",
-            '0.2.5' : "Loosened lp cycle from 110 to 150% of lag estimation due to occasional lp storm.",
-            '0.2.4' : "Added stop method.",
-            '0.2.3' : "Fixed typo on get_inventory.",
-            '0.2.2' : "Put lp in world state control.",
-            '0.2.1' : "lp call cycle setup.",
-            '0.2.0' : "Initial work for lp info.",
-            '0.1.1' : "Added blocking_get_inventory." }
+            }
         self.daemon = True
         self.framework = framework
         self.shutdown = False
@@ -53,6 +43,7 @@ class world_state ( threading.Thread ):
         self.inventory_lock = { 'callee'    : None,
                                 'timeout'   : 10,
                                 'timestamp' : None }
+        self.inventory_wrong_spawns = [ ]
 
         now = time.time ( )
         self.llp_timestamp = 0
@@ -65,7 +56,7 @@ class world_state ( threading.Thread ):
                                'timeout'   : 10,
                                'timestamp' : None }
         self.latest_gt_call = 0
-        self.gt_lag = 0.1
+        self.gt_lag = 10
 
         # le
         self.entities = { }
@@ -74,7 +65,7 @@ class world_state ( threading.Thread ):
                                'timeout'   : 10,
                                'timestamp' : None }
         self.latest_le_call = 0
-        self.le_lag = 0.1
+        self.le_lag = 20
 
         # list players
         self.players = { }
@@ -83,7 +74,7 @@ class world_state ( threading.Thread ):
                                'timeout'   : 10,
                                'timestamp' : None }
         self.latest_lp_call = 0
-        self.lp_lag = 0.1
+        self.lp_lag = 5
 
     def run ( self ):
         while not self.shutdown:
@@ -235,8 +226,8 @@ class world_state ( threading.Thread ):
         self.request_inventory ( player )
         while self.inventory [ 'checking' ]:
             self.log.info ( "Waiting for si to complete..." )
-            time.sleep ( 1 )
-            if time.time ( ) - timestamp > 10:
+            time.sleep ( 2 )
+            if time.time ( ) - timestamp > 6:
                 break
         inventory = self.inventory
         self.let_inventory ( )
@@ -260,6 +251,14 @@ class world_state ( threading.Thread ):
                 
     # /API
         
+    def buffer_shop_item ( self, matches ):
+        self.log.info ( matches )
+        pos_x = float ( matches [ 10 ] )
+        pos_y = float ( matches [ 12 ] )
+        pos_z = float ( matches [ 11 ] )
+        self.log.info ( "Wrong spawn item at ({} {} {}).".format ( pos_x, pos_y, pos_z ) )
+        self.inventory_wrong_spawns.append ( ( pos_x, pos_y, pos_z ) )
+
     def get_inventory ( self ):
         callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         now = time.time ( )
@@ -318,15 +317,10 @@ class world_state ( threading.Thread ):
         if current_length > 0:
             return
         now = time.time ( )
-        if now - self.latest_gt_call < self.framework.preferences.loop_wait:
-            return
-        if now - self.latest_gt_call < self.gt_lag * 1.5:
+        if now - self.latest_gt_call < self.gt_lag:
             self.log.debug ( "decide_gt: gt_lag ({:.2f}).".format ( self.gt_lag ) )
             return
-        if self.gt_lag > self.framework.preferences.loop_wait:
-            self.log.info ( "decide_gt: call gt ({:.2f}).".format ( self.gt_lag ) )
         self.latest_gt_call = now
-        self.gt_lag += 1
         gt_message = self.framework.console.telnet_wrapper ( "gt" )
         self.framework.console.telnet_client_commands.write ( gt_message )
 
@@ -357,9 +351,15 @@ class world_state ( threading.Thread ):
         self.game_server.gt = ( new_gt, now )
 
         self.log.info ( "Game date: {} {:02d}:{:02d}.".format ( day, hour, minute ) )
-        
-        self.gt_lag = time.time ( ) - self.latest_gt_call
-        if self.gt_lag > self.framework.preferences.loop_wait:
+
+        old_lag = self.gt_lag
+        new_lag = time.time ( ) - self.latest_gt_call
+        if new_lag > old_lag:
+            self.gt_lag += 0.1
+        if new_lag < old_lag:
+            self.gt_lag -= 0.1
+        self.gt_lag = max ( self.gt_lag, self.framework.preferences.loop_wait )
+        if self.gt_lag != old_lag:
             self.log.info ( "gt_lag = {:.2f}s".format ( self.gt_lag ) )
 
     def lock_gt_queue ( self ):
@@ -394,13 +394,10 @@ class world_state ( threading.Thread ):
         if current_length > 0:
             return
         now = time.time ( )
-        if now - self.latest_le_call < self.le_lag * 1.5:
+        if now - self.latest_le_call < self.le_lag:
             self.log.debug ( "decide_le: le_lag ({:.2f}).".format ( self.le_lag ) )
             return
-        if self.le_lag > self.framework.preferences.loop_wait:
-            self.log.info ( "decide_le: call le ({:.2f}).".format ( self.le_lag ) )
         self.latest_le_call = time.time ( )
-        self.le_lag += 1
         le_message = self.framework.console.telnet_wrapper ( "le" )
         self.framework.console.telnet_client_le.write ( le_message )
 
@@ -482,13 +479,10 @@ class world_state ( threading.Thread ):
         if current_length > 0:
             return
         now = time.time ( )
-        if now - self.latest_lp_call < self.lp_lag * 1.5:
+        if now - self.latest_lp_call < self.lp_lag:
             self.log.debug ( "decide_lp: lp_lag ({:.2f}).".format ( self.lp_lag ) )
             return
-        if self.lp_lag > self.framework.preferences.loop_wait:
-            self.log.info ( "decide_lp: call lp ({:.2f}).".format ( self.lp_lag ) )
         self.latest_lp_call = time.time ( )
-        self.lp_lag += 1
         lp_message = self.framework.console.telnet_wrapper ( "lp" )
         self.framework.console.telnet_client_lp.write ( lp_message )
 
@@ -497,13 +491,26 @@ class world_state ( threading.Thread ):
         num_players = len ( list ( self.players.keys ( ) ) )
         num_entities = len ( list ( self.entities.keys ( ) ) )
         if total > num_players - 2 and total < num_players + 2:
-            self.lp_lag = time.time ( ) - self.latest_lp_call
-            if self.lp_lag > self.framework.preferences.loop_wait:
-                self.log.info ( "lp_lag = {:.2f}s".format ( self.lp_lag ) )
+            old_lag = self.lp_lag
+            new_lag = time.time ( ) - self.latest_lp_call
+            if new_lag > self.lp_lag:
+                self.lp_lag += 0.1
+            if new_lag < self.lp_lag:
+                self.lp_lag -= 0.1
+            self.lp_lag = max ( self.lp_lag, self.framework.preferences.loop_wait )
+            if self.lp_lag != old_lag:
+                self.log.info ( "lp_lag = {:.1f}s".format ( self.lp_lag ) )
         if total > num_entities - 5 and total < num_entities + 5:
-            self.le_lag = time.time ( ) - self.latest_le_call
-            if self.le_lag > self.framework.preferences.loop_wait:
-                self.log.info ( "le_lag = {:.2f}s".format ( self.le_lag ) )
+            self.log.debug ( "footer le" )
+            old_lag = self.le_lag
+            new_lag = time.time ( ) - self.latest_le_call
+            if new_lag > self.le_lag:
+                self.le_lag += 0.1
+            if new_lag < self.le_lag:
+                self.le_lag -= 0.1
+            self.le_lag = max ( self.le_lag, self.framework.preferences.loop_wait )
+            if self.le_lag != old_lag:
+                self.log.info ( "le_lag = {:.1f}s".format ( self.le_lag ) )
         
     def buffer_lp ( self, matches ):
         self.log.debug ( "buffer_lp: {}.".format ( matches [ 1 ] ) )

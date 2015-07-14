@@ -13,41 +13,15 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.5.5'
+        self.__version__ = '0.5.6'
         self.changelog = {
+            '0.5.6' : "Cleanup le and pm stuff.",
             '0.5.5' : "Removed le calls.",
             '0.5.4' : "Removed initial call to offline_players.",
             '0.5.3' : "Instead of calling offline_players ever 100 cycles, call offline_lagged_players all cycles.",
             '0.5.2' : "Cleanup for new lp cycle.",
             '0.5.1' : "Added header to status.",
             '0.5.0' : "Added status() to call each telnet's status().",
-            '0.4.3' : "After shutdown sequence, logging level goes to debug.",
-            '0.4.2' : "Soft shutdown refactor, using a more systematic approach.",
-            '0.4.1' : "Added a framework.rank object to scrape 7daystodie-servers.com. Initial work on soft shutdown for components.",
-            '0.4.0' : "Major refactor to use multiple telnets and parsers.",
-            '0.3.8' : "Separated send and list channels. Makes sense; who talks through their ears?",
-            '0.3.7' : "Reverted to reliable non-self-healing version.",
-            '0.3.6' : "Extended with utils module. Added db_lock functionality.",
-            '0.3.5' : "Linked with game events.",
-            '0.3.4' : "Only call lp if needed.",
-            '0.3.3' : "Do not call module when module reload fails.",
-            '0.3.2' : "Let players know when mods go up or down.",
-            '0.3.1' : "Framework state will now save and output changelog.",
-            '0.3.0' : "Added support for saving the framework state.",
-            '0.2.2' : "Increased interval between offline_all_players calls, because everything is racing this.",
-            '0.2.1' : "Fixing errors regarding self.mods change.",
-            '0.2.0' : "Changed self.mods to be a dict, and output changelog during updates." }
-
-        self.pm_info = {
-            'enqueueing' : { 'condition' : True,
-                            'timestamp' : 0 },
-            'sending'    : { 'condition' : False,
-                            'timestamp' : 0 },
-            'executing'  : { 'condition' : False,
-                            'timestamp' : 0 },
-            'parsed'     : { 'condition' : False,
-                            'timestamp' : 0 },
-            'lag'        : 0
             }
 
         self.db_lock = None
@@ -97,10 +71,6 @@ class orchestrator ( threading.Thread ):
                             
                 self.log.debug ( "Asking server for updates." )
                 now = time.time ( )
-                #if now - self.world_state.le_timestamp > self.preferences.loop_wait:
-                #    pass
-                #    self.world_state.le_timestamp = now
-                #    self.console.le ( )
                 if now - self.world_state.llp_timestamp > self.preferences.loop_wait * 100:
                     self.world_state.llp_timestamp = now
                     self.console.llp ( )
@@ -207,7 +177,7 @@ class orchestrator ( threading.Thread ):
                 self.console.say ( "Mod %s updated to %s: %s" %
                                    ( str ( component ), str ( new_version ),
                                      str ( self.framework_state [ component ] [ 'changelog' ] ) ) )
-        self.console.say ( "Mods up." )
+        #self.console.say ( "Mods up." )
             
     def get_db_lock ( self ):
         callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
@@ -222,25 +192,10 @@ class orchestrator ( threading.Thread ):
         self.db_lock = callee_class + "." + callee
         self.log.debug ( "{:s} get player db lock.".format ( callee ) )
 
-    def get_ent_lock ( self ):
-        callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
-        callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
-        while self.ent_lock:
-            self.log.info ( "{}.{} wants entities db lock from {}.".format (
-                callee_class, callee, self.ent_lock ) )
-            time.sleep ( 0.6 )
-        self.ent_lock = callee_class + "." + callee
-        self.log.debug ( "{:s} get entities db lock.".format ( callee ) )
-
     def let_db_lock ( self ):
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
         self.db_lock = None
         self.log.debug ( "{:s} let player db lock.".format ( callee ) )
-
-    def let_ent_lock ( self ):
-        callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
-        self.ent_lock = None
-        self.log.debug ( "{:s} let entities db lock.".format ( callee ) )
 
     def load_mod ( self, module_name ):
         full_module_name = module_name + "." + module_name
@@ -269,6 +224,9 @@ class orchestrator ( threading.Thread ):
                          module_name )
         return mod_instance
 
+    def quiet_listener ( self, matches ):
+        self.telnet.write ( self.console.telnet_wrapper ( "loglevel ERR False" ) )
+
     def status ( self ):
         self.log.info ( "telnet listener status:" )
         self.telnet.status ( )
@@ -283,7 +241,7 @@ class orchestrator ( threading.Thread ):
         
     def stop ( self ):
         self.log.info ( "framework.stop" )
-        self.console.say ( "Mods going down." )
+        #self.console.say ( "Mods going down." )
         pickle_file = open ( self.preferences.framework_state_file, 'wb' )
         pickle.dump ( self.framework_state, pickle_file, pickle.HIGHEST_PROTOCOL )
 

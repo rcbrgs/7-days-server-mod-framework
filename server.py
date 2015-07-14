@@ -509,7 +509,7 @@ class server ( threading.Thread ):
             len ( player.player_kills_explanations ),
             player.karma,
             player.cash,
-            player.zombies, )
+            player.zombies )
         return player_line
         
     def get_random_entity ( self ):
@@ -628,6 +628,8 @@ class server ( threading.Thread ):
         online_players = self.get_online_players ( )
         self.framework.get_db_lock ( )
         for player in online_players:
+            if not player.timestamp_latest_update:
+                player.timestamp_latest_update = time.time ( )
             if time.time ( ) - player.timestamp_latest_update > self.framework.world_state.lp_lag * 10:
                 player.online = False
         self.framework.let_db_lock ( )
@@ -763,7 +765,7 @@ class server ( threading.Thread ):
                 if old_minutes == 4 and new_minutes == 5:
                     events.append ( self.framework.game_events.player_can_vote )
                 if old_minutes == 9 and new_minutes == 10:
-                    events.append ( self.framework.game_events.player_can_vote )
+                    events.append ( self.framework.game_events.player_can_propose )
                     
             else:
                 player.online_time = 0
@@ -1533,4 +1535,4 @@ class server ( threading.Thread ):
     def whiner ( self, player ):
         player.cash  = round ( player.cash * 0.9 )
         player.karma = round ( player.karma * 0.9 )
-        self.framework.console.pm ( "You have been fined 10% of you cash and karma for whining." )
+        self.framework.console.pm ( player, "You have been fined 10% of you cash and karma for whining." )

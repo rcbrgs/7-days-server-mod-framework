@@ -11,15 +11,18 @@ class queued_console ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel = ( logging.INFO )
-        self.__version__ = "0.1.2"
+        self.__version__ = "0.1.3"
         self.changelog = {
+            '0.1.4' : "Fixed PM storm after sales / translations.",
+            '0.1.3' : "Move pm control here.",
             '0.1.2' : "More logging on stop().",
             '0.1.1' : "Cleanup for new lp cycle.",
             '0.1.0' : "Initial version." }
         
         self.framework = orchestrator
         self.daemon = True
-        self.le_lag = 0
+        self.pm_lag = 10
+        self.pm_latest_call = 0
         self.queue = [ ]
         self.queue_lock = None
         self.shutdown = False
@@ -131,32 +134,6 @@ class queued_console ( threading.Thread ):
         self.queue.append ( command_call )
         self.let_queue_lock ( )
 
-    def le ( self ):
-        if self.framework.le_info [ 'sent' ] [ 'condition' ]:
-            self.log.debug ( "Previous le call not yet finished." )
-            return
-        
-        old_lag = self.le_lag
-        self.le_lag = self.framework.le_info [ 'executing' ] [ 'timestamp' ] - \
-                      self.framework.le_info [ 'sent'      ] [ 'timestamp' ]
-
-        if "{:.1f}".format ( self.le_lag ) != "{:.1f}".format ( old_lag ):
-            if self.le_lag > 5:
-                self.log.info ( "le lag: {:.1f}s.".format ( self.le_lag ) )
-
-        if time.time ( ) - self.timestamp_le < self.le_lag * 1.1:
-            self.log.debug ( "le timestamp less than 1.1 * lag recent. Ignoring call for le." )
-            return
-
-        command_call = queueable_call ( )
-        command_call.function = self.le_wrapper
-        command_call.kill_timer = self.framework.preferences.loop_wait * 10
-        command_call.retirement_age = self.framework.preferences.loop_wait * 10
-        
-        self.get_queue_lock ( )
-        self.queue.append ( command_call )
-        self.let_queue_lock ( )
-
     def llp ( self ):
         self.llp_wrapper ( )
         
@@ -190,16 +167,6 @@ class queued_console ( threading.Thread ):
         self.framework.gt_info [ 'sent' ] = { 'condition' : True,
                                               'timestamp' : time.time ( ) }
 
-    def le_wrapper ( self ):
-        if self.framework.server.clear_online_property:
-            self.framework.server.entities = { }
-        
-        self.timestamp_le = time.time ( )
-        self.framework.le_info [ 'sent' ] [ 'condition' ] = True
-        self.framework.le_info [ 'sent' ] [ 'timestamp' ] = time.time ( )
-        le_message = self.telnet_wrapper ( "le" )
-        self.telnet_client_le.write ( le_message )
-
     def llp_wrapper ( self ):
         self.framework.console.send ( "llp" )
 
@@ -220,21 +187,13 @@ class queued_console ( threading.Thread ):
         self.log.debug ( "Counts differ {} != {}".format ( counter, lp_finish_matcher [ 0 ] ) )    
         
     def pm_wrapper ( self, player, message, can_fail = False, loglevel = "INFO" ):
-        first_timestamp = time.time ( )
-        while ( self.framework.pm_info [ 'sending' ] [ 'condition' ] ):
-            self.log.debug ( "Previous pm call not yet finished." )
+        now = time.time ( )
+        while ( now - self.pm_latest_call < self.pm_lag * 1.5 ):
+            time.sleep ( 0.1 )
             if can_fail:
                 return
-            time.sleep ( self.framework.pm_info [ 'lag' ] * 0.1 )
-            if ( time.time ( ) - first_timestamp ) > ( self.framework.pm_info [ 'lag' ] * 10 ):
-                self.log.warning ( "Enqueueing PM despite sent flag: {}.".format ( message ) )
-                break
+            now = time.time ( )
 
-        self.framework.pm_info [ 'enqueueing' ] [ 'condition' ] = False
-        self.framework.pm_info [ 'executing'  ] [ 'condition' ] = False
-        self.framework.pm_info [ 'sending'    ] [ 'condition' ] = True
-        self.framework.pm_info [ 'sending'    ] [ 'timestamp' ] = time.time ( )
-        
         pm_string = 'pm {} "{}"'.format ( player.steamid, message )
         pm_log_string = 'pm {} "{}"'.format ( player.name_sane, message )
         if loglevel == "INFO":
@@ -243,6 +202,7 @@ class queued_console ( threading.Thread ):
             self.log.debug ( pm_log_string )
         pm_message = self.telnet_wrapper ( pm_string )
         self.telnet_client_pm.write ( pm_message )
+        self.pm_latest_call = time.time ( )
 
     def say ( self, msg ):
         """

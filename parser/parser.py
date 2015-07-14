@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.50'
+        self.__version__ = '0.1.51'
         self.changelog = {
+            '0.1.51' : "Added matcher for web static not found.",
             '0.1.50' : "Refactored to use new entity loop.",
             '0.1.49' : "Tweaked entityitem fell off the world matcher to get more data.",
             '0.1.48' : "Refactored for simplified interface with server.",
@@ -295,7 +296,9 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'header A12'           : { 'to_match' : '\*\*\* Server version: Alpha 12 \(b56\) Compatibility Version: Alpha 12$',
                                        'to_call'  : [ ] },
-            'icon'                 : { 'to_match' : self.match_prefix + r'INF Web:IconHandler:FileNotFound: ".*"$',
+            'icon nof found'       : { 'to_match' : self.match_prefix + r'INF Web:IconHandler:FileNotFound: ".*"$',
+                                       'to_call'  : [ ] },
+            'static not found'     : { 'to_match' : self.match_prefix + r'INF Web:Static:FileNotFound: ".*" @ ".*"$',
                                        'to_call'  : [ ] },
             'instantiate'          : { 'to_match' : self.match_prefix + r'WRN InstantiateEntities: ignoring [\d]+ as it is already added\.$',
                                        'to_call'  : [ ] },
@@ -443,7 +446,7 @@ class parser ( threading.Thread ):
                                        self.match_string_pos + r' Day=[\d]+ TotalInWave=[\d]+ CurrentWave=[\d]+$',
                                        'to_call'  : [ ] },
             'spawn ent wrong pos'  : { 'to_match' : self.match_prefix + r'WRN Spawned entity with wrong pos: Item_([\d]+) \((EntityItem)\) id=([\d]+) pos=' + self.match_string_pos + r'$',
-                                       'to_call'  : [ self.log.info ] },
+                                       'to_call'  : [ self.framework.world_state.buffer_shop_item ] },
             'spawn output'         : { 'to_match' : r'^Spawned [\w\d]+$',
                                        'to_call'  : [ ] },
             'spider spawn horde'   : { 'to_match' : self.match_prefix + r'INF Spider scout spawned a zombie' + \
@@ -506,7 +509,7 @@ class parser ( threading.Thread ):
                                        r'command \'version\' by Telnet from ' + self.match_string_ip + r':[\d]+$',
                                        'to_call'  : [ ] },
             'exception sharing'    : { 'to_match' : r'IOException: Sharing violation on path .*',
-                                       'to_call'  : [ ] },
+                                       'to_call'  : [ self.framework.quiet_listener ] },
         }
         # must run after self.telnet_output_matchers is defined
         for key in self.telnet_output_matchers.keys ( ):
@@ -577,16 +580,16 @@ class parser ( threading.Thread ):
         self.log.debug ( "cmd pm exec parser: {}".format ( match ) )
         if self.framework.preferences.mod_ip == match [ 9 ]:
             self.log.debug ( "pm was from mod" )
-            self.framework.pm_info [ 'sending'   ] [ 'condition' ] = False
-            self.framework.pm_info [ 'executing' ] [ 'condition' ] = True
             now = time.time ( )
-            self.framework.pm_info [ 'executing' ] [ 'timestamp' ] = now
-            old_lag = self.framework.pm_info [ 'lag' ]
-            self.framework.pm_info [ 'lag' ] = now - self.framework.pm_info [ 'sending' ] [ 'timestamp' ]
+            old_lag = self.framework.console.pm_lag
+            new_lag = now - self.framework.console.pm_latest_call
+            if new_lag >= old_lag:
+                self.framework.console.pm_lag += 0.1
+            else:
+                self.framework.console.pm_lag -= 0.1
             self.log.debug ( 'pm executing' )
-            if "{:.1f}".format ( self.framework.pm_info [ 'lag' ] ) != "{:.1f}".format ( old_lag ):
-                if self.framework.pm_info [ 'lag' ] > 5:
-                    self.log.info ( "pm lag: {:.1f}s.".format ( self.framework.pm_info [ 'lag' ] ) )
+            if self.framework.console.pm_lag > 5:
+                self.log.info ( "pm lag: {:.1f}s.".format ( self.framework.console.pm_lag ) )
 
     def dequeue ( self ):
         self.lock_queue ( )
