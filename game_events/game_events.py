@@ -109,7 +109,7 @@ class game_events ( threading.Thread ):
         position = self.framework.rank.current_rank
         self.log.info ( "position = {}".format ( position ) )
         if position != -1:
-            self.framework.console.say ( self.framework.preferences.rank_msg )
+            self.framework.console.say ( self.framework.preferences.rank_message )
             self.framework.console.say ( self.framework.preferences.rank_url )
 
         self.log.info ( "Calling shop.increase_stock ( )" )

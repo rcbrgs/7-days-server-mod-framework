@@ -153,8 +153,7 @@ class server ( threading.Thread ):
                                             " /help shows the list of commands." ),
                           'sos'         : ( self.sos,
                                             " /sos will ask players to help you." ),
-                          'status'      : ( self.mod_status,
-                                            " /status lists running mods." ) }
+                          }
         
         file_found = True
         try:
@@ -619,11 +618,6 @@ class server ( threading.Thread ):
                 player.online = False
         self.framework.let_db_lock ( )
 
-    def output_starter_base ( self, msg_origin, msg_content ):
-        self.framework.console.say ( "To teleport to the starterbase, type /gostart." )
-        self.framework.console.say ( "- Replant what you harvest." )
-        self.framework.console.say ( "- Take what you need, and repay with work around the base." )
-        
     def parse_gmsg ( self, match ):
         self.log.debug ( match )
         msg = match [ 7 ]
