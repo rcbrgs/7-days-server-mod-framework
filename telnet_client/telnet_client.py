@@ -12,8 +12,9 @@ class telnet_client ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.6'
+        self.__version__ = '0.2.7'
         self.changelog = {
+            '0.2.7' : "Added matcher for total of in game because of too many chomp timeouts.",
             '0.2.6' : "Refactored chomp to use regex to try to get rid of gt timeouts.",
             '0.2.5' : "Improved treating 0 socket write exception.",
             '0.2.4' : "Silenced spammy loggings.",
@@ -30,7 +31,9 @@ class telnet_client ( threading.Thread ):
         self.framework = framework
 
         self.output_matchers = [ re.compile ( b'^.*\n' ),
-                                 re.compile ( b'^Day [\d]+, [\d]{2}:[\d]{2} ' ) ]
+                                 re.compile ( b'^Day [\d]+, [\d]{2}:[\d]{2} ' ),
+                                 re.compile ( b'Total of [\d]+ in the game' ),
+                                 ]
         self.matchers = { }
         self.shutdown = False
         self.parsers = [ parser ( framework ) ]
@@ -88,9 +91,11 @@ class telnet_client ( threading.Thread ):
             result = self.telnet.expect ( self.output_matchers, 5 )
             if len ( result ) == 3:
                 line = result [ 2 ]
-                if result [ 0 ] == 1:
-                    self.log.debug ( "Appending newline to normalize gt telnet output." )
-                    line += b'\n'
+                if result [ 0 ] == -1:
+                    if result [ 2 ] != b'':
+                        self.log.info ( "expect timed out on '{}'.".format ( result [ 2 ] ) )
+                elif result [ 0 ] != 0:
+                    self.log.debug ( "output_matcher [ {} ] hit".format ( result [ 0 ] ) )
         except Exception as e:
             self.log.error ( "Exception in chomp: {}".format ( e ) )
             self.log.error ( "type ( self.telnet ) == {}".format ( type ( self.telnet ) ) )
