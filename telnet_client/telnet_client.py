@@ -12,8 +12,9 @@ class telnet_client ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.7'
+        self.__version__ = '0.2.8'
         self.changelog = {
+            '0.2.8' : "Using telnetlib.expect errors to detect chomp timeout reliably.",
             '0.2.7' : "Added matcher for total of in game because of too many chomp timeouts.",
             '0.2.6' : "Refactored chomp to use regex to try to get rid of gt timeouts.",
             '0.2.5' : "Improved treating 0 socket write exception.",
@@ -108,8 +109,6 @@ class telnet_client ( threading.Thread ):
             self.log.debug ( "chomp: line not null/none: '{}'".format ( line ) )
             self.timestamp_input_previous = self.timestamp_input
             self.timestamp_input = time.time ( )
-            if line [ -1 ] != b'\n' [ - 1 ]:
-                self.log.info ( "Timed out on chomp: {}.".format ( line ) )
 
         self.log.debug ( "chomp() returning" )
         return line

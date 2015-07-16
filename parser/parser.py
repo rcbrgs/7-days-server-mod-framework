@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.52'
+        self.__version__ = '0.1.53'
         self.changelog = {
+            '0.1.53' : "Removed lp_lag pile up from parser being overwhelmed.",
             '0.1.52' : "+Matcher for server: any header.",
             '0.1.51' : "Added matcher for web static not found.",
             '0.1.50' : "Refactored to use new entity loop.",
@@ -553,11 +554,6 @@ class parser ( threading.Thread ):
             match_delay = time.time ( ) - match_timestamp
             delay = time.time ( ) - line [ 'timestamp' ]
             if delay > 15:
-                self.framework.world_state.lp_lag += 15
-                #self.log.info ( "Line {} matched {} in {:.1f}s, parsed in {:.1f}.".format ( line,
-                #                                                                            matched_key,
-                #                                                                            match_delay,
-                #                                                                            delay ) )
                 self.log.info ( "Line matched {} in {:.1f}s, parsed in {:.1f}.".format ( matched_key,
                                                                                          match_delay,
                                                                                          delay ) )
