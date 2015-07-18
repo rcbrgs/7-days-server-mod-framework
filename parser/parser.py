@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.56'
+        self.__version__ = '0.1.57'
         self.changelog = {
+            '0.1.57' : "Removed chat commands hook.",
             '0.1.56' : "Added deprecation notice to chat.",
             '0.1.55' : "Added matcher for console denial of command, hooked to server.comand_console.",
             '0.1.54' : "Reintroduced le, lp and gt lag increase upon parser overwhelming.",
@@ -271,7 +272,8 @@ class parser ( threading.Thread ):
                                        r'fell off the world, id=([\d]+) pos=' + self.match_string_pos + r'$',
                                        'to_call'  : [ ] },
             'gmsg'                 : { 'to_match' : self.match_string_date + r' INF GMSG: (.*: .*)$',
-                                       'to_call'  : [ self.framework.server.parse_gmsg, self.advise_deprecation_chat ] },
+                                       #'to_call'  : [ self.framework.server.parse_gmsg, self.advise_deprecation_chat ] },
+                                       'to_call'  : [ self.advise_deprecation_chat ] },
             'gt command executing' : { 'to_match' : self.match_string_date + \
                                        r' INF Executing command \'gt\' by Telnet from ' + \
                                        self.match_string_ip + ':([\d]+)',
@@ -591,7 +593,7 @@ class parser ( threading.Thread ):
         if not player:
             self.log.error ( "Unkown player from match '{}' on advise_deprecation_chat.".format ( match ) )
             return
-        self.framework.console.say ( "{}, the chat commands will not work. Use the console version, prefixing commands with gg (example: `gg /list auger).".format ( player.name_sane ) )
+        self.framework.console.pm ( player, "The commands now go in the console, prefixing with gg (example: `gg /list auger)." )
 
     def command_lp_output_parser ( self, match ):
         self.log.debug ( str ( match ) )
