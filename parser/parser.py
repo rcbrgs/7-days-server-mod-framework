@@ -10,8 +10,10 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.53'
+        self.__version__ = '0.1.55'
         self.changelog = {
+            '0.1.55' : "Added matcher for console denial of command, hooked to server.comand_console.",
+            '0.1.54' : "Reintroduced le, lp and gt lag increase upon parser overwhelming.",
             '0.1.53' : "Removed lp_lag pile up from parser being overwhelmed.",
             '0.1.52' : "+Matcher for server: any header.",
             '0.1.51' : "Added matcher for web static not found.",
@@ -213,6 +215,8 @@ class parser ( threading.Thread ):
             'deny match'           : { 'to_match' : r'(.*) INF Player (.*) denied: ' + \
                                        r'(.*) has been banned until (.*)',
                                        'to_call'  : [ self.framework.game_events.player_denied ] },
+            'denying command'      : { 'to_match' : self.match_prefix + r'INF Denying command \'(.*)\' from client (.*)$',
+                                       'to_call'  : [ self.framework.server.console_command ] },
             'EAC backend conn'     : { 'to_match' : self.match_prefix + r'INF \[EAC\] Log: Backend connection established\.$',
                                        'to_call'  : [ ] },
             'EAC callback'         : { 'to_match' : self.match_prefix + r'INF \[EAC\] UserStatusHandler callback.'+\
@@ -557,6 +561,12 @@ class parser ( threading.Thread ):
                 self.log.info ( "Line matched {} in {:.1f}s, parsed in {:.1f}.".format ( matched_key,
                                                                                          match_delay,
                                                                                          delay ) )
+                if matched_key == 'gt command executing':
+                    self.framework.world_state.gt_lag += 0.1
+                if matched_key == 'le command executing':
+                    self.framework.world_state.le_lag += 0.1
+                if matched_key == 'lp command executing':
+                    self.framework.world_state.lp_lag += 0.1
 
     def stop ( self ):
         self.shutdown = True
