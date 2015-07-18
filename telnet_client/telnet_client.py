@@ -98,8 +98,13 @@ class telnet_client ( threading.Thread ):
                 elif result [ 0 ] != 0:
                     self.log.debug ( "output_matcher [ {} ] hit".format ( result [ 0 ] ) )
         except Exception as e:
+            if not self.check_connection ( ):
+                self.log.warning ( "chomp had an exception, because the connection is off." )
+                return
             self.log.error ( "Exception in chomp: {}".format ( e ) )
             self.log.error ( "type ( self.telnet ) == {}".format ( type ( self.telnet ) ) )
+            self.log.error ( "isinstance ( self.telnet.get_socket ( ), socket.socket ) = {}".format (
+                    self.check_connection ( ) ) )
             #self.log.error ( "type ( line ) == {}".format ( type ( line ) ) )
             self.framework.shutdown = True
             return

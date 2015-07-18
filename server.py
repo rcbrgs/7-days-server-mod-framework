@@ -21,56 +21,11 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.46'
+        self.__version__ = '0.5.1'
         self.changelog = {
-            '0.4.46' : "Changed get nearest zombie to retunrn None instead of recursive call itself.",
-            '0.4.45' : "Fixed entities changing size exception by making copy.",
-            '0.4.44' : "Disable help and commands for disabled mods.",
-            '0.4.43' : "Fixed offline_lagged_players calling lp.",
-            '0.4.42' : "Refactored offline_players into offline_lagged_players.",
-            '0.4.41' : "Fixed preteleport never getting positive because distance increases as player falls.",
-            '0.4.40' : "Fixed dequeue not sending right info to preteleport.",
-            '0.4.39' : "Fixed import inspect for queue lock.",
-            '0.4.38' : "Fixed preteleport dequeueing call.",
-            '0.4.37' : "Moved preteleport to a separate queue. Move command_rules to chat_commands module.",
-            '0.4.36' : "Fixed preteleport using wrong syntax for utils.get_coordinates.",
-            '0.4.35' : "Preteleport now handles when player disconnects.",
-            '0.4.34' : "Updated entity table to values of A12. Lol.",
-            '0.4.33' : "Removed console().",
-            '0.4.32' : "Removed position update from teleport, it is not its responsibility.",
-            '0.4.31' : "Moved command_about out of here.",
-            '0.4.30' : "Catching exceptions during preteleport.",
-            '0.4.29' : "Moved gt and mem stuff to world_state.",
-            '0.4.28' : "Added exception capture during preteleport console.send.",
-            '0.4.27' : "New airdrop rule.",
-            '0.4.26' : "Tweaked preteleport to positive with threshold 20m.",
-            '0.4.25' : "Created whiner () function to punish sakis if he whines again.",
-            '0.4.24' : "Increased preteleport detection threshold to 10m.",
-            '0.4.23' : "Added preteleport timeout of 2 mins.",
-            '0.4.22' : "Fixed Y / height mismatch on preteleport.",
-            '0.4.21' : "Made pre/teleport interval dynamic, based on position data.",
-            '0.4.20' : "Adjusted teleport to be (much) closer to destination, trying to fix A12 tp.",
-            '0.4.19' : "Increased pre -> teleport interval from 3 to 4 due reports from players.",
-            '0.4.18' : "Adjustments to new lp cycle.",
-            '0.4.17' : "Greet known player upon return.",
-            '0.4.16' : "Fixed syntax for set_steamid_online.",
-            '0.4.15' : "Added event calls for when player becomes voter and senator.",
-            '0.4.14' : "Fixed set steamid online",
-            '0.4.13' : "Logging before time events for debugging exception on update_gt.",
-            '0.4.12' : "Better logging when running a mod command.",
-            '0.4.11' : "Added get_nearest_player_to_position function.",
-            '0.4.10' : "Simplified player positions being saved from floats to ints. Playerid now updated every id update.",
-            '0.4.9'  : "Better logging of preteleports. Player positions are cleaned up to make save file smaller. (50% smaller!)",
-            '0.4.8'  : "give_player_stuff now using steamid instead of player names. Converting steamid to string.",
-            '0.4.7'  : "+db_clean. Preteleport now prevents immediate reteleport to same location.",
-            '0.4.6'  : "Refactor give_stuff. Reindexed players by steamid.",
-            '0.4.5'  : "+get_game_server_summary. Detection of burntzombies, zombieferals.",
-            '0.4.4'  : "+get_player_summary, refactor for it.",
-            '0.4.3'  : "Added le. Fixed new player info not being saved.",
-            '0.4.2'  : "Increased preteleport lag 2 -> 3s. Refactored id update.",
-            '0.4.1'  : "Removed enforce_home_radii, moved to sethome.",
-            '0.4.0'  : "Make backups of player db every hour.",
-            }
+            '0.5.1'  : "Do not return entities with 0 health from get_nearest_zombie.",
+            '0.5.0'  : "Added system to have per-mod help items.",
+                        }
         self.shutdown = False
         
         self.log.info ( "Server module initializing." )
@@ -123,7 +78,7 @@ class server ( threading.Thread ):
         self.help_items = {
             'democracy' : ( "Honestly, the admins cannot be online all the time. So veteran"
                             " players can create proposals and vote on those proposals, "
-                            "regarding punishing players." ),
+                            "to decide if it is right to punish players after an offense." ),
             'karma' : ( "Karma is a measure of how much we trust you, the player."
                         " You gain 1 karma per hour played. You spend karma to teleport,"
                         " sethome, and other actions." ),
@@ -208,6 +163,16 @@ class server ( threading.Thread ):
                 if help_item == predicate:
                     self.framework.console.say ( self.help_items [ help_item ] )
                     return
+            for mod_key in self.framework.mods.keys ( ):
+                mod = self.framework.mods [ mod_key ] [ 'reference' ]
+                if not mod.enabled:
+                    continue
+                if not hasattr ( mod, "help_items" ):
+                    continue
+                for key in mod.help_items.keys ( ):
+                    if key == predicate:
+                        self.framework.console.say ( mod.help_items [ key ] )
+                        return
 
         command_list = [ ]
         for key in self.commands.keys ( ):
@@ -432,6 +397,8 @@ class server ( threading.Thread ):
         entities = copy.copy ( self.framework.world_state.entities )
         for key in entities.keys ( ):
             if entities [ key ].dead == "True":
+                continue
+            if entities [ key ].health == 0:
                 continue
             if not entities [ key ].entity_type in list ( self.entity_db.keys ( ) ):
                 continue

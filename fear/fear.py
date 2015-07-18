@@ -10,8 +10,13 @@ class fear ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = "0.1.9"
+        self.__version__ = "0.1.14"
         self.changelog = {
+            '0.1.14' : "Tweaked timings to get more balanced effect.",
+            '0.1.13' : "Bump down fear upon triggered event.",
+            '0.1.12' : "Adjusted event to be more often and have more effect.",
+            '0.1.11' : "Added help_items.",
+            '0.1.10' : "Final touches on warnings.",
             '0.1.9' : "Tweaked logs and warnings.",
             '0.1.8' : "Fixed math.floor instead of floor.",
             '0.1.7' : "Refactored to use non recursive get_nearest_zombie.",
@@ -36,6 +41,9 @@ class fear ( threading.Thread ):
         self.commands = {
             # 'suicide' : ( self.kill_player, " /suicide will kill your character." )
         }
+        self.help_items = {
+            "fear" : "Fear is a measure of how much you avoid zombies. As it increases, your chances of a zombie appearing by your side increase."
+            }
 
     def __del__ ( self ):
         self.stop ( )
@@ -68,8 +76,6 @@ class fear ( threading.Thread ):
                     zone = 'fear'
                 if distance < float ( self.mod_preferences [ 'distance_minimum' ] ):
                     zone = 'courage'
-                self.log.info ( "{} is {:.1f}m away from {} ({}).".format ( 
-                        entity_type, distance, player.name_info, zone ) )
                 # update accumulators
                 current_info = self.framework.database.select_record ( "fear", { "steamid" : player.steamid } )
                 self.log.debug ( "current_info = {}".format ( current_info ) )
@@ -94,7 +100,7 @@ class fear ( threading.Thread ):
                 if old_state == zone:
                     old_timestamp = float ( current_info [ 'latest_state_timestamp' ] )
                     if now - new_fear_timestamp > 60 * float ( self.mod_preferences [ 'factor' ] ):
-                        self.log.info ( "accumulating {}".format ( zone ) )
+                        self.log.debug ( "accumulating {}".format ( zone ) )
                         interval = now - old_timestamp 
                         if interval < 10:
                             if zone == "fear":
@@ -111,30 +117,48 @@ class fear ( threading.Thread ):
                     old_check = float ( current_info [ 'latest_check_timestamp' ] )
                 new_check = old_check
 
+                self.log.info ( "{} is {:.1f}m away from {} ({}, {:.1f}).".format ( 
+                        player.name_sane, distance, entity_type, zone, new_fear ) )
+
                 # check for event triggers
                 # spawn zed?
                 trigger = False
-                if now - old_check > 600:
+                if now - old_check > 60:
                     new_check = now
-                    # trigger a random event
-                    trigger = self.trigger_random_event ( player, new_fear )
+                    if new_fear > 540 + 60 * float ( self.mod_preferences [ 'factor' ] ):
+                        # trigger a random event
+                        trigger = self.trigger_random_event ( player, new_fear )
                 if trigger:
-                    new_fear /= 2
-
+                    new_fear -= new_fear % 60
+                    
                 # warn about fear?
                 old_fear_warning = current_info [ 'latest_fear_warning' ]
                 if not old_fear_warning:
                     old_fear_warning = 0
                 new_fear_warning = old_fear_warning
-                fear_warning = math.floor ( new_fear / ( 10 * 60 * int ( self.mod_preferences [ 'factor' ] ) ) )
-                if fear_warning > old_fear_warning + 1:
-                    self.framework.console.say ( "{} seems more anxious than before.".format ( player.name_sane ) )
-                    new_fear_warning = fear_warning
-                    if new_fear_warning == 10:
-                        self.framework.console.say ( "{} fear is now so intense it can be smelled from afar.".format ( player.name_sane ) )
-                if fear_warning < old_fear_warning - 1:
-                    self.framework.console.say ( "{} seems more confident than before.".foramt ( player.name_sane ) )
-                    new_fear_warning = fear_warning
+                fear_warning = math.floor ( new_fear / ( 480 + 60 * float ( self.mod_preferences [ 'factor' ] ) ) )
+                if fear_warning > old_fear_warning:
+                    if new_fear > fear_warning + 0.1:
+                        new_fear_warning = fear_warning
+                        if new_fear_warning == 1:
+                            self.framework.console.say ( 
+                                "{} fear is now so intense it might attracts zombies.".format ( 
+                                    player.name_sane ) )
+                        else:
+                            self.framework.console.say ( "{} smells of fear even more than before.".format ( 
+                                    player.name_sane ) )
+
+                if fear_warning < old_fear_warning:
+                    if new_fear > fear_warning - 0.1:
+                        new_fear_warning = fear_warning
+                        if new_fear_warning == 0:
+                            self.framework.console.say ( 
+                                "{} courage is now so intense no zombies are attracted.".format ( 
+                                    player.name_sane ) )
+                        else:
+                            self.framework.console.say ( "{} smells of fear a little less than before.".format ( 
+                                    player.name_sane ) )
+
 
                 new_info = {
                     "steamid"                : player.steamid,
@@ -157,9 +181,11 @@ class fear ( threading.Thread ):
     def trigger_random_event ( self, player, fear ):
         random.seed ( time.time ( ) )
         dice = random.randint ( 0, 100 )
-        fear_factor = fear / ( 60 * int ( self.mod_preferences [ 'factor' ] ) )
+        fear_factor = fear / ( 60 * float ( self.mod_preferences [ 'factor' ] ) )
         if fear_factor > dice:
             self.log.info ( "trigger_random_event: fear_factor {} > dice {}.".format ( fear_factor, dice ) )
-            self.framework.console.say ( "{} craps his/her pants in fear, attracting a zombie!".format ( player.name_sane ) )
+            self.framework.console.say ( "{} craps in own pants out of fear, attracting zombies!".format ( player.name_sane ) )
+            #self.framework.console.se ( player, 'animalRabbit', 2 )
+            self.framework.console.se ( player, 'zombiecrawler', 2 )
             return True
         return False

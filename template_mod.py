@@ -25,7 +25,10 @@ class template ( threading.Thread ):
         self.commands = {
             # 'suicide' : ( self.kill_player, " /suicide will kill your character." )
         }
-
+        self.help_items = {
+            #"template" : "A mod to do X.",
+            }
+        
     def __del__ ( self ):
         self.stop ( )
 
