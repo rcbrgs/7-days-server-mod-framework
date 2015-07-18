@@ -1,5 +1,7 @@
 from .console          import ( queued_console )
+from .database         import database
 from .entity_info      import entity_info
+from .fear             import fear
 from .game_events      import game_events
 from .lp_data          import lp_data
 from .orchestrator     import orchestrator
@@ -8,7 +10,7 @@ from .player_info      import player_info
 from .polis            import polis
 from .preferences      import preferences
 from .rank             import rank
-from .server           import server
+from .server                         import server
 from .telnet_client.telnet_client    import telnet_client
 from .utils                          import utils
 from .void_fall_detector             import void_fall_detector
@@ -20,9 +22,9 @@ import sys
 import threading
 import time
 
-__version__ = '0.2.1'
+__version__ = '0.3.0'
 changelog = {
-    '0.2.1' : "Added entity_info module.",
+    '0.3.0' : "Added database module.",
     }
 
 log = logging.getLogger ( __name__ )

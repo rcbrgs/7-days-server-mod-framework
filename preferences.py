@@ -5,16 +5,13 @@ class preferences ( object ):
     def __init__ ( self, preferences_file_name ):
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.3'
+        self.__version__ = '0.2.0'
         self.changelog = {
-            '0.1.3' : "Added rank url and message variables.",
-            '0.1.2' : "Added mod_ip attribute.",
-            '0.1.1' : "Added support for framework state file." }
-        
+            '0.2.0' : "Added database variables.",
+            }
         
         self.mods = { }
         if not preferences_file_name:
-            pass
             self.chat_log_file = ""
             self.log_file = ""
             self.forbidden_countries = ""
@@ -25,6 +22,9 @@ class preferences ( object ):
             self.loop_wait = 2
             self.mod_ip = ""
             self.mods = { }
+            self.mysql_user_name = ""
+            self.mysql_user_password = ""
+            self.mysql_db_name = ""
             self.player_info_file = ""
             self.rank_url = ""
             self.rank_message = ""
@@ -33,6 +33,12 @@ class preferences ( object ):
             self.telnet_password = ""
             self.telnet_port = 8081
             return
+
+        self.preference_items = [ "mysql_user_name",
+                                  "mysql_user_password",
+                                  "mysql_db_name",
+                                  ]
+
             
         self.preferences_file = open ( preferences_file_name )
         
@@ -83,6 +89,15 @@ class preferences ( object ):
             if ( left_hand == "loop_wait" ):
                 self.loop_wait = int ( splitted [ 1 ] )
                 continue
+
+            if ( left_hand == "mod_ip" ):
+                self.mod_ip = splitted [ 1 ].strip ( )
+                continue
+
+            for item in self.preference_items:
+                if left_hand == item:
+                    setattr ( self, item, splitted [ 1 ].strip ( ) )
+                    continue
 
             if ( left_hand == "mod_ip" ):
                 self.mod_ip = splitted [ 1 ].strip ( )
@@ -170,6 +185,8 @@ class preferences ( object ):
         self.log.info ( "loop_wait = %d" % ( self.loop_wait ) )
         self.log.info ( "mod_ip = %s" % str ( self.mod_ip ) )
         self.log.info ( "mods = %s" % str ( self.mods ) )
+        for item in self.preference_items:
+            self.log.info ( "{} = {}.".format ( item, getattr ( self, item ) ) )
         self.log.info ( "player_info_file = %s" % ( self.player_info_file ) )
         self.log.info ( "rank_url = %s" % ( self.rank_url ) )
         self.log.info ( "rank_message = %s" % ( self.rank_message ) )

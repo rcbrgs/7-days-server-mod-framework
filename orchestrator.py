@@ -13,17 +13,12 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.5.6'
+        self.__version__ = '0.6.0'
         self.changelog = {
-            '0.5.6' : "Cleanup le and pm stuff.",
-            '0.5.5' : "Removed le calls.",
-            '0.5.4' : "Removed initial call to offline_players.",
-            '0.5.3' : "Instead of calling offline_players ever 100 cycles, call offline_lagged_players all cycles.",
-            '0.5.2' : "Cleanup for new lp cycle.",
-            '0.5.1' : "Added header to status.",
-            '0.5.0' : "Added status() to call each telnet's status().",
+            '0.6.0' : "Added database module.",
             }
 
+        self.database = None
         self.db_lock = None
         self.framework_state = None
         self.items_lock = None
@@ -92,6 +87,9 @@ class orchestrator ( threading.Thread ):
         self.silence = False
         self.shutdown = False
         self.preferences = framework.preferences ( preferences_file_name )
+        self.database = framework.database ( self )
+        self.database.start ( )
+        self.stop_on_shutdown.append ( self.database )
         self.rank.start ( )
         self.stop_on_shutdown.append ( self.rank )
         self.server = framework.server ( framework = self )

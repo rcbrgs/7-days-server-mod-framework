@@ -21,8 +21,10 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.44'
+        self.__version__ = '0.4.46'
         self.changelog = {
+            '0.4.46' : "Changed get nearest zombie to retunrn None instead of recursive call itself.",
+            '0.4.45' : "Fixed entities changing size exception by making copy.",
             '0.4.44' : "Disable help and commands for disabled mods.",
             '0.4.43' : "Fixed offline_lagged_players calling lp.",
             '0.4.42' : "Refactored offline_players into offline_lagged_players.",
@@ -77,42 +79,42 @@ class server ( threading.Thread ):
         self.clear_online_property = False
         self.entities = { }
         self.entity_db = {
-            'animalBear'        : { 'entityid' : 27, 'is_animal' : True  },
-            'animalPig'         : { 'entityid' : 29, 'is_animal' : True  },
-            'animalRabbit'      : { 'entityid' : 28, 'is_animal' : True  },
-            'animalStag'        : { 'entityid' : 26, 'is_animal' : True  },
-            'burntzombie'       : { 'entityid' : 12, 'is_animal' : False },
-            'car_Blue'          : { 'entityid' : 22, 'is_animal' : False },
-            'car_Orange'        : { 'entityid' : 23, 'is_animal' : False },
-            'car_Red'           : { 'entityid' : 24, 'is_animal' : False },
-            'car_White'         : { 'entityid' : 25, 'is_animal' : False },
-            'EntityPlayer'      : { 'entityid' : -1, 'is_animal' : False },
-            'EntitySupplyPlane' : { 'entityid' : -1, 'is_animal' : False },
-            'fatzombie'         : { 'entityid' : 19, 'is_animal' : False },
-            'fatzombiecop'      : { 'entityid' : 18, 'is_animal' : False },
-            'hornet'            : { 'entityid' : 20, 'is_animal' : False },
-            'minibike'          : { 'entityid' : 34, 'is_animal' : False },
-            'sc_General'        : { 'entityid' : 31, 'is_animal' : False },
-            'snowzombie01'      : { 'entityid' : 8 , 'is_animal' : False },
-            'snowzombie02'      : { 'entityid' : 9 , 'is_animal' : False },
-            'snowzombie03'      : { 'entityid' : 10, 'is_animal' : False },
-            'spiderzombie'      : { 'entityid' : 11, 'is_animal' : False },
-            'supplyPlane'       : { 'entityid' : 30, 'is_animal' : False },
-            'zombie01'          : { 'entityid' : 6 , 'is_animal' : False },
-            'zombie02'          : { 'entityid' : 17, 'is_animal' : False },
-            'zombie04'          : { 'entityid' : 1 , 'is_animal' : False },
-            'zombie05'          : { 'entityid' : 3 , 'is_animal' : False },
-            'zombie06'          : { 'entityid' : 4 , 'is_animal' : False },
-            'zombie07'          : { 'entityid' : 5 , 'is_animal' : False },
-            'zombiecrawler'     : { 'entityid' : 7 , 'is_animal' : False },
-            'zombiedog'         : { 'entityid' : 21, 'is_animal' : False },
-            'zombieferal'       : { 'entityid' : 2 , 'is_animal' : False },
-            'zombiegal01'       : { 'entityid' : 13, 'is_animal' : False },
-            'zombiegal02'       : { 'entityid' : 14, 'is_animal' : False },
-            'zombiegal03'       : { 'entityid' : 15, 'is_animal' : False },
-            'zombiegal04'       : { 'entityid' : 16, 'is_animal' : False },
-            'zombieUMAfemale'   : { 'entityid' : 32, 'is_animal' : False },
-            'zombieUMAmale'     : { 'entityid' : 33, 'is_animal' : False },
+            'animalBear'        : { 'entityid' : 27, 'is_animal' : True,  'is_zombie' : False },
+            'animalPig'         : { 'entityid' : 29, 'is_animal' : True,  'is_zombie' : False },
+            'animalRabbit'      : { 'entityid' : 28, 'is_animal' : True,  'is_zombie' : False },
+            'animalStag'        : { 'entityid' : 26, 'is_animal' : True,  'is_zombie' : False },
+            'burntzombie'       : { 'entityid' : 12, 'is_animal' : False, 'is_zombie' : True },
+            'car_Blue'          : { 'entityid' : 22, 'is_animal' : False, 'is_zombie' : False },
+            'car_Orange'        : { 'entityid' : 23, 'is_animal' : False, 'is_zombie' : False },
+            'car_Red'           : { 'entityid' : 24, 'is_animal' : False, 'is_zombie' : False },
+            'car_White'         : { 'entityid' : 25, 'is_animal' : False, 'is_zombie' : False },
+            'EntityPlayer'      : { 'entityid' : -1, 'is_animal' : False, 'is_zombie' : False },
+            'EntitySupplyPlane' : { 'entityid' : -1, 'is_animal' : False, 'is_zombie' : False },
+            'fatzombie'         : { 'entityid' : 19, 'is_animal' : False, 'is_zombie' : True },
+            'fatzombiecop'      : { 'entityid' : 18, 'is_animal' : False, 'is_zombie' : True },
+            'hornet'            : { 'entityid' : 20, 'is_animal' : False, 'is_zombie' : True },
+            'minibike'          : { 'entityid' : 34, 'is_animal' : False, 'is_zombie' : False },
+            'sc_General'        : { 'entityid' : 31, 'is_animal' : False, 'is_zombie' : False },
+            'snowzombie01'      : { 'entityid' : 8 , 'is_animal' : False, 'is_zombie' : True },
+            'snowzombie02'      : { 'entityid' : 9 , 'is_animal' : False, 'is_zombie' : True },
+            'snowzombie03'      : { 'entityid' : 10, 'is_animal' : False, 'is_zombie' : True },
+            'spiderzombie'      : { 'entityid' : 11, 'is_animal' : False, 'is_zombie' : True },
+            'supplyPlane'       : { 'entityid' : 30, 'is_animal' : False, 'is_zombie' : False },
+            'zombie01'          : { 'entityid' : 6 , 'is_animal' : False, 'is_zombie' : True },
+            'zombie02'          : { 'entityid' : 17, 'is_animal' : False, 'is_zombie' : True },
+            'zombie04'          : { 'entityid' : 1 , 'is_animal' : False, 'is_zombie' : True },
+            'zombie05'          : { 'entityid' : 3 , 'is_animal' : False, 'is_zombie' : True },
+            'zombie06'          : { 'entityid' : 4 , 'is_animal' : False, 'is_zombie' : True },
+            'zombie07'          : { 'entityid' : 5 , 'is_animal' : False, 'is_zombie' : True },
+            'zombiecrawler'     : { 'entityid' : 7 , 'is_animal' : False, 'is_zombie' : True },
+            'zombiedog'         : { 'entityid' : 21, 'is_animal' : False, 'is_zombie' : True },
+            'zombieferal'       : { 'entityid' : 2 , 'is_animal' : False, 'is_zombie' : True },
+            'zombiegal01'       : { 'entityid' : 13, 'is_animal' : False, 'is_zombie' : True },
+            'zombiegal02'       : { 'entityid' : 14, 'is_animal' : False, 'is_zombie' : True },
+            'zombiegal03'       : { 'entityid' : 15, 'is_animal' : False, 'is_zombie' : True },
+            'zombiegal04'       : { 'entityid' : 16, 'is_animal' : False, 'is_zombie' : True },
+            'zombieUMAfemale'   : { 'entityid' : 32, 'is_animal' : False, 'is_zombie' : True },
+            'zombieUMAmale'     : { 'entityid' : 33, 'is_animal' : False, 'is_zombie' : True },
             }
             
         # Other programs might have /keywords that we want to ignore. Put those here.
@@ -293,7 +295,7 @@ class server ( threading.Thread ):
     def display_entities ( self ):
         print ( "stal | entty_id | entity_type | lifetime  | remot | dead  | heal | pos" )
         self.wait_entities ( )
-        self.framework.get_ent_lock ( )
+        #self.framework.get_ent_lock ( )
         for key in self.entities.keys ( ):
             entity = self.entities [ key ]
             self.log.debug ( str ( entity ) )
@@ -307,7 +309,7 @@ class server ( threading.Thread ):
                 entity.health,
                 entity.pos_x, entity.pos_y, entity.pos_z,
             ) )
-        self.framework.let_ent_lock ( )
+        #self.framework.let_ent_lock ( )
 
     def find_nearest_player ( self, steamid ):
         player_distances = { }
@@ -362,13 +364,13 @@ class server ( threading.Thread ):
 
     def get_nearest_animal ( self, player ):
         self.wait_entities ( )
-        self.framework.get_ent_lock ( )
+        #self.framework.get_ent_lock ( )
         animal_entities_list = [ ]
         for key in self.entities.keys ( ):
             if self.entity_db [ self.entities [ key ].entity_type ] [ 'is_animal' ]:
                 if self.entities [ key ].dead == "False":
                     animal_entities_list.append ( key )
-        self.framework.let_ent_lock ( )
+        #self.framework.let_ent_lock ( )
         self.log.info ( "get_nearest_animal: list: {}.".format ( str ( animal_entities_list ) ) ) 
         min_distance = None
         min_entity_id = None
@@ -393,7 +395,7 @@ class server ( threading.Thread ):
 
     def get_nearest_entity ( self, player ):
         self.wait_entities ( )
-        self.framework.get_ent_lock ( )
+        #self.framework.get_ent_lock ( )
         min_distance = None
         min_entity_id = None
         for key in self.entities.keys ( ):
@@ -412,14 +414,48 @@ class server ( threading.Thread ):
         self.log.debug ( "nearest: {}".format ( min_distance ) )
 
         if min_entity_id not in self.entities.keys ( ):
-            self.framework.let_ent_lock ( )
+            #self.framework.let_ent_lock ( )
             time.sleep ( 1 )
             self.log.warning ( "Recursively trying to find a near entity." )
             return self.get_nearest_entity ( player )
         
         min_type = self.entities [ min_entity_id ].entity_type
-        self.framework.let_ent_lock ( )
+        #self.framework.let_ent_lock ( )
         return min_entity_id, min_type
+
+    def get_nearest_zombie ( self, player ):
+        self.log.info ( "get_nearest_zombie ( {} )".format ( player.name_sane ) )
+        #self.wait_entities ( )
+        #self.framework.get_ent_lock ( )
+        min_distance = None
+        min_entity_id = None
+        entities = copy.copy ( self.framework.world_state.entities )
+        for key in entities.keys ( ):
+            if entities [ key ].dead == "True":
+                continue
+            if not entities [ key ].entity_type in list ( self.entity_db.keys ( ) ):
+                continue
+            if not self.entity_db [ entities [ key ].entity_type ] [ 'is_zombie' ]:
+                continue
+            distance = self.framework.utils.calculate_distance ( ( float ( entities [ key ].pos_x ),
+                                                                   float ( entities [ key ].pos_y ),
+                                                                   float ( entities [ key ].pos_z ) ),
+                                                                 self.framework.utils.get_coordinates ( player ) )
+            self.log.debug ( "distance: {}".format ( distance ) )
+            if not min_distance:
+                min_distance = distance
+            min_distance = min ( min_distance, distance )
+            if min_distance == distance:
+                min_entity_id = key
+        self.log.debug ( "nearest: {}".format ( min_distance ) )
+
+        if min_entity_id not in entities.keys ( ):
+            self.log.warning ( "No zombie near player." )
+            return None, None, None
+        
+        min_type = entities [ min_entity_id ].entity_type
+        #self.framework.let_ent_lock ( )
+        return min_distance, min_entity_id, min_type
             
     def get_online_players ( self ):
         result = [ ]
@@ -498,10 +534,10 @@ class server ( threading.Thread ):
         
     def get_random_entity ( self ):
         self.wait_entities ( )
-        self.framework.get_ent_lock ( )
+        #self.framework.get_ent_lock ( )
         random_index = random.choice ( list ( self.entities.keys ( ) ) )
         random_type = self.entities [ random_index ].entity_type
-        self.framework.let_ent_lock ( )
+        #self.framework.let_ent_lock ( )
         return random_index, random_type
     
     def give_cash ( self, player = None, amount = 0 ):
@@ -871,12 +907,12 @@ class server ( threading.Thread ):
         """
         ent_position = None
         self.wait_entities ( )
-        self.framework.get_ent_lock ( )
+        #self.framework.get_ent_lock ( )
         if entity_id in self.entities.keys ( ):
             ent_position = ( self.entities [ entity_id ].pos_x,
                              self.entities [ entity_id ].pos_y,
                              self.entities [ entity_id ].pos_z )
-        self.framework.let_ent_lock ( )
+        #self.framework.let_ent_lock ( )
         if not ent_position:
             self.log.info ( "{} not in self.entities".format ( entity_id ) )
             return -1
@@ -1136,7 +1172,7 @@ class server ( threading.Thread ):
         dead = matches [ 10 ]
         health = int ( matches [ 11 ] )
 
-        self.framework.get_ent_lock ( ) 
+        #self.framework.get_ent_lock ( ) 
         if le_id in self.framework.server.entities.keys ( ):
             entity = self.framework.server.entities [ le_id ]
         else:
@@ -1156,7 +1192,7 @@ class server ( threading.Thread ):
         entity.timestamp = time.time ( )
         
         self.framework.server.entities [ le_id ] = entity
-        self.framework.let_ent_lock ( ) 
+        #self.framework.let_ent_lock ( ) 
 
     def update_players_pickle ( self ):
         import framework
