@@ -424,7 +424,7 @@ class server ( threading.Thread ):
         return min_entity_id, min_type
 
     def get_nearest_zombie ( self, player ):
-        self.log.info ( "get_nearest_zombie ( {} )".format ( player.name_sane ) )
+        self.log.debug ( "get_nearest_zombie ( {} )".format ( player.name_sane ) )
         #self.wait_entities ( )
         #self.framework.get_ent_lock ( )
         min_distance = None

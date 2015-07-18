@@ -1,5 +1,6 @@
 import framework
 import logging
+import math
 import random
 import sys
 import threading
@@ -9,8 +10,10 @@ class fear ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = "0.1.7"
+        self.__version__ = "0.1.9"
         self.changelog = {
+            '0.1.9' : "Tweaked logs and warnings.",
+            '0.1.8' : "Fixed math.floor instead of floor.",
             '0.1.7' : "Refactored to use non recursive get_nearest_zombie.",
             '0.1.6' : "Added fear / courage messages.",
             '0.1.5' : "Fixes to inertia.",
@@ -59,13 +62,14 @@ class fear ( threading.Thread ):
                 distance, entity_id, entity_type = self.framework.server.get_nearest_zombie ( player )
                 if not distance:
                     distance = 100 * self.mod_preferences [ 'distance_maximum' ]
-                self.log.info ( "{} is {:.1f}m away.".format ( entity_type, distance ) )
                 # save each players' zone info
                 zone = 'neutral'
                 if distance > float ( self.mod_preferences [ 'distance_maximum' ] ):
                     zone = 'fear'
                 if distance < float ( self.mod_preferences [ 'distance_minimum' ] ):
                     zone = 'courage'
+                self.log.info ( "{} is {:.1f}m away from {} ({}).".format ( 
+                        entity_type, distance, player.name_info, zone ) )
                 # update accumulators
                 current_info = self.framework.database.select_record ( "fear", { "steamid" : player.steamid } )
                 self.log.debug ( "current_info = {}".format ( current_info ) )
@@ -122,10 +126,12 @@ class fear ( threading.Thread ):
                 if not old_fear_warning:
                     old_fear_warning = 0
                 new_fear_warning = old_fear_warning
-                fear_warning = floor ( new_fear / ( 10 * 60 * int ( self.mod_preferences [ 'factor' ] ) ) )
+                fear_warning = math.floor ( new_fear / ( 10 * 60 * int ( self.mod_preferences [ 'factor' ] ) ) )
                 if fear_warning > old_fear_warning + 1:
                     self.framework.console.say ( "{} seems more anxious than before.".format ( player.name_sane ) )
                     new_fear_warning = fear_warning
+                    if new_fear_warning == 10:
+                        self.framework.console.say ( "{} fear is now so intense it can be smelled from afar.".format ( player.name_sane ) )
                 if fear_warning < old_fear_warning - 1:
                     self.framework.console.say ( "{} seems more confident than before.".foramt ( player.name_sane ) )
                     new_fear_warning = fear_warning
