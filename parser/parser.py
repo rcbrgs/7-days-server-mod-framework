@@ -588,9 +588,10 @@ class parser ( threading.Thread ):
         player = self.framework.server.get_player ( match [ 7 ].split ( ": " ) [ 0 ] )
         command = match [ 7 ].split ( ": " ) [ 1 ]
         if command [ 0 ] != "/":
-            self.log.info ( "command [ 0 ] '{}' not a /".format ( command ) )
+            self.log.info ( "CHAT {}".format ( match [ 7 ] ) )
             return
         if not player:
+            self.log.info ( "CHAT {}".format ( match [ 7 ] ) )
             self.log.error ( "Unkown player from match '{}' on advise_deprecation_chat.".format ( match ) )
             return
         self.framework.console.pm ( player, "The commands now go in the console, prefixing with gg (example: `gg /list auger)." )

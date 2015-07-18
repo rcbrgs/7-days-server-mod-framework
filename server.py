@@ -21,8 +21,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.5.3'
+        self.__version__ = '0.5.4'
         self.changelog = {
+            '0.5.4'  : "Refactored to use new console command.",
             '0.5.3'  : "Fixed syntaxfor console command.",
             '0.5.2'  : "Added wrapper to get console input through denied command from player.",
             '0.5.1'  : "Do not return entities with 0 health from get_nearest_zombie.",
@@ -651,7 +652,7 @@ class server ( threading.Thread ):
                 self.log.error ( "Possible injection attempt, ignoring gmsg '{}'.".format ( msg ) )
                 return
 
-        self.log.info ( "CHAT %s: %s" % ( msg_origin, msg_content ) )
+        self.log.info ( "CONS %s: %s" % ( msg_origin, msg_content ) )
         if len ( msg_content ) > 2:
             if msg_content [ 0 : 1 ] == "/":
                 # chat message started with "/"
