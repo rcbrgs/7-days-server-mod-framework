@@ -586,6 +586,7 @@ class parser ( threading.Thread ):
         player = self.framework.server.get_player ( match [ 7 ].split ( ": " ) [ 0 ] )
         command = match [ 7 ].split ( ": " ) [ 1 ]
         if command [ 0 ] != "/":
+            self.log.info ( "command [ 0 ] '{}' not a /".format ( command ) )
             return
         if not player:
             self.log.error ( "Unkown player from match '{}' on advise_deprecation_chat.".format ( match ) )
