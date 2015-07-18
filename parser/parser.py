@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.58'
+        self.__version__ = '0.1.59'
         self.changelog = {
+            '0.1.59' : "Fixed inversion on admin syntax for mod.",
             '0.1.58' : "Fixed console mod commands for admins.",
             '0.1.57' : "Removed chat commands hook.",
             '0.1.56' : "Added deprecation notice to chat.",
@@ -593,9 +594,9 @@ class parser ( threading.Thread ):
             self.log.error ( "Could not find player for match '{}'.".format ( match ) )
             return
         temp = refactored_match [ 7 ]
-        refactored_match [ 7 ] = player.name
-        refactored_match [ 8 ] = temp
-        self.framework.server.console_command ( tuple ( refactored_match ) )
+        refactored_match [ 7 ] = "{}: {}".format ( player.name, temp )
+        self.log.info ( "refactored_match [ 7 ] = {}".format ( refactored_match [ 7 ] ) )
+        self.framework.server.parse_gmsg ( tuple ( refactored_match ) )
 
     def advise_deprecation_chat ( self, match ):
         player = self.framework.server.get_player ( match [ 7 ].split ( ": " ) [ 0 ] )
