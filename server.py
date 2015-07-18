@@ -21,8 +21,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.5.4'
+        self.__version__ = '0.5.5'
         self.changelog = {
+            '0.5.5'  : "Made some commands output into PMs.",
             '0.5.4'  : "Refactored to use new console command.",
             '0.5.3'  : "Fixed syntaxfor console command.",
             '0.5.2'  : "Added wrapper to get console input through denied command from player.",
@@ -148,11 +149,15 @@ class server ( threading.Thread ):
         pickle.dump ( self.players_info, pickle_file, pickle.HIGHEST_PROTOCOL )
                   
     def command_help ( self, msg_origin, msg_content ):
+        player = self.get_player ( msg_origin )
+        if not player:
+            self.log.error ( "could not get_player for '{}' on command_help".format ( msg_origin ) )
+            return
         if len ( msg_content ) > len ( "/help" ):
             predicate = msg_content [ len ( "/help " ) : ]
             for key in self.commands.keys ( ):
                 if msg_content [ 6 : ] == key:
-                    self.framework.console.say ( self.commands [ key ] [ 1 ] )
+                    self.framework.console.pm ( player, self.commands [ key ] [ 1 ] )
                     return
             for mod_key in self.framework.mods.keys ( ):
                 mod = self.framework.mods [ mod_key ] [ 'reference' ]
@@ -160,11 +165,11 @@ class server ( threading.Thread ):
                     continue
                 for key in mod.commands.keys ( ):
                     if msg_content [ 6 : ] == key:
-                        self.framework.console.say ( mod.commands [ key ] [ 1 ] )
+                        self.framework.console.pm ( player, mod.commands [ key ] [ 1 ] )
                         return
             for help_item in self.help_items.keys ( ):
                 if help_item == predicate:
-                    self.framework.console.say ( self.help_items [ help_item ] )
+                    self.framework.console.pm ( player, self.help_items [ help_item ] )
                     return
             for mod_key in self.framework.mods.keys ( ):
                 mod = self.framework.mods [ mod_key ] [ 'reference' ]
@@ -174,7 +179,7 @@ class server ( threading.Thread ):
                     continue
                 for key in mod.help_items.keys ( ):
                     if key == predicate:
-                        self.framework.console.say ( mod.help_items [ key ] )
+                        self.framework.console.pm ( player, mod.help_items [ key ] )
                         return
 
         command_list = [ ]
@@ -191,7 +196,7 @@ class server ( threading.Thread ):
         for mod_key in sorted ( command_list ):
             help_message += mod_key + " "
         
-        self.framework.console.say ( help_message )
+        self.framework.console.pm ( player, help_message )
             
     def command_me ( self, player_identifier, message ):
         self.log.debug ( "me: start" )
@@ -258,7 +263,7 @@ class server ( threading.Thread ):
             some_msg = curses [ random.randint ( 0, len ( curses ) - 1 ) ]
             self.framework.console.say ( some_msg % str ( target.name_sane ) )
         else:
-            self.framework.console.say ( "I would never curse such a nice person!" )
+            self.framework.console.pm ( self.get_player ( msg_origin ), "I would never curse such a nice person!" )
 
     def display_entities ( self ):
         print ( "stal | entty_id | entity_type | lifetime  | remot | dead  | heal | pos" )
@@ -678,7 +683,7 @@ class server ( threading.Thread ):
                 for external_command in self.external_commands:
                     if msg_content [ 1 : ] == external_command:
                         return
-                self.framework.console.say ( "Syntax error: %s." % msg_content [ 1 : ] )
+                self.framework.console.pm ( player, "Syntax error: %s." % msg_content [ 1 : ] )
             else:
                 self.log.debug ( "Going for a translation." )
                 if 'translator'  in self.framework.mods.keys ( ):
@@ -872,10 +877,6 @@ class server ( threading.Thread ):
         result = result.replace ( "'", '_' )
         return result
                 
-    def say ( self, msg = None ):
-        self.log.warning ( "deprecated call to console.say" )
-        self.framework.console.say ( msg )
-
     def scout_distance ( self, player, entity_id ):
         """
         Will indicate to player how far he is from entity.
