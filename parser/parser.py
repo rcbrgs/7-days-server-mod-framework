@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.57'
+        self.__version__ = '0.1.58'
         self.changelog = {
+            '0.1.58' : "Fixed console mod commands for admins.",
             '0.1.57' : "Removed chat commands hook.",
             '0.1.56' : "Added deprecation notice to chat.",
             '0.1.55' : "Added matcher for console denial of command, hooked to server.comand_console.",
@@ -326,7 +327,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'kicking player'       : { 'to_match' : self.match_prefix + r'INF Kicking player: .*$',
                                        'to_call'  : [ ] },
-
+            'gg executing'         : { 'to_match' : self.match_prefix + r'INF Executing command \'gg (.*)\' from client ([\d]+)$',
+                                       'to_call'  : [ self.admin_command_mod ] },
             'le command executing' : { 'to_match' : self.match_string_date + \
                                        r' INF Executing command \'le\' by Telnet from ' + \
                                        self.match_string_ip + ':([\d]+)',
@@ -584,6 +586,17 @@ class parser ( threading.Thread ):
 
     # \API
 
+    def admin_command_mod ( self, match ):
+        refactored_match = list ( match )
+        player = self.framework.server.get_player ( int ( refactored_match [ 8 ] ) )
+        if not player:
+            self.log.error ( "Could not find player for match '{}'.".format ( match ) )
+            return
+        temp = refactored_match [ 7 ]
+        refactored_match [ 7 ] = player.name
+        refactored_match [ 8 ] = temp
+        self.framework.server.console_command ( tuple ( refactored_match ) )
+
     def advise_deprecation_chat ( self, match ):
         player = self.framework.server.get_player ( match [ 7 ].split ( ": " ) [ 0 ] )
         command = match [ 7 ].split ( ": " ) [ 1 ]
@@ -594,6 +607,7 @@ class parser ( threading.Thread ):
             self.log.info ( "CHAT {}".format ( match [ 7 ] ) )
             self.log.error ( "Unkown player from match '{}' on advise_deprecation_chat.".format ( match ) )
             return
+        self.log.info ( "CHAT {}".format ( match [ 7 ] ) )
         self.framework.console.pm ( player, "The commands now go in the console, prefixing with gg (example: `gg /list auger)." )
 
     def command_lp_output_parser ( self, match ):
