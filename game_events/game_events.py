@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.7"
+        self.__version__ = "0.3.8"
         self.changelog = {
+            '0.3.8'  : "Added inheritance tax.",
             '0.3.7'  : "Using smarter method to give taunt when tree-killed.",
             '0.3.6'  : "Use preferences' rank url and message instead of hardcoded values.",
             '0.3.5'  : "Refactor for gt in world_state.",
@@ -216,6 +217,10 @@ class game_events ( threading.Thread ):
             if not message_number:
                 message_number = random.randint ( 1, len ( player_died_messages ) - 1 )
             self.framework.console.say ( player_died_messages [ message_number ].format ( player.name_sane ) )
+        before_cash = player.cash
+        player.cash = round ( 0.9 * player.cash )
+        self.framework.console.pm ( player, "You payed {}$ as inheritance tax.".format ( 
+                before_cash - player.cash ) )
         
     def player_denied ( self, player_denied_match_group ):
         quoted_player_name = player_denied_match_group [ 1 ]
