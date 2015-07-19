@@ -17,8 +17,9 @@ class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.6'
+        self.__version__ = '0.4.7'
         self.changelog = {
+            '0.4.7' : "gale summary now display lag info.",
             '0.4.6' : "Changed inventory threhsold from 6 to 600 seconds to avoid sell all inventory bug.",
             '0.4.5' : "Added 60s to min le lag.",
             '0.4.4' : "Handler for exception on possible race condition.",
@@ -244,12 +245,13 @@ class world_state ( threading.Thread ):
         if 'time' not in mi.keys ( ):
             return
         staleness = time.time ( ) - self.game_server.mem [ 1 ]
-        msg = "{:.1f}s {:s}m {:s}/{:s}MB {:s}chu {:s}cgo {:s}p/{:s}z/{:s}i/{:s}({:s})e.".format (
+        msg = "{:.1f}s {:s}m {:s}/{:s}MB {:s}chu {:s}cgo {:s}p/{:s}z/{:s}i/{:s}({:s})e ".format (
             staleness,
             str ( mi [ 'time' ] ), str ( mi [ 'heap' ] ), str ( mi [ 'max' ] ), str ( mi [ 'chunks' ] ),
             str ( mi [ 'cgo' ] ), str ( mi [ 'players' ] ), str ( mi [ 'zombies' ] ), str ( mi [ 'items' ] ),
             str ( mi [ 'entities_1' ] ), str ( mi [ 'entities_2' ] ) ) 
 
+        msg += "le_lag {}, lp_lag {}, gt_lag {}.".format ( self.le_lag, self.lp_lag, self.gt_lag )
         return msg
                 
     # /API
