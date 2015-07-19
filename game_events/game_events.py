@@ -12,7 +12,7 @@ class game_events ( threading.Thread ):
         self.log = logging.getLogger ( __name__ )
         self.__version__ = "0.3.10"
         self.changelog = {
-            '0.3.10' : "Fixed death-by-tree picking message at random after picking right one.",
+            '0.3.10' : "Fixed death-by-tree picking message at random after picking right one. Fixed wrong syntax at tree list deleting time.",
             '0.3.9'  : "Fixed syntax for tree fell event.",
             '0.3.8'  : "Added inheritance tax.",
             '0.3.7'  : "Using smarter method to give taunt when tree-killed.",
@@ -303,7 +303,7 @@ class game_events ( threading.Thread ):
         deletables = [ ]
         for key in self.tree_kills.keys ( ):
             if now - key > 30:
-                deletables.add ( key )
+                deletables.append ( key )
         for key in deletables:
             del self.tree_kills [ key ]
         chance_event = random.randint ( 1, 100 )
