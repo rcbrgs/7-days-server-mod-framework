@@ -571,13 +571,13 @@ class parser ( threading.Thread ):
                                                                                          delay ) )
                 if matched_key == 'gt command executing':
                     self.framework.world_state.gt_lag += 0.1
-                    self.log.info ( "gt_lag = {}".format ( self.framework.world_state.gt_lag ) )
+                    self.log.info ( "gt_lag = {:.1f}".format ( self.framework.world_state.gt_lag ) )
                 if matched_key == 'le command executing' or matched_key == 'le_output':
                     self.framework.world_state.le_lag += 0.1
-                    self.log.info ( "le_lag = {}".format ( self.framework.world_state.le_lag ) )
+                    self.log.info ( "le_lag = {:.1f}".format ( self.framework.world_state.le_lag ) )
                 if matched_key == 'lp command executing' or matched_key == 'lp output':
                     self.framework.world_state.lp_lag += 0.1
-                    self.log.info ( "lp_lag = {}".format ( self.framework.world_state.lp_lag ) )
+                    self.log.info ( "lp_lag = {:.1f}".format ( self.framework.world_state.lp_lag ) )
 
     def stop ( self ):
         self.shutdown = True

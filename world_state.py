@@ -17,8 +17,10 @@ class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.7'
+        self.__version__ = '0.4.9'
         self.changelog = {
+            '0.4.9' : "Refactore le_lag for simplicity.",
+            '0.4.8' : "Added more logging to decide_le.",
             '0.4.7' : "gale summary now display lag info.",
             '0.4.6' : "Changed inventory threhsold from 6 to 600 seconds to avoid sell all inventory bug.",
             '0.4.5' : "Added 60s to min le lag.",
@@ -400,8 +402,9 @@ class world_state ( threading.Thread ):
             return
         now = time.time ( )
         if now - self.latest_le_call < self.le_lag:
-            self.log.debug ( "decide_le: le_lag ({:.2f}).".format ( self.le_lag ) )
+            self.log.debug ( "decide_le: ignore since le_lag is {:.2f}.".format ( self.le_lag ) )
             return
+        self.log.info ( "calling le" )
         self.latest_le_call = time.time ( )
         le_message = self.framework.console.telnet_wrapper ( "le" )
         self.framework.console.telnet_client_le.write ( le_message )
@@ -509,12 +512,11 @@ class world_state ( threading.Thread ):
             if self.lp_lag != old_lag:
                 self.log.info ( "lp_lag = {:.1f}s".format ( self.lp_lag ) )
         if total > num_entities - 5 and total < num_entities + 5:
-            self.log.debug ( "footer le" )
             old_lag = self.le_lag
-            new_lag = time.time ( ) - self.latest_le_call
-            if new_lag > self.le_lag:
+            latest_interval = time.time ( ) - self.latest_le_call
+            if latest_interval > self.le_lag:
                 self.le_lag += 0.1
-            if new_lag < self.le_lag:
+            if latest_interval < self.le_lag:
                 self.le_lag -= 0.1
             self.le_lag = max ( self.le_lag, self.framework.preferences.loop_wait + 60 )
             if self.le_lag != old_lag:
