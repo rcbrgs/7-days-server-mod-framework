@@ -10,8 +10,10 @@ class fear ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = "0.1.15"
+        self.__version__ = "0.1.17"
         self.changelog = {
+            '0.1.17' : "Fixed courage not diminishing fear",
+            '0.1.16' : "Made courage be multiplied by factor.",
             '0.1.15' : "Fixed exception when no entities around.",
             '0.1.14' : "Tweaked timings to get more balanced effect.",
             '0.1.13' : "Bump down fear upon triggered event.",
@@ -107,7 +109,7 @@ class fear ( threading.Thread ):
                             if zone == "fear":
                                 new_fear += interval
                             if zone == "courage":
-                                new_fear -= interval
+                                new_fear -= interval * float ( self.mod_preferences [ 'factor' ] )
                 elif zone == "fear":
                     self.log.info ( "setting new fear timestamp" )
                     new_fear_timestamp = now
