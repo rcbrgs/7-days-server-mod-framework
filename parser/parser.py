@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.59'
+        self.__version__ = '0.1.60'
         self.changelog = {
+            '0.1.60' : "Now lp and le latency increase more aggressively during server laggyness.",
             '0.1.59' : "Fixed inversion on admin syntax for mod.",
             '0.1.58' : "Fixed console mod commands for admins.",
             '0.1.57' : "Removed chat commands hook.",
@@ -569,9 +570,9 @@ class parser ( threading.Thread ):
                                                                                          delay ) )
                 if matched_key == 'gt command executing':
                     self.framework.world_state.gt_lag += 0.1
-                if matched_key == 'le command executing':
+                if matched_key == 'le command executing' or matched_key == 'le_output':
                     self.framework.world_state.le_lag += 0.1
-                if matched_key == 'lp command executing':
+                if matched_key == 'lp command executing' or matched_key == 'lp output':
                     self.framework.world_state.lp_lag += 0.1
 
     def stop ( self ):
