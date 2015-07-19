@@ -253,7 +253,7 @@ class world_state ( threading.Thread ):
             str ( mi [ 'cgo' ] ), str ( mi [ 'players' ] ), str ( mi [ 'zombies' ] ), str ( mi [ 'items' ] ),
             str ( mi [ 'entities_1' ] ), str ( mi [ 'entities_2' ] ) ) 
 
-        msg += "le_lag {}, lp_lag {}, gt_lag {}.".format ( self.le_lag, self.lp_lag, self.gt_lag )
+        msg += "le_lag {:.1f}, lp_lag {:.1f}, gt_lag {:.1f}.".format ( self.le_lag, self.lp_lag, self.gt_lag )
         return msg
                 
     # /API
