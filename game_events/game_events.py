@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.9"
+        self.__version__ = "0.3.10"
         self.changelog = {
+            '0.3.10' : "Fixed death-by-tree picking message at random after picking right one.",
             '0.3.9'  : "Fixed syntax for tree fell event.",
             '0.3.8'  : "Added inheritance tax.",
             '0.3.7'  : "Using smarter method to give taunt when tree-killed.",
@@ -178,7 +179,8 @@ class game_events ( threading.Thread ):
         
     def player_died ( self, matches ):
         player_died_messages = [
-            ( "{} is quite the tree-hugger!" ),
+            ( "It was an uneven match, {}. That tree has more kills than you ever will." ),
+            #( "{} is quite the tree-hugger!" ),
             ( "{}, the price of femur is really good right now, you don't mind do you?" ),
             ( "{} was hunted down by a vicious sand block." ),
             ( "Again, {}!?" ),
@@ -190,17 +192,16 @@ class game_events ( threading.Thread ):
             ( "Hmmm. I think I can make a base out of {}'s gore blocks." ),
             ( "I want brains, and after eating {}'s, I'm still hungry!" ),
             ( "If you will keep dying that fast, I will start respawning you as a rabbit, {}." ),
-            ( "It was an uneven match, {}. That tree has more kills than you ever will." ),
-            ( "Lemme guess, {}: you learned how to play with Lulu?" ),
+            #( "Lemme guess, {}: you learned how to play with Lulu?" ),
             ( "Let's all hope {} lost his backpack to a bug!" ),
             ( "Lol {}, are you role-playing a zombie?" ),
             ( "Muwahaha! The evil lag monster strikes {} again!" ),
             ( "Player stew: one water, one potato and one {}." ),
-            ( "Quick everyone! {}'s backpack has two augers!!" ),
+            #( "Quick everyone! {}'s backpack has two augers!!" ),
             ( "That's not how a log spike is supposed to work, {}." ),
             ( "Told you, {}, those are not teddy bears." ),
             ( "Wow, {} tastes just like chicken!" ),
-            ( "{}, you are supposed to stay [523456]behind[FFFFFF] the tree when it falls." ),
+            #( "{}, you are supposed to stay [523456]behind[FFFFFF] the tree when it falls." ),
             ( "You expect a prize if you read all taunts, {}?" ),
             ( "You shouldn't have eaten so much fast food, {}!" ),
             ]
@@ -215,7 +216,7 @@ class game_events ( threading.Thread ):
                         message_number = 0
                         break
             self.log.info ( "{} died!".format ( player.name_sane ) )
-            if not message_number:
+            if message_number == None:
                 message_number = random.randint ( 1, len ( player_died_messages ) - 1 )
             self.framework.console.say ( player_died_messages [ message_number ].format ( player.name_sane ) )
         before_cash = player.cash
