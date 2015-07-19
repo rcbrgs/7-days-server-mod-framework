@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.8"
+        self.__version__ = "0.3.9"
         self.changelog = {
+            '0.3.9'  : "Fixed syntax for tree fell event.",
             '0.3.8'  : "Added inheritance tax.",
             '0.3.7'  : "Using smarter method to give taunt when tree-killed.",
             '0.3.6'  : "Use preferences' rank url and message instead of hardcoded values.",
@@ -299,7 +300,7 @@ class game_events ( threading.Thread ):
         now = time.time ( )
         self.tree_kills [ now ] = ( float ( matches [ 0 ] ), float ( matches [ 2 ] ) )
         deletables = [ ]
-        for key in self.tree_kills.key:
+        for key in self.tree_kills.keys ( ):
             if now - key > 30:
                 deletables.add ( key )
         for key in deletables:
