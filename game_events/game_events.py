@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.6"
+        self.__version__ = "0.3.7"
         self.changelog = {
+            '0.3.7'  : "Using smarter method to give taunt when tree-killed.",
             '0.3.6'  : "Use preferences' rank url and message instead of hardcoded values.",
             '0.3.5'  : "Refactor for gt in world_state.",
             '0.3.4'  : "100 kills prize is at least 100 now.",
@@ -54,6 +55,7 @@ class game_events ( threading.Thread ):
             'player_position_changed'    : [ ( self.check_position_triggers,
                                                { } ) ],
             }
+        self.tree_kills = { }
 
     def __del__ ( self ):
         self.stop ( )
@@ -202,8 +204,17 @@ class game_events ( threading.Thread ):
             ]
         player = self.framework.server.get_player ( matches [ 7 ] )
         if player:
+            message_number = None
+            for key in self.tree_kills.keys ( ):
+                for position in player.positions [ : -10 ]:
+                    distance = self.framework.utils.calculate_distance ( ( player.pos_x, player.pos_y ),
+                                                                         self.tree_kills [ key ] )
+                    if distance < 5:
+                        message_number = 0
+                        break
             self.log.info ( "{} died!".format ( player.name_sane ) )
-            message_number = random.randint ( 0, len ( player_died_messages ) - 1 )
+            if not message_number:
+                message_number = random.randint ( 1, len ( player_died_messages ) - 1 )
             self.framework.console.say ( player_died_messages [ message_number ].format ( player.name_sane ) )
         
     def player_denied ( self, player_denied_match_group ):
@@ -280,6 +291,14 @@ class game_events ( threading.Thread ):
 
     def tree_felled ( self, matches ):
         self.log.info ( "Tree was felled at ( {}, {} ).".format ( matches [ 0 ], matches [ 2 ] ) )
+        now = time.time ( )
+        self.tree_kills [ now ] = ( float ( matches [ 0 ] ), float ( matches [ 2 ] ) )
+        deletables = [ ]
+        for key in self.tree_kills.key:
+            if now - key > 30:
+                deletables.add ( key )
+        for key in deletables:
+            del self.tree_kills [ key ]
         chance_event = random.randint ( 1, 100 )
         self.log.info ( "chance_event = {}".format ( chance_event ) )
         if chance_event < 5:

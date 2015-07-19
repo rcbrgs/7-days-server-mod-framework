@@ -10,8 +10,9 @@ class fear ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = "0.1.14"
+        self.__version__ = "0.1.15"
         self.changelog = {
+            '0.1.15' : "Fixed exception when no entities around.",
             '0.1.14' : "Tweaked timings to get more balanced effect.",
             '0.1.13' : "Bump down fear upon triggered event.",
             '0.1.12' : "Adjusted event to be more often and have more effect.",
@@ -69,7 +70,7 @@ class fear ( threading.Thread ):
                 now = time.time ( )
                 distance, entity_id, entity_type = self.framework.server.get_nearest_zombie ( player )
                 if not distance:
-                    distance = 100 * self.mod_preferences [ 'distance_maximum' ]
+                    distance = 100 * float ( self.mod_preferences [ 'distance_maximum' ] )
                 # save each players' zone info
                 zone = 'neutral'
                 if distance > float ( self.mod_preferences [ 'distance_maximum' ] ):
