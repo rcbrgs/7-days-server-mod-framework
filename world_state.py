@@ -17,8 +17,9 @@ class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.5'
+        self.__version__ = '0.4.6'
         self.changelog = {
+            '0.4.6' : "Changed inventory threhsold from 6 to 600 seconds to avoid sell all inventory bug.",
             '0.4.5' : "Added 60s to min le lag.",
             '0.4.4' : "Handler for exception on possible race condition.",
             '0.4.3' : "Tweaked gt lag.",
@@ -229,7 +230,7 @@ class world_state ( threading.Thread ):
         while self.inventory [ 'checking' ]:
             self.log.info ( "Waiting for si to complete..." )
             time.sleep ( 2 )
-            if time.time ( ) - timestamp > 6:
+            if time.time ( ) - timestamp > 600:
                 break
         inventory = self.inventory
         self.let_inventory ( )
