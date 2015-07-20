@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.1'
+        self.__version__ = '0.2.2'
         self.changelog = {
+            '0.2.2'  : "Added call to translation after deprecation check.",
             '0.2.1'  : "Fixed syntax error on callback for guard matcher of sell.",
             '0.2.0'  : "Added command guard matcher and processing.",
             }
@@ -219,7 +220,6 @@ class parser ( threading.Thread ):
                                        r'fell off the world, id=([\d]+) pos=' + self.match_string_pos + r'$',
                                        'to_call'  : [ ] },
             'gmsg'                 : { 'to_match' : self.match_string_date + r' INF GMSG: (.*: .*)$',
-                                       #'to_call'  : [ self.framework.server.parse_gmsg, self.advise_deprecation_chat ] },
                                        'to_call'  : [ self.advise_deprecation_chat ] },
             'gt command executing' : { 'to_match' : self.match_string_date + \
                                        r' INF Executing command \'gt\' by Telnet from ' + \
@@ -556,6 +556,16 @@ class parser ( threading.Thread ):
         command = match [ 7 ].split ( ": " ) [ 1 ]
         if command [ 0 ] != "/":
             self.log.info ( "CHAT {}".format ( match [ 7 ] ) )
+            self.log.debug ( "Going for a translation." )
+            if 'translator'  in self.framework.mods.keys ( ):
+                translator = self.framework.mods [ 'translator' ] [ 'reference' ]
+                if translator.enabled:
+                    translator.translate ( msg_origin, msg_content [ : ] )
+                else:
+                    self.log.info ( "translate not enabled" )
+            else:
+                self.log.info ( "translate module not loaded" )
+
             return
         if not player:
             self.log.info ( "CHAT {}".format ( match [ 7 ] ) )
