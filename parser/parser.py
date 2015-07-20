@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.61'
+        self.__version__ = '0.1.62'
         self.changelog = {
+            '0.1.62' : "Added exception for server commands through chat.",
             '0.1.61' : "More logging for lag changes.",
             '0.1.60' : "Now lp and le latency increase more aggressively during server laggyness.",
             '0.1.59' : "Fixed inversion on admin syntax for mod.",
@@ -604,6 +605,11 @@ class parser ( threading.Thread ):
         self.framework.server.parse_gmsg ( tuple ( refactored_match ) )
 
     def advise_deprecation_chat ( self, match ):
+        if match [ 7 ] [ : len ( "Server: " ) ] == "Server: ":
+            self.log.info ( "Server chat command '{}' detected.".format ( match [ 7 ] [ len ( "Server: " ) : ] ) )
+            self.framework.server.parse_gmsg ( match )
+            return
+
         player = self.framework.server.get_player ( match [ 7 ].split ( ": " ) [ 0 ] )
         command = match [ 7 ].split ( ": " ) [ 1 ]
         if command [ 0 ] != "/":
