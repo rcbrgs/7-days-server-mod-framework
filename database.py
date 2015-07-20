@@ -9,8 +9,9 @@ class database ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.1.3"
+        self.__version__ = "0.1.4"
         self.changelog = {
+            '0.1.4' : "Changed shutdown event from error to warning.",
             '0.1.3' : "Fixed no connection error by only connecting on startup and breaking if fail.",
             '0.1.1' : "Added generic exception handler to configure_tables.",
             '0.1.1' : "Added generic exception handler to check_tables.",
@@ -54,8 +55,8 @@ class database ( threading.Thread ):
             # STARTMOD
 
             if not self.connection:
-                self.log.error ( "Connection became None during runtime." )
-                break
+                self.log.warning ( "Connection became None during runtime." )
+                self.shutdown ( )
             
             # ENDMOD                             
 
