@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.2'
+        self.__version__ = '0.2.3'
         self.changelog = {
+            '0.2.3'  : "Fixed translation call syntax on deprecation.",
             '0.2.2'  : "Added call to translation after deprecation check.",
             '0.2.1'  : "Fixed syntax error on callback for guard matcher of sell.",
             '0.2.0'  : "Added command guard matcher and processing.",
@@ -553,6 +554,9 @@ class parser ( threading.Thread ):
             return
 
         player = self.framework.server.get_player ( match [ 7 ].split ( ": " ) [ 0 ] )
+        if not player:
+            self.log.warning ( "deprecation: could not find player '{}'.".format ( 
+                    match [ 7 ].split ( ": " ) [ 0 ] ) )
         command = match [ 7 ].split ( ": " ) [ 1 ]
         if command [ 0 ] != "/":
             self.log.info ( "CHAT {}".format ( match [ 7 ] ) )
@@ -560,7 +564,8 @@ class parser ( threading.Thread ):
             if 'translator'  in self.framework.mods.keys ( ):
                 translator = self.framework.mods [ 'translator' ] [ 'reference' ]
                 if translator.enabled:
-                    translator.translate ( msg_origin, msg_content [ : ] )
+                    #translator.translate ( msg_origin, msg_content [ : ] )
+                    translator.translate ( player.name, match [ 7 ] [ len ( player.name + ": " ) : ] )
                 else:
                     self.log.info ( "translate not enabled" )
             else:
