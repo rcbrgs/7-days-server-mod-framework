@@ -17,8 +17,9 @@ class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.9'
+        self.__version__ = '0.4.10'
         self.changelog = {
+            '0.4.10' : "Refactored to use command guard for si. Time threshold 600 -> 60.",
             '0.4.9' : "Refactore le_lag for simplicity.",
             '0.4.8' : "Added more logging to decide_le.",
             '0.4.7' : "gale summary now display lag info.",
@@ -233,7 +234,7 @@ class world_state ( threading.Thread ):
         while self.inventory [ 'checking' ]:
             self.log.info ( "Waiting for si to complete..." )
             time.sleep ( 2 )
-            if time.time ( ) - timestamp > 600:
+            if time.time ( ) - timestamp > 60:
                 break
         inventory = self.inventory
         self.let_inventory ( )
@@ -288,6 +289,15 @@ class world_state ( threading.Thread ):
     def request_inventory ( self, player ):
         self.inventory = { 'checking' : True }
         self.framework.console.send ( "si {}".format ( player.steamid ) )
+        self.framework.console.send ( "si{}".format ( player.steamid ) )
+
+    def si_process_guard ( self, matches ):
+        steamid = int ( matches [ 0 ] [ len ( "si" ) : ] )
+        player = self.framework.server.get_player ( steamid )
+        if not player:
+            self.log.warning ( "si_process_guard could not get valid player from '{}'.".format ( steamid ) )
+            return
+        self.inventory [ 'checking' ] = False
 
     def update_inventory ( self, matches ):
         self.log.debug ( "update inventory ( {} )".format ( matches ) )

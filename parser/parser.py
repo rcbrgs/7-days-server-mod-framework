@@ -10,71 +10,10 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.1.62'
+        self.__version__ = '0.2.0'
         self.changelog = {
-            '0.1.62' : "Added exception for server commands through chat.",
-            '0.1.61' : "More logging for lag changes.",
-            '0.1.60' : "Now lp and le latency increase more aggressively during server laggyness.",
-            '0.1.59' : "Fixed inversion on admin syntax for mod.",
-            '0.1.58' : "Fixed console mod commands for admins.",
-            '0.1.57' : "Removed chat commands hook.",
-            '0.1.56' : "Added deprecation notice to chat.",
-            '0.1.55' : "Added matcher for console denial of command, hooked to server.comand_console.",
-            '0.1.54' : "Reintroduced le, lp and gt lag increase upon parser overwhelming.",
-            '0.1.53' : "Removed lp_lag pile up from parser being overwhelmed.",
-            '0.1.52' : "+Matcher for server: any header.",
-            '0.1.51' : "Added matcher for web static not found.",
-            '0.1.50' : "Refactored to use new entity loop.",
-            '0.1.49' : "Tweaked entityitem fell off the world matcher to get more data.",
-            '0.1.48' : "Refactored for simplified interface with server.",
-            '0.1.47' : "Made logged lagging lines less spammy.",
-            '0.1.46' : "Tweaked two matchers not capturing all events.",
-            '0.1.45' : "Hooked parser to increase lag when parsing storm begins.",
-            '0.1.44' : "Matcher for failed collision data.",
-            '0.1.43' : "No good position for horde.",
-            '0.1.42' : "Hooked log to item dropping in void to better see shop working.",
-            '0.1.41' : "Matcher for scout-triggered horde finishing.",
-            '0.1.40' : "Made header matcher more flexible.",
-            '0.1.39' : "Matcher for playerlogin more flexible.",
-            '0.1.38' : "Logging when player disconnects.",
-            '0.1.37' : "Simplifying lp cycle.",
-            '0.1.36' : "snow zom matcher",
-            '0.1.35' : "EAC backend matcher.",
-            '0.1.34' : "AI wanderer stop matcher.",
-            '0.1.33' : "Another player disconnect output matcher.",
-            '0.1.32' : "Matcher scout horde spawn finish.",
-            '0.1.31' : "Matcher steam drop client.",
-            '0.1.30' : "Matcher biome snow znimas zombies.",
-            '0.1.29' : "Matcher cmd se executing.",
-            '0.1.28' : "Matcher scout horde zombie being removed.",
-            '0.1.27' : "Matcher failed triangles.",
-            '0.1.26' : "Matcher RPC. Refactored player online.",
-            '0.1.25' : "Fixed ai horde towards player.",
-            '0.1.24' : "Matcher for biome snow zombie. Kicking player more flexible.",
-            '0.1.23' : "Fixed ent fell off matcher, added zombie waste night day, biome zombie, player dconn net.",
-            '0.1.22' : "Added matcher for behaviour missing script.",
-            '0.1.21' : "Matcher for wanderer horde going for player.",
-            '0.1.20' : "+Matcher for night horde finish.",
-            '0.1.19' : "+Matcher for save file failure.",
-            '0.1.18' : "More informative exception log.",
-            '0.1.17' : "Fixed matcher claim to not false positive.",
-            '0.1.16' : "Matcher wasteland day",
-            '0.1.15' : "Matcher of zed wasteland day night.",
-            '0.1.14' : "Added matcher for biome spawn zombie animal all, falling block fell void, AI wanderer removed.",
-            '0.1.13' : "Added matcher for EAC unregister.",
-            '0.1.12' : "Hooked tree felling match to event.",
-            '0.1.11' : "Refactored biome matcher.",
-            '0.1.10' : "Fixed matcher for telnet close.",
-            '0.1.9'  : "Matchers for telnet close. Biome.",
-            '0.1.8'  : "Matchers for biomespawn, falling trees.",
-            '0.1.7'  : "Supply plane and crates matchers. A12 header matcher.",
-            '0.1.6'  : "Matcher for item drop, Steam auth. Fixed zed fall through void matcher typo.",
-            '0.1.5'  : "Added hook to player creation event.",
-            '0.1.4'  : "Some more connection / new player matchers.",
-            '0.1.3'  : "EAC Auth matcher.",
-            '0.1.2'  : "+AI scout matchers.",
-            '0.1.1'  : "Matcher for player requested spawn, EAC kicking user reason, playerid not found.",
-            '0.1.0'  : "Initial commit." }
+            '0.2.0'  : "Added command guard matcher and processing.",
+            }
 
         self.daemon = True
         self.llp_current_player = None
@@ -244,6 +183,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'empty line'           : { 'to_match' : r'^$',
                                        'to_call'  : [ ] },
+            'ERROR'                : { 'to_match' : r'*** ERROR: unknown command \'(.*)\'',
+                                       'to_call'  : [ self.output_guard_error] },
             'executing cmd give'   : { 'to_match' : self.match_prefix + r'INF Executing command \'give ' + \
                                        r'[\d]+ [\w\d]+ [\d]+\' by Telnet from ' + self.match_string_ip + \
                                        r':[\d]+$',
@@ -697,6 +638,21 @@ class parser ( threading.Thread ):
                 break
         self.queue_lock = callee_class + "." + callee
         self.log.debug ( "{:s} got parser queue lock.".format ( callee ) )
+
+    def output_guard_error ( self, matches ):
+        """
+        When necessary, framework will send an invalid command, so that the game server respond with an error containing the said invalid command string.
+        Using that, the framework is able to know when a command sent BEFORE the invalid one has finished.
+        Example: the si command can end with any slot, up to the backpack's 31th slot. By sending an invalid command after the si, when the error is sent we know the command is finished.
+        """
+        command_string = matches [ 0 ]
+        callbacks = {
+            "si" : self.framework.world_state.si_process_guard
+            }
+
+        for key in callbacks.keys ( ):
+            if command_string [ : len ( key ) ] == key:
+                callback [ key ] ( command_string )
 
     def unlock_queue ( self ):
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
