@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.3'
+        self.__version__ = '0.2.4'
         self.changelog = {
+            '0.2.4'  : "Matcher of EAC log user dconn.",
             '0.2.3'  : "Fixed translation call syntax on deprecation.",
             '0.2.2'  : "Added call to translation after deprecation check.",
             '0.2.1'  : "Fixed syntax error on callback for guard matcher of sell.",
@@ -176,6 +177,10 @@ class parser ( threading.Thread ):
             'EAC kicking player'   : { 'to_match' : self.match_prefix + r'Kicking player: Kicked by EAC. ' + \
                                        r'Please check if you started the game with AntiCheat protection ' + \
                                        r'software enabled$',
+                                       'to_call'  : [ ] },
+            'EAC log conn lost'    : { 'to_match' : self.match_prefix + r'INF \[EAC\] Log: User EAC client connection lost: [\d]+$',
+                                       'to_call'  : [ ] },
+            'EAC log dconn'         : { 'to_match' : self.match_prefix + r'INF \[EAC\] Log: User without EAC connection: [\d]+. User status: Disconnected$',
                                        'to_call'  : [ ] },
             'EAC Auth'             : { 'to_match' : self.match_prefix + r'INF \[Steamworks\.NET\] Authenticating player: [\w]+ SteamId: [\d]+ TicketLen: [\d]+ Result: k_EBeginAuthSessionResultOK$',
                                        'to_call'  : [ ] },
