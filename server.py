@@ -657,7 +657,11 @@ class server ( threading.Thread ):
                 self.log.error ( "Possible injection attempt, ignoring gmsg '{}'.".format ( msg ) )
                 return
 
-        self.log.info ( "CONS %s: %s" % ( msg_origin, msg_content ) )
+        if msg_origin != "Server":
+            self.log.info ( "CONS %s: %s" % ( msg_origin, msg_content ) )
+        else:
+            self.log.info ( "CHAT %s: %s" % ( msg_origin, msg_content ) )
+
         if len ( msg_content ) > 2:
             if msg_content [ 0 : 1 ] == "/":
                 # chat message started with "/"

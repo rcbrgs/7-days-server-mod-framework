@@ -27,18 +27,22 @@ class queued_console ( threading.Thread ):
         self.queue_lock = None
         self.shutdown = False
         telnet_wait = 7
+        self.log.info ( "loading client commands telnet" )
         self.telnet_client_commands = framework.telnet_client ( self.framework )
         self.telnet_client_commands.open_connection ( )
         self.telnet_client_commands.start ( )
         time.sleep ( telnet_wait )
+        self.log.info ( "loading le telnet" )
         self.telnet_client_le = framework.telnet_client ( self.framework )
         self.telnet_client_le.open_connection ( )
         self.telnet_client_le.start ( )
         time.sleep ( telnet_wait )
+        self.log.info ( "loading lp telnet" )
         self.telnet_client_lp = framework.telnet_client ( self.framework )
         self.telnet_client_lp.open_connection ( )
         self.telnet_client_lp.start ( )
         time.sleep ( telnet_wait )
+        self.log.info ( "loading pm telnet" )
         self.telnet_client_pm = framework.telnet_client ( self.framework )
         self.telnet_client_pm.open_connection ( )
         self.telnet_client_pm.start ( )

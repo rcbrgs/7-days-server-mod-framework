@@ -46,6 +46,7 @@ class telnet_client ( threading.Thread ):
         self.telnet_port     = self.framework.preferences.telnet_port
         self.timestamp_input = None
         self.timestamp_input_previous = None
+        self.log.info ( "creating telnetlib object" )
         self.telnet = telnetlib.Telnet ( timeout = 10 )
 
     def __del__ ( self ):

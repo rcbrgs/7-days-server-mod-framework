@@ -120,9 +120,11 @@ class orchestrator ( threading.Thread ):
 
         self.log.info ( "Loading console." )
         self.console = framework.queued_console ( self )
+        self.log.info ( "Starting console." )
         self.console.start ( )
         self.stop_on_shutdown.append ( self.console )
 
+        self.log.info ( "Loading world_state" )
         self.world_state.start ( )
         self.stop_on_shutdown.append ( self.world_state )
 

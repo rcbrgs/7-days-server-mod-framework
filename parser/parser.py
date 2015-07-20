@@ -183,7 +183,7 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'empty line'           : { 'to_match' : r'^$',
                                        'to_call'  : [ ] },
-            'ERROR'                : { 'to_match' : r'*** ERROR: unknown command \'(.*)\'',
+            'ERROR'                : { 'to_match' : r'\*\*\* ERROR: unknown command \'(.*)\'',
                                        'to_call'  : [ self.output_guard_error] },
             'executing cmd give'   : { 'to_match' : self.match_prefix + r'INF Executing command \'give ' + \
                                        r'[\d]+ [\w\d]+ [\d]+\' by Telnet from ' + self.match_string_ip + \

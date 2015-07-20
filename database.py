@@ -36,7 +36,7 @@ class database ( threading.Thread ):
             # Check again.
             if not self.check_mysql_connection ( ):
                 self.log.error ( "Could not open MySQL connection, aborting." )
-                self.stop ( )
+                #self.stop ( )
                 return
 
         # Check config is good.
@@ -56,7 +56,7 @@ class database ( threading.Thread ):
 
             if not self.connection:
                 self.log.warning ( "Connection became None during runtime." )
-                self.stop ( )
+                #self.stop ( )
             
             # ENDMOD                             
 
