@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.10"
+        self.__version__ = "0.3.11"
         self.changelog = {
+            '0.3.11' : "Hooked a call to best buy every day at 21h.",
             '0.3.10' : "Fixed death-by-tree picking message at random after picking right one. Fixed wrong syntax at tree list deleting time.",
             '0.3.9'  : "Fixed syntax for tree fell event.",
             '0.3.8'  : "Added inheritance tax.",
@@ -133,6 +134,10 @@ class game_events ( threading.Thread ):
         for player in self.framework.server.get_online_players ( ):
             self.log.info ( self.framework.server.get_player_summary ( player ) )
         self.log.info ( self.framework.world_state.get_game_server_summary ( ) )
+
+        if previous_hour == 20:
+            if 'shop' in list ( self.framework.mods.keys ( ) ):
+                self.framework.mods [ 'shop' ] [ 'reference' ].best_buy ( )
 
     def player_can_propose ( self, player ):
         self.framework.console.say ( "The community looks up to {} for guidance! {} can now propose referendums.".format ( player.name_sane, player.name_sane ) )

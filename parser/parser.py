@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.4'
+        self.__version__ = '0.2.5'
         self.changelog = {
+            '0.2.5'  : "More logging for guard matcher.",
             '0.2.4'  : "Matcher of EAC log user dconn.",
             '0.2.3'  : "Fixed translation call syntax on deprecation.",
             '0.2.2'  : "Added call to translation after deprecation check.",
@@ -667,12 +668,16 @@ class parser ( threading.Thread ):
         Example: the si command can end with any slot, up to the backpack's 31th slot. By sending an invalid command after the si, when the error is sent we know the command is finished.
         """
         command_string = matches [ 0 ]
+        self.log.info ( "command_string = '{}'.".format ( command_string ) )
+
         callbacks = {
             "si" : self.framework.world_state.si_process_guard
             }
 
         for key in callbacks.keys ( ):
             if command_string [ : len ( key ) ] == key:
+                self.log.info ( "output_guard_error matched key of '{}' for matches [ 0 ] = '{}'".format ( 
+                        key, matches [ 0 ] ) )
                 callbacks [ key ] ( command_string )
 
     def unlock_queue ( self ):
