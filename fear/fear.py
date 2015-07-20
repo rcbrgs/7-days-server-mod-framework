@@ -145,7 +145,7 @@ class fear ( threading.Thread ):
                         new_fear_warning = fear_warning
                         if new_fear_warning == 1:
                             self.framework.console.say ( 
-                                "{} fear is now so intense it might attracts zombies.".format ( 
+                                "{} fear is now so intense it might attract zombies.".format ( 
                                     player.name_sane ) )
                         else:
                             self.framework.console.say ( "{} smells of fear even more than before.".format ( 
