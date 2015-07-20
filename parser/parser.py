@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.0'
+        self.__version__ = '0.2.1'
         self.changelog = {
+            '0.2.1'  : "Fixed syntax error on callback for guard matcher of sell.",
             '0.2.0'  : "Added command guard matcher and processing.",
             }
 
@@ -652,7 +653,7 @@ class parser ( threading.Thread ):
 
         for key in callbacks.keys ( ):
             if command_string [ : len ( key ) ] == key:
-                callback [ key ] ( command_string )
+                callbacks [ key ] ( command_string )
 
     def unlock_queue ( self ):
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
