@@ -8,8 +8,9 @@ import time
 class polis ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
-        self.__version__ = "0.1.7"
+        self.__version__ = "0.1.8"
         self.changelog = {
+            '0.1.8' : "Better logging during vote for debug.",
             '0.1.7' : "Fixed countdown. For real this time. Fixed wrong player handle crashing the mod.",
             '0.1.6' : "Fixed countdown displaying inverted time 0->5min instead of 5->0mins.",
             '0.1.5' : "Fixed countdown display, fixed votes not being registered. Fixed resulting command syntax. Fixed warnings.",
@@ -168,15 +169,21 @@ class polis ( threading.Thread ):
             self.framework.console.say ( "{}, only players with more than 5h on the server can vote.".format (
                 player.name_sane ) )
             return
+        self.log.info ( "{} has voting power.".format ( player.name_sane ) )
 
         vote_text = message [ len ( "/vote " ) : ].strip ( ).lower ( )
         if vote_text == 'yes':
             self.proposal [ 'votes' ] [ player ] = 'yes'
             self.framework.console.pm ( player, "You voted yes." )
-
+            self.log.info ( "{} voted {}.".format ( player.name_sane, vote_text ) )
+            return
         if vote_text == 'no':
             self.proposal [ 'votes' ] [ player ] = 'no'
             self.framework.console.pm ( player, "You voted no." )
+            self.log.info ( "{} voted {}.".format ( player.name_sane, vote_text ) )
+            return
+        self.log.info ( "{} voted unintelligeble vote '{}'.".format ( player.name_sane, vote_text ) )
+
 
     # /commands
 
