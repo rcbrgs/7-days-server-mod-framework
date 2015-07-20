@@ -56,7 +56,7 @@ class database ( threading.Thread ):
 
             if not self.connection:
                 self.log.warning ( "Connection became None during runtime." )
-                self.shutdown ( )
+                self.stop ( )
             
             # ENDMOD                             
 
