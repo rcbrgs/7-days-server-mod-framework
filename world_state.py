@@ -17,8 +17,9 @@ class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.10'
+        self.__version__ = '0.4.11'
         self.changelog = {
+            '0.4.11' : "Fixed si string on process si.",
             '0.4.10' : "Refactored to use command guard for si. Time threshold 600 -> 60.",
             '0.4.9' : "Refactore le_lag for simplicity.",
             '0.4.8' : "Added more logging to decide_le.",
@@ -291,8 +292,8 @@ class world_state ( threading.Thread ):
         self.framework.console.send ( "si {}".format ( player.steamid ) )
         self.framework.console.send ( "si{}".format ( player.steamid ) )
 
-    def si_process_guard ( self, matches ):
-        steamid = int ( matches [ 0 ] [ len ( "si" ) : ] )
+    def si_process_guard ( self, si_string ):
+        steamid = int ( si_string [ len ( "si" ) : ] )
         player = self.framework.server.get_player ( steamid )
         if not player:
             self.log.warning ( "si_process_guard could not get valid player from '{}'.".format ( steamid ) )
