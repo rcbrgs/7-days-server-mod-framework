@@ -562,7 +562,10 @@ class parser ( threading.Thread ):
     def advise_deprecation_chat ( self, match ):
         if match [ 7 ] [ : len ( "Server: /" ) ] == "Server: /":
             self.log.info ( "Server chat command '{}' detected.".format ( match [ 7 ] [ len ( "Server: " ) : ] ) )
-            self.framework.server.parse_gmsg ( match )
+            self.log.info ( "CHAT {}".format ( match [ 7 ] ) )
+            refactored_match = list ( match )
+            refactored_match.append ( "Server" )
+            self.framework.server.parse_gmsg ( tuple ( refactored_match ) )
             return
         if match [ 7 ] [ : len ( "Server: " ) ] == "Server: ":
             self.log.debug ( "Server chat message '{}' detected.".format ( match [ 7 ] [ len ( "Server: " ) : ] ) )
