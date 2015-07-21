@@ -21,8 +21,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.5.6'
+        self.__version__ = '0.5.7'
         self.changelog = {
+            '0.5.7'  : "Added capture on server chat messages.",
             '0.5.6'  : "Fixed syntax error message having a syntax error.",
             '0.5.5'  : "Made some commands output into PMs.",
             '0.5.4'  : "Refactored to use new console command.",
@@ -637,6 +638,9 @@ class server ( threading.Thread ):
 
     def parse_gmsg ( self, match ):
         player = self.get_player ( match [ 8 ] )
+        if not player:
+            self.log.warning ( "No player '{}' exists.".format ( match [ 8 ] ) )
+            return
         self.log.debug ( match )
         msg = match [ 7 ]
         msg_splitted = msg.split ( ":" )
