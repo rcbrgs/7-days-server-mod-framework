@@ -108,7 +108,7 @@ class telnet_client ( threading.Thread ):
                 self.log.warning ( "chomp: game server closed the connection." )
                 self.framework.shutdown = True
                 return
-            if e == "telnet connection closed"
+            if e == "telnet connection closed":
                 self.log.warning ( "chomp: game server closed the connection." )
                 self.framework.shutdown = True
                 return
