@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.7'
+        self.__version__ = '0.2.8'
         self.changelog = {
+            '0.2.8'  : "Detecting server chat messages sooner.",
             '0.2.7'  : "Fixed false positives on server chat command detection.",
             '0.2.6'  : "Matcher for steam kick over invalid login.",
             '0.2.5'  : "More logging for guard matcher.",
@@ -562,6 +563,9 @@ class parser ( threading.Thread ):
             self.log.info ( "Server chat command '{}' detected.".format ( match [ 7 ] [ len ( "Server: " ) : ] ) )
             self.framework.server.parse_gmsg ( match )
             return
+        if match [ 7 ] [ : len ( "Server: " ) ] == "Server: ":
+            self.log.debug ( "Server chat message '{}' detected.".format ( match [ 7 ] [ len ( "Server: " ) : ] ) )
+            return       
 
         player = self.framework.server.get_player ( match [ 7 ].split ( ": " ) [ 0 ] )
         if not player:
