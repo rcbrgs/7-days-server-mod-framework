@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.6'
+        self.__version__ = '0.2.7'
         self.changelog = {
+            '0.2.7'  : "Fixed false positives on server chat command detection.",
             '0.2.6'  : "Matcher for steam kick over invalid login.",
             '0.2.5'  : "More logging for guard matcher.",
             '0.2.4'  : "Matcher of EAC log user dconn.",
@@ -557,7 +558,7 @@ class parser ( threading.Thread ):
         self.framework.server.parse_gmsg ( tuple ( refactored_match ) )
 
     def advise_deprecation_chat ( self, match ):
-        if match [ 7 ] [ : len ( "Server: " ) ] == "Server: ":
+        if match [ 7 ] [ : len ( "Server: /" ) ] == "Server: /":
             self.log.info ( "Server chat command '{}' detected.".format ( match [ 7 ] [ len ( "Server: " ) : ] ) )
             self.framework.server.parse_gmsg ( match )
             return
