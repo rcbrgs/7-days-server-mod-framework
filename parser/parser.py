@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.5'
+        self.__version__ = '0.2.6'
         self.changelog = {
+            '0.2.6'  : "Matcher for steam kick over invalid login.",
             '0.2.5'  : "More logging for guard matcher.",
             '0.2.4'  : "Matcher of EAC log user dconn.",
             '0.2.3'  : "Fixed translation call syntax on deprecation.",
@@ -429,6 +430,8 @@ class parser ( threading.Thread ):
                                        r'Authentication callback\. ID: [\d]+, owner: [\d]+, result: .*$',
                                        'to_call'  : [ ] },
             'steam drop client'    : { 'to_match' : self.match_prefix + r'INF \[Steamworks\.NET\] NET: Dropping client: [\d]+$',
+                                       'to_call'  : [ ] },
+            'steam kick'           : { 'to_match' : self.match_prefix + r'INF \[Steamworks\.NET\] Kick player for invalid login: [\d]+ .*$',
                                        'to_call'  : [ ] },
             'steam player connect' : { 'to_match' : self.match_prefix + r'INF \[NET\] PlayerConnected ' + \
                                        r'EntityID=-1, PlayerID=\'\', OwnerID=\'\', PlayerName=\'\'$',
