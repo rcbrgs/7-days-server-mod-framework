@@ -8,8 +8,9 @@ import time
 class polis ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
-        self.__version__ = "0.1.8"
+        self.__version__ = "0.1.9"
         self.changelog = {
+            '0.1.9' : "Added a call to review when proposal is activated since now the commands are hidden in console.",
             '0.1.8' : "Better logging during vote for debug.",
             '0.1.7' : "Fixed countdown. For real this time. Fixed wrong player handle crashing the mod.",
             '0.1.6' : "Fixed countdown displaying inverted time 0->5min instead of 5->0mins.",
@@ -150,6 +151,7 @@ class polis ( threading.Thread ):
         player.karma -= 1
 
         self.framework.console.say ( "Proposal active! Citizens have 5 minutes to vote." )
+        self.command_review ( "", "" )
         
     def command_review ( self, origin, message ):
         if self.proposal == { }:
