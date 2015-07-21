@@ -12,8 +12,9 @@ class telnet_client ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.9'
+        self.__version__ = '0.2.10'
         self.changelog = {
+            '0.2.10' : "Added telnet connection close detection exception on chomp.",
             '0.2.9' : "Detecting game server closing connection earlier.",
             '0.2.8' : "Using telnetlib.expect errors to detect chomp timeout reliably.",
             '0.2.7' : "Added matcher for total of in game because of too many chomp timeouts.",
@@ -104,6 +105,10 @@ class telnet_client ( threading.Thread ):
                 self.log.warning ( "chomp had an exception, because the connection is off." )
                 return
             if e == "[Errno 104] Connection reset by peer":
+                self.log.warning ( "chomp: game server closed the connection." )
+                self.framework.shutdown = True
+                return
+            if e == "telnet connection closed"
                 self.log.warning ( "chomp: game server closed the connection." )
                 self.framework.shutdown = True
                 return

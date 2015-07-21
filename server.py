@@ -21,8 +21,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.5.5'
+        self.__version__ = '0.5.6'
         self.changelog = {
+            '0.5.6'  : "Fixed syntax error message having a syntax error.",
             '0.5.5'  : "Made some commands output into PMs.",
             '0.5.4'  : "Refactored to use new console command.",
             '0.5.3'  : "Fixed syntaxfor console command.",
@@ -635,6 +636,7 @@ class server ( threading.Thread ):
         self.parse_gmsg ( tuple ( refactored_match ) )
 
     def parse_gmsg ( self, match ):
+        player = self.get_player ( match [ 8 ] )
         self.log.debug ( match )
         msg = match [ 7 ]
         msg_splitted = msg.split ( ":" )
