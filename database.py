@@ -9,8 +9,9 @@ class database ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.1.4"
+        self.__version__ = "0.1.5"
         self.changelog = {
+            '0.1.5' : "Added BrokenPipeError handler for insert.",
             '0.1.4' : "Changed shutdown event from error to warning.",
             '0.1.3' : "Fixed no connection error by only connecting on startup and breaking if fail.",
             '0.1.1' : "Added generic exception handler to configure_tables.",
@@ -182,6 +183,10 @@ class database ( threading.Thread ):
             self.log.debug ( "sql = '{}'.".format ( sql ) )
             cursor.execute ( sql )
             self.connection.commit ( )
+        except BrokenPipeError as e:
+            self.log.error ( "BrokenPipeError during insert: '{}'.".format ( e ) )
+            self.framework.shutdown = True
+            return
         except Exception as e:
             self.log.error ( "Exception during insert: {}.".format ( e ) )
             if e == ( 2014, 'Command Out of Sync' ):
