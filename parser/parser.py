@@ -10,8 +10,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.9'
+        self.__version__ = '0.2.10'
         self.changelog = {
+            '0.2.10' : "Matcher for EAC package lost.",
             '0.2.9'  : "Logging server chat upon early detection.",
             '0.2.8'  : "Detecting server chat messages sooner.",
             '0.2.7'  : "Fixed false positives on server chat command detection.",
@@ -188,6 +189,8 @@ class parser ( threading.Thread ):
             'EAC log dconn'         : { 'to_match' : self.match_prefix + r'INF \[EAC\] Log: User without EAC connection: [\d]+. User status: Disconnected$',
                                        'to_call'  : [ ] },
             'EAC Auth'             : { 'to_match' : self.match_prefix + r'INF \[Steamworks\.NET\] Authenticating player: [\w]+ SteamId: [\d]+ TicketLen: [\d]+ Result: k_EBeginAuthSessionResultOK$',
+                                       'to_call'  : [ ] },
+            'EAC package'          : { 'to_match' : self.match_prefix + r'ERR \[Steamworks\.NET\] NET: Could not send package to client [\d]+$',
                                        'to_call'  : [ ] },
             'EAC status change'    : { 'to_match' : self.match_prefix + r'INF \[EAC\] Log: User status changed' + \
                                        r': [\d]+. Status: Authenticated Message: N/A$',
