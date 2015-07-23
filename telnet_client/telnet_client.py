@@ -12,8 +12,9 @@ class telnet_client ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.12'
+        self.__version__ = '0.2.13'
         self.changelog = {
+            '0.2.13' : "Added handler for ConnectionResetError on chomp.",
             '0.2.12' : "Added handler for EOFError on telnet.",
             '0.2.11' : "Added more detailed exc_info upon telnetlib exception to begin improving its treatment.",
             '0.2.10' : "Added telnet connection close detection exception on chomp.",
@@ -104,6 +105,10 @@ class telnet_client ( threading.Thread ):
                     self.log.debug ( "output_matcher [ {} ] hit".format ( result [ 0 ] ) )
         except EOFError as e:
             self.log.warning ( "chomp EOFError '{}'.".format ( e ) )
+            self.framework.shutdown = True
+            return
+        except ConnectionResetError as e:
+            self.log.warning ( "chomp ConnectionResetError '{}'.".format ( e ) )
             self.framework.shutdown = True
             return
         except Exception as e:

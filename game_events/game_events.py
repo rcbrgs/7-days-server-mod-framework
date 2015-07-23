@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.12"
+        self.__version__ = "0.3.13"
         self.changelog = {
+            '0.3.13' : "More taunt.",
             '0.3.12' : "Hooked a call to best sell every day at 11h.",
             '0.3.11' : "Hooked a call to best buy every day at 21h.",
             '0.3.10' : "Fixed death-by-tree picking message at random after picking right one. Fixed wrong syntax at tree list deleting time.",
@@ -201,6 +202,7 @@ class game_events ( threading.Thread ):
             ( "Hahaha I knew that broken leg was gonna do you in, {}!" ),
             ( "Hmmm. I think I can make a base out of {}'s gore blocks." ),
             ( "I want brains, and after eating {}'s, I'm still hungry!" ),
+            ( "I will pretend you died because your console opened, {}." ),
             ( "If you will keep dying that fast, I will start respawning you as a rabbit, {}." ),
             #( "Lemme guess, {}: you learned how to play with Lulu?" ),
             ( "Let's all hope {} lost his backpack to a bug!" ),
