@@ -6,23 +6,44 @@ import threading
 import time
 
 class database ( threading.Thread ):
-    def __init__ ( self, framework):
+    def __init__ ( self, framework_instance ):
         super ( self.__class__, self ).__init__ ( )
-        self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.1.5"
+        self.__version__ = "0.2.5"
         self.changelog = {
-            '0.1.5' : "Added BrokenPipeError handler for insert.",
-            '0.1.4' : "Changed shutdown event from error to warning.",
-            '0.1.3' : "Fixed no connection error by only connecting on startup and breaking if fail.",
-            '0.1.1' : "Added generic exception handler to configure_tables.",
-            '0.1.1' : "Added generic exception handler to check_tables.",
-            '0.1.0' : "Initial version." }
+            '0.2.5'  : "Better logging",
+            '0.2.4'  : "Added cursor.close to exceptions also.",
+            '0.2.3'  : "Calling cursor.close and framework.output_exception when appropriate.",
+            '0.2.2'  : "Return all rows when more than one match.",
+            '0.2.1'  : "Support for where_dict on update record.",
+            '0.2.0'  : "Refactored version."
+        }
+        self.framework = framework_instance
+        self.log = logging.getLogger ( __name__ )
+        self.log_level = logging.INFO
         self.daemon = True
         self.shutdown = False
 
-        self.framework = framework
-
         self.connection = None
+        self.expected_tables = {
+            'players' : "( steamid bigint primary key,"
+                        "name varchar ( 30 ) )",
+            'fear'    : "( steamid bigint primary key,"
+                        " fear float,"
+                        " latest_check_timestamp double,"
+                        " latest_fear_timestamp double,"
+                        " latest_fear_warning int,"
+                        " latest_state varchar ( 10 ),"
+                        " latest_state_timestamp double )",
+            'friends' : "( steamid bigint,"
+                        "friend bigint )",
+            'portals' : "( steamid bigint,"
+                        "name varchar ( 30 ),"
+                        "position_x int,"
+                        "position_y int,"
+                        "position_z int )"
+        }
+        self.queue = [ ]
+        self.queue_lock = framework.lock ( )
 
     def __del__ ( self ):
         self.stop ( )
@@ -51,15 +72,16 @@ class database ( threading.Thread ):
                 return
 
         while not self.shutdown:
-            time.sleep ( self.framework.preferences.loop_wait )
-
-            # STARTMOD
+            self.log.debug ( "Starting database loop." )
+            time.sleep ( 1 )
 
             if not self.connection:
                 self.log.warning ( "Connection became None during runtime." )
                 #self.stop ( )
-            
-            # ENDMOD                             
+
+            self.log.setLevel ( self.log_level )
+
+            self.dequeue ( )
 
         self.close_mysql_connection ( )
             
@@ -90,9 +112,9 @@ class database ( threading.Thread ):
                                                 charset = 'utf8mb4',
                                                 cursorclass = pymysql.cursors.DictCursor )
         except Exception as e:
-            self.log.error ( "Exception during MySQL connection open: {}.".format ( e ) )
+            self.log.error ( framework.output_exception ( e ) )
             self.connection = None
-        self.log.info ( "MySQL connection opened." )
+        self.log.debug ( "MySQL connection opened." )
 
     # Config methods. They suppose connection is fine.
 
@@ -102,61 +124,94 @@ class database ( threading.Thread ):
             cursor.execute ( "show tables" )
             self.connection.commit ( )
             result = cursor.fetchall ( )
+            cursor.close ( )
         except Exception as e:
-            self.log.error ( "Exception during check_tables: {}.".format ( e ) )
-            return False
+            self.log.error ( framework.output_exception ( e ) )
+            cursor.close ( )
         result_tables = [ ]
         for entry in result:
             for key in entry.keys ( ):
                 result_tables.append ( entry [ key ] )
-        expected_tables = [ 'fear', 'players' ]
+        expected_tables = list ( self.expected_tables.keys ( ) )
         if sorted ( result_tables ) != sorted ( expected_tables ):
-            self.log.error ( "Tables in db '{}' differ from the expected '{}'!".format ( result,
+            self.log.debug ( "Tables in db '{}' differ from the expected '{}'!".format ( result,
                                                                                          expected_tables ) )
             return False
         return True
 
     def configure_tables ( self ):
         """
-        A possible more clean method would only create the tables that each mod instance uses. But since it will take a lot longer to code that, and just having empty tables will not take much space, I will just create the full set everywhere.
+        If the db is empty, populate it with a structure defined in self.expected_tables.
         """
         try:
             cursor = self.connection.cursor ( )
             cursor.execute ( "show tables" )
             self.connection.commit ( )
             result = cursor.fetchall ( )
+            cursor.close ( )
         except Exception as e:
-            self.log.error ( "Exception during configure_tables: {}.".format ( e ) )
+            self.log.error ( framework.output_exception ( e ) )
+            cursor.close ( )
             return
             
         if result != ( ):
-            self.log.error ( "db '{}' is not empty!".format ( result ) )
+            self.log.error ( "Database '{}' is not empty AND is different from expected!".format ( result ) )
             return
 
-        try:
-            cursor.execute ( "create table players ( steamid bigint primary key,"
-                             " name varchar ( 30 ) )"
-                             )
-            self.connection.commit ( )
-            cursor.execute ( "create table fear ( steamid bigint primary key,"
-                             " fear float,"
-                             " latest_check_timestamp double,"
-                             " latest_fear_timestamp double,"
-                             " latest_fear_warning tinyint,"
-                             " latest_state varchar ( 10 ),"
-                             " latest_state_timestamp double )"
-                             )
-            self.connection.commit ( )
-        except Exception as e:
-            self.log.error ( "Exception during table creation: {}.".format ( e ) )
+        for table in self.expected_tables.keys ( ):
+            try:
+                cursor = self.connection.cursor ( )
+                cursor.execute ( "create table {} {}".format ( table, self.expected_tables [ table ] ) )
+                self.connection.commit ( )
+                cursor.close ( )
+            except Exception as e:
+                self.log.error ( framework.output_exception ( e ) )
+                cursor.close ( )
 
     # Data methods. They suppose connection and tables are valid.
 
-    def insert_record ( self, table, columns_values ):
+    def delete_record ( self, table, columns_values ):
+        """
+        Enqueues request to delete_record_processor.
+        """
+        self.enqueue ( { 'function' : self.delete_record_processor,
+                         'args' : ( table, columns_values ),
+                         'kwargs' : { } } )
+        
+    def delete_record_processor ( self, table, columns_values ):
         """
         columns_values must be a dict with columns as keys.
         """
+        for key in columns_values.keys ( ):
+            try:
+                where_string += " and {} = '{}'".format ( key, columns_values [ key ] )
+            except UnboundLocalError:
+                where_string = "{} = '{}'".format ( key, columns_values [ key ] )
+                continue
+            sql = "delete from {} where {}".format ( table, 
+                                                     where_string )
+        try:
+            cursor = self.connection.cursor ( )
+            self.log.debug ( "sql = '{}'.".format ( sql ) )
+            cursor.execute ( sql )
+            self.connection.commit ( )
+            cursor.close ( )
+        except Exception as e:
+            self.log.error ( framework.output_exception ( e ) )
+            cursor.close ( )
 
+    def insert_record ( self, table, columns_values ):
+        """
+        Enqueues request to insert_record_processor.
+        """
+        self.enqueue ( { 'function' : self.insert_record_processor,
+                         'args' : ( table, columns_values ),
+                         'kwargs' : { } } )
+        
+    def insert_record_processor ( self, table, columns_values ):
+        """
+        columns_values must be a dict with columns as keys.
+        """
         columns_string = "( "
         for column in columns_values.keys ( ):
             if columns_string != "( ":
@@ -168,70 +223,63 @@ class database ( threading.Thread ):
         for key in columns_values.keys ( ):
             entry = columns_values [ key ]
             try:
-                values_string += ", {}".format ( entry )
+                values_string += ", '{}'".format ( entry )
             except UnboundLocalError:
-                values_string = "{}".format ( entry )
+                values_string = "'{}'".format ( entry )
         values_string = "( " + values_string + " )"
-
-        self.log.info ( "values_string = '{}'.".format ( values_string ) )
-
-        cursor = self.connection.cursor ( )
+        self.log.debug ( "values_string = '{}'.".format ( values_string ) )
+        sql = "insert into {} {} values {}".format ( table, 
+                                                     columns_string,
+                                                     values_string )
         try:
-            sql = "insert into {} {} values {}".format ( table, 
-                                                         columns_string,
-                                                         values_string )
+            cursor = self.connection.cursor ( )
             self.log.debug ( "sql = '{}'.".format ( sql ) )
             cursor.execute ( sql )
             self.connection.commit ( )
-        except BrokenPipeError as e:
-            self.log.error ( "BrokenPipeError during insert: '{}'.".format ( e ) )
-            self.framework.shutdown = True
-            return
+            cursor.close ( )
         except Exception as e:
-            self.log.error ( "Exception during insert: {}.".format ( e ) )
-            if e == ( 2014, 'Command Out of Sync' ):
-                self.log.info ( "Trying to recover resursively." )
-                return self.select_record ( table, columns_values )
-            return
+            self.log.error ( framework.output_exception ( e ) )
+            cursor.close ( )
         
     def select_record ( self, table, columns_values ):
         """
         columns_values must be a dict with columns as keys.
         """
-        
         for key in columns_values.keys ( ):
             try:
                 where_string += " and {} = '{}'".format ( key, columns_values [ key ] )
             except UnboundLocalError:
                 where_string = "{} = '{}'".format ( key, columns_values [ key ] )
                 continue
-
-        #if not self.check_connection ( ):
-        #    return None
-        cursor = self.connection.cursor ( )
+        sql = "select * from {} where {}".format ( table, 
+                                                   where_string )
         try:
-            sql = "select * from {} where {}".format ( table, 
-                                                         where_string )
+            cursor = self.connection.cursor ( )
             self.log.debug ( "sql = '{}'.".format ( sql ) )
             cursor.execute ( sql )
             self.connection.commit ( )
             res = cursor.fetchall ( )
+            cursor.close ( )
             self.log.debug ( "res = {}".format ( res ) )
-            if len ( res ) == 0:
-                return None
-            return res [ 0 ]
+            return res
         except Exception as e:
-            self.log.error ( "Exception during select: {}.".format ( e ) )
-            if e == ( 2014, 'Command Out of Sync' ):
-                self.log.info ( "Trying to recover resursively." )
-                return self.select_record ( table, columns_values )
+            self.log.error ( "select_record with sql = '{}' exception: {}".format ( 
+                    sql, framework.output_exception ( e ) ) )
+            cursor.close ( )
             return None
 
     def update_record ( self, table, columns_values ):
         """
+        Enqueues request to update_record_processor.
+        """
+        self.enqueue ( { 'function' : self.update_record_processor,
+                         'args' : ( table, columns_values ),
+                         'kwargs' : { } } )
+        
+    def update_record_processor ( self, table, columns_values, where_dict = None ):
+        """
         columns_values must be a dict with columns as keys.
         """
-        
         for key in columns_values.keys ( ):
             if key == "steamid":
                 continue
@@ -241,20 +289,45 @@ class database ( threading.Thread ):
                 update_string = "{} = '{}'".format ( key, columns_values [ key ] )
                 continue
 
-        where_string = "steamid = '{}'".format ( columns_values [ 'steamid' ] )
-
-        cursor = self.connection.cursor ( )
+        if not where_dict:
+            where_string = "steamid = '{}'".format ( columns_values [ 'steamid' ] )
+        else:
+            for key in where_dict.keys ( ):
+                try:
+                    where_string += ", {} = '{}'".format ( key, where_dict [ key ] )
+                except UnboundLocalError:
+                    where_string  =   "{} = '{}'".format ( key, where_dict [ key ] )
+                    continue
+        sql = "update {} set {} where {}".format ( table, 
+                                                   update_string,
+                                                   where_string )
         try:
-            sql = "update {} set {} where {}".format ( table, 
-                                                       update_string,
-                                                       where_string )
+            cursor = self.connection.cursor ( )
             self.log.debug ( "sql = '{}'.".format ( sql ) )
             cursor.execute ( sql )
             self.connection.commit ( )
-            res = cursor.fetchall ( )
-            if len ( res ) == 0:
-                return None
-            return res [ 0 ]
+            cursor.close ( )
         except Exception as e:
-            self.log.error ( "Exception during update: {}.".format ( e ) )
-            return None
+            self.log.error ( framework.output_exception ( e ) )
+            cursor.close ( )
+
+    # queue
+           
+    def enqueue ( self, data ):
+        self.log.debug ( "enqueue: {}.".format ( data ) )
+        self.queue_lock.get ( )
+        self.queue.append ( data )
+        self.queue_lock.let ( )
+
+    def dequeue ( self ):
+        self.queue_lock.get ( )
+        data = None
+        if len ( self.queue ) > 0:
+            data = self.queue.pop ( )
+        self.queue_lock.let ( )
+        if data:
+            self.log.debug ( "dequeue: {}.".format ( data ) )
+            self.process ( data )
+
+    def process ( self, data ):
+        data [ 'function' ] ( *data [ 'args' ], **data [ 'kwargs' ] )

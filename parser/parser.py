@@ -1,3 +1,4 @@
+import framework
 import inspect
 import logging
 import re
@@ -6,12 +7,15 @@ import time
 import threading
 
 class parser ( threading.Thread ):
-    def __init__ ( self, framework ):
+    def __init__ ( self, framework_instance ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.10'
+        self.__version__ = '0.2.13'
         self.changelog = {
+            '0.2.13' : "Added import framework to parser.",
+            '0.2.12' : "Added exception handler around translate call.",
+            '0.2.11' : "Converts steamid into player name to pass to server.console_command.",
             '0.2.10' : "Matcher for EAC package lost.",
             '0.2.9'  : "Logging server chat upon early detection.",
             '0.2.8'  : "Detecting server chat messages sooner.",
@@ -36,7 +40,7 @@ class parser ( threading.Thread ):
         self.queue = [ ]
         self.queue_lock = None
         self.shutdown = False
-        self.framework = framework
+        self.framework = framework_instance
         self.telnet_output_matchers = {
             'add obs entity'       : { 'to_match' : self.match_prefix + r'INF Adding observed entity: ' +\
                                        r'[\d]+, ' + self.match_string_pos + r', [\d]+$',
@@ -171,7 +175,7 @@ class parser ( threading.Thread ):
             'deny match'           : { 'to_match' : r'(.*) INF Player (.*) denied: ' + \
                                        r'(.*) has been banned until (.*)',
                                        'to_call'  : [ self.framework.game_events.player_denied ] },
-            'denying command'      : { 'to_match' : self.match_prefix + r'INF Denying command \'(.*)\' from client (.*)$',
+            'denying command'      : { 'to_match' : self.match_prefix + r'INF Denying command \'gg (.*)\' from client (.*)$',
                                        'to_call'  : [ self.framework.server.console_command ] },
             'EAC backend conn'     : { 'to_match' : self.match_prefix + r'INF \[EAC\] Log: Backend connection established\.$',
                                        'to_call'  : [ ] },
@@ -552,15 +556,15 @@ class parser ( threading.Thread ):
     # \API
 
     def admin_command_mod ( self, match ):
+        self.log.info ( match )
         refactored_match = list ( match )
         player = self.framework.server.get_player ( int ( refactored_match [ 8 ] ) )
         if not player:
             self.log.error ( "Could not find player for match '{}'.".format ( match ) )
             return
-        temp = refactored_match [ 7 ]
-        refactored_match [ 7 ] = "{}: {}".format ( player.name, temp )
-        self.log.info ( "refactored_match [ 7 ] = {}".format ( refactored_match [ 7 ] ) )
-        self.framework.server.parse_gmsg ( tuple ( refactored_match ) )
+        refactored_match [ 8 ] = player.name
+        self.log.info ( "refactored_match = {}".format ( refactored_match ) )
+        self.framework.server.console_command ( tuple ( refactored_match ) )
 
     def advise_deprecation_chat ( self, match ):
         if match [ 7 ] [ : len ( "Server: /" ) ] == "Server: /":
@@ -587,7 +591,10 @@ class parser ( threading.Thread ):
                 translator = self.framework.mods [ 'translator' ] [ 'reference' ]
                 if translator.enabled:
                     #translator.translate ( msg_origin, msg_content [ : ] )
-                    translator.translate ( player.name, match [ 7 ] [ len ( player.name + ": " ) : ] )
+                    try:
+                        translator.translate ( player.name, match [ 7 ] [ len ( player.name + ": " ) : ] )
+                    except Exception as e:
+                        self.log.error ( framework.output_exception ( e ) )
                 else:
                     self.log.info ( "translate not enabled" )
             else:

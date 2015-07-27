@@ -10,8 +10,10 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.13"
+        self.__version__ = "0.3.15"
         self.changelog = {
+            '0.3.15' : "Taunt.",
+            '0.3.14' : "Removed call to deprecated sethome function.",
             '0.3.13' : "More taunt.",
             '0.3.12' : "Hooked a call to best sell every day at 11h.",
             '0.3.11' : "Hooked a call to best buy every day at 21h.",
@@ -75,39 +77,8 @@ class game_events ( threading.Thread ):
         self.shutdown = True
 
     def check_position_triggers ( self, player = None ):
-        #self.framework.get_db_lock ( )
         if not player:
             self.log.error ( "player None" )
-        # map borders
-        #if ( ( abs ( player.pos_x ) > 4400 ) or
-        #     ( abs ( player.pos_y ) > 4400 ) ):
-        #    if player.map_limit_beacon == None:
-        #        self.framework.console.pm ( player,
-        #                                    "You are beyond the 4.4km soft limit. Teleport destination saved." )
-        #        new_beacon =  self.framework.utils.get_coordinates ( player )
-        #        player.map_limit_beacon = copy.copy ( new_beacon )
-        #        self.log.info ( "Setting {}.map_limit_beacon to {}".format ( player.name_sane,
-        #                                                                     new_beacon ) )
-        #    if ( ( abs ( player.pos_x ) > 4500 ) or
-        #         ( abs ( player.pos_y ) > 4500 ) ):
-        #        msg = '%s is beyond the 4.5km hard limit. Teleporting back to saved position."'
-        #        self.log.info ( msg % ( player.name_sane ) )
-        #        if ( abs ( player.map_limit_beacon [ 0 ] ) > 4500 or
-        #             abs ( player.map_limit_beacon [ 1 ] ) > 4500 ):
-        #            self.framework.console.pm ( player, "Your saved position also beyond hard limit; teleporting to starter base." )
-        #            player.map_limit_beacon = ( 1500, 350, 67 )                    
-        #        self.framework.server.preteleport ( player,
-        #                                            player.map_limit_beacon )
-        #else:
-        #    player.map_limit_beacon = None
-        #self.framework.let_db_lock ( )
-
-        if 'sethome' not in self.framework.mods.keys ( ):
-            return
-        if not self.framework.mods [ 'sethome' ] [ 'reference' ].enabled:
-            return
-
-        self.framework.mods [ 'sethome' ] [ 'reference' ].enforce_home ( player )
         
     def day_changed ( self, previous_day ):
         self.log.info ( "day_changed call" )
@@ -194,6 +165,7 @@ class game_events ( threading.Thread ):
             #( "{} is quite the tree-hugger!" ),
             ( "{}, the price of femur is really good right now, you don't mind do you?" ),
             ( "{} was hunted down by a vicious sand block." ),
+            ( "{} died like a rabbit kissing a cactus." ),
             ( "Again, {}!?" ),
             ( "Another {}-kill and without spending a single arrow." ),
             ( "Don't feel bad, {}. Even the zombies died once." ),

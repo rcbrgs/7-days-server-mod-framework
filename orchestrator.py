@@ -66,9 +66,9 @@ class orchestrator ( threading.Thread ):
                             
                 self.log.debug ( "Asking server for updates." )
                 now = time.time ( )
-                if now - self.world_state.llp_timestamp > self.preferences.loop_wait * 100:
-                    self.world_state.llp_timestamp = now
-                    self.console.llp ( )
+                #if now - self.world_state.llp_timestamp > self.preferences.loop_wait * 100:
+                #    self.world_state.llp_timestamp = now
+                #    self.console.llp ( )
 
                 time.sleep ( self.preferences.loop_wait )
                 count += 1
@@ -177,7 +177,7 @@ class orchestrator ( threading.Thread ):
                 self.console.say ( "Mod %s updated to %s: %s" %
                                    ( str ( component ), str ( new_version ),
                                      str ( self.framework_state [ component ] [ 'changelog' ] ) ) )
-        #self.console.say ( "Mods up." )
+        self.console.say ( "Mods up." )
             
     def get_db_lock ( self ):
         callee_class = inspect.stack ( ) [ 1 ] [ 0 ].f_locals [ 'self' ].__class__.__name__
@@ -213,7 +213,7 @@ class orchestrator ( threading.Thread ):
             return
         self.log.debug ( "mod_module = %s" % str ( mod_module ) )
         mod_class = getattr ( mod_module, module_name )
-        mod_instance = mod_class ( framework = self )
+        mod_instance = mod_class ( self )
         self.log.info ( "Mod %s loaded." % module_name )
         self.framework_state [ module_name ] = { 'version'   : mod_instance.__version__,
                                                  'changelog' : mod_instance.changelog [ mod_instance.__version__ ], }
@@ -241,7 +241,7 @@ class orchestrator ( threading.Thread ):
         
     def stop ( self ):
         self.log.info ( "framework.stop" )
-        #self.console.say ( "Mods going down." )
+        self.console.say ( "Mods going down." )
         pickle_file = open ( self.preferences.framework_state_file, 'wb' )
         pickle.dump ( self.framework_state, pickle_file, pickle.HIGHEST_PROTOCOL )
 

@@ -17,8 +17,10 @@ class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.11'
+        self.__version__ = '0.4.13'
         self.changelog = {
+            '0.4.13' : "Using local copy of buffer to avoi dict change exceptions during claimstone update.",
+            '0.4.12' : "Fixed error falsely reported on lock claimstones.",
             '0.4.11' : "Fixed si string on process si.",
             '0.4.10' : "Refactored to use command guard for si. Time threshold 600 -> 60.",
             '0.4.9' : "Refactore le_lag for simplicity.",
@@ -54,7 +56,7 @@ class world_state ( threading.Thread ):
         self.inventory_wrong_spawns = [ ]
 
         now = time.time ( )
-        self.llp_timestamp = 0
+        self.llp_timestamp = time.time ( ) + 540
         self.le_timestamp = now
         
         # game time
@@ -101,6 +103,8 @@ class world_state ( threading.Thread ):
                 self.decide_le ( )
 
             self.decide_gt ( )
+            self.decide_llp ( )
+            self.update_claimstones ( )
 
     def stop ( self ):
         self.shutdown = True
@@ -173,24 +177,32 @@ class world_state ( threading.Thread ):
         self.update_claimstones ( )
 
     def update_claimstones ( self ):
-        self.log.info ( "Updating current claimstones data with buffer." )
+        self.log.debug ( "Updating current claimstones data with buffer." )
         claimstones = self.get_claimstones ( )
+        self.decide_llp ( )
 
         events = [ ]
-        for steamid in self.claimstones_buffer.keys ( ):
-            if steamid not in claimstones.keys ( ):
-                claimstones [ steamid ] = self.claimstones_buffer [ steamid ]
+        for steamid in claimstones.keys ( ):
+            self.log.info ( "{} in claimstone buffer".format ( 
+                    self.framework.server.get_player ( steamid ).name_sane ) )
+            if steamid not in list ( self.claimstones.keys ( ) ):
+                self.log.info ( "Player not yet in claimstone dict." )
+                self.claimstones [ steamid ] = claimstones [ steamid ]
                 #events.append ( ( self.framework.game_events.player_set_claimstones,
                 #                  ( steamid, self.claimstones_buffer [ steamid ] ) ) )
             else:
-                for claim in self.claimstones_buffer [ steamid ]:
-                    if claim not in claimstones [ steamid ]:
-                        claimstones [ steamid ].append ( claim )
+                self.log.info ( "Player in claimstone dict." )
+                for claim in claimstones [ steamid ]:
+                    self.log.info ( "considering claim {}".format ( claim ) )
+                    if claim not in self.claimstones [ steamid ]:
+                        self.log.info ( "claim append" )
+                        self.claimstones [ steamid ].append ( claim )
                         #events.append ( ( self.framework.game_events.player_added_claimstone,
                         #                  ( steamid, claim ) ) )
-                for claim in claimstones [ steamid ]:
-                    if claim not in self.claimstones_buffer [ steamid ]:
-                        claimstones [ steamid ].remove ( claim )
+                for claim in self.claimstones [ steamid ]:
+                    if claim not in claimstones [ steamid ]:
+                        self.log.info ( "claim remove" )
+                        self.claimstones [ steamid ].remove ( claim )
                         #events.append ( ( self.framework.game_events.player_removed_claimstone,
                         #                  ( steamid, claim ) ) )
         
@@ -219,12 +231,15 @@ class world_state ( threading.Thread ):
         self.claimstones_lock [ 'callee'    ] = callee_function
         self.claimstones_lock [ 'timestamp' ] = now
 
+        self.log.debug ( "get_claimstones returning" )
         return self.claimstones
 
     def let_claimstones ( self ):
         callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name
-        if self.claimstones_lock [ 'callee' ] != callee_function:
-            self.log.error ( "Claimstones lock being freed by another function than callee!" )
+        if ( self.claimstones_lock [ 'callee' ] != callee_function and
+             self.claimstones_lock [ 'callee' ] != None ):
+            self.log.error ( "Claimstones lock being freed by another function '{}' than callee '{}'!".format (
+                    callee_function, self.claimstones_lock [ 'callee' ] ) )
         self.claimstones_lock [ 'callee'    ] = None
         self.claimstones_lock [ 'timestamp' ] = None
 
@@ -379,6 +394,11 @@ class world_state ( threading.Thread ):
         self.gt_lag = max ( self.gt_lag, self.framework.preferences.loop_wait )
         if self.gt_lag != old_lag:
             self.log.info ( "gt_lag = {:.2f}s".format ( self.gt_lag ) )
+
+    def decide_llp ( self ):
+        if time.time ( ) - self.llp_timestamp > 600:
+            self.framework.console.llp ( )
+            self.llp_timestamp = time.time ( )
 
     def lock_gt_queue ( self ):
         callee_function = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name

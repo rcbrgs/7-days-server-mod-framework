@@ -10,8 +10,9 @@ class fear ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = "0.1.17"
+        self.__version__ = "0.1.18"
         self.changelog = {
+            '0.1.18' : "Refactored call to select.",
             '0.1.17' : "Fixed courage not diminishing fear",
             '0.1.16' : "Made courage be multiplied by factor.",
             '0.1.15' : "Fixed exception when no entities around.",
@@ -80,7 +81,11 @@ class fear ( threading.Thread ):
                 if distance < float ( self.mod_preferences [ 'distance_minimum' ] ):
                     zone = 'courage'
                 # update accumulators
-                current_info = self.framework.database.select_record ( "fear", { "steamid" : player.steamid } )
+                select = self.framework.database.select_record ( "fear", { "steamid" : player.steamid } )
+                current_info = None
+                if select:
+                    if len ( select ) == 1:
+                        current_info = select [ 0 ]
                 self.log.debug ( "current_info = {}".format ( current_info ) )
                 if not current_info:
                     info = {

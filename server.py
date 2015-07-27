@@ -21,8 +21,13 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.5.7'
+        self.__version__ = '0.5.12'
         self.changelog = {
+            '0.5.12' : "Simplified parsing of console command.",
+            '0.5.11' : "Fixed player and admin command compatibility.",
+            '0.5.10' : "Fixed steamid being treated as strign.",
+            '0.5.9'  : "Removed fix invitees function that is useless now.",
+            '0.5.8'  : "Pedded preteles with -500 to avoid bedrock deaths.",
             '0.5.7'  : "Added capture on server chat messages.",
             '0.5.6'  : "Fixed syntax error message having a syntax error.",
             '0.5.5'  : "Made some commands output into PMs.",
@@ -90,6 +95,8 @@ class server ( threading.Thread ):
                         " sethome, and other actions." ),
             'night' : ( "Night is when zombies run and you hide. In this server"
                         " it happens between 0h and 6h." ),
+            'portal' : ( "Portals allow you to teleport instantly. You can use 'set portal X' to"
+                         " create a portal destination, and then 'go X' to teleport there." ),
             'prison' : ( "Or swiss prison will rehabilitate you: if you try to invade bases,"
                          " you go to prison, to meditate on your evil ways. If you kill another"
                          " player, you fo to prison, until we decide you can go outside your cage." ),
@@ -195,8 +202,14 @@ class server ( threading.Thread ):
                 command_list.append ( key )
 
         help_message = "Available commands: "
+        color = "white"
         for mod_key in sorted ( command_list ):
-            help_message += mod_key + " "
+            if color == "white":
+                help_message += "[BBBBBB]" + mod_key + "[FFFFFF] "
+                color = "blue"
+            else:
+                help_message += mod_key + " "
+                color = "white"
         
         self.framework.console.pm ( player, help_message )
             
@@ -633,7 +646,7 @@ class server ( threading.Thread ):
 
     def console_command ( self, match ):
         refactored_match = list ( match )
-        refactored_match [ 7 ] = "{}: {}".format ( match [ 8 ], match [ 7 ] [ len ( "gg " ) : ] )
+        refactored_match [ 7 ] = "{}: {}".format ( match [ 8 ], match [ 7 ] )
         self.parse_gmsg ( tuple ( refactored_match ) )
 
     def parse_gmsg ( self, match ):
@@ -689,7 +702,8 @@ class server ( threading.Thread ):
                                 mod.commands [ key ] [ 0 ] ( msg_origin, msg_content )
                                 return
                             except Exception as e:
-                                self.log.error ( "During mod.commands {}: {}".format ( key, e ) )
+                                self.log.error ( "During mod.commands {}: {}".format ( 
+                                        key, framework.output_exception ( e ) ) )
                 for external_command in self.external_commands:
                     if msg_content [ 1 : ] == external_command:
                         return
@@ -699,7 +713,7 @@ class server ( threading.Thread ):
                 if 'translator'  in self.framework.mods.keys ( ):
                     translator = self.framework.mods [ 'translator' ] [ 'reference' ]
                     if translator.enabled:
-                        translator.translate ( msg_origin, msg_content [ : ] )
+                        translator.translate ( msg_origin, msg_content )
                 else:
                     self.log.info ( "translate not working" )
 
@@ -1005,10 +1019,10 @@ class server ( threading.Thread ):
                      str ( int ( where_to [ 2 ] ) + 1 ) + " " + \
                      str ( int ( where_to [ 1 ] ) )
             premsg += str ( int ( where_to [ 0 ] ) ) + " " + \
-                      str ( int ( where_to [ 2 ] ) - 5 ) + " " + \
+                      str ( int ( where_to [ 2 ] ) - 500 ) + " " + \
                       str ( int ( where_to [ 1 ] ) )
             prelogmsg = str ( int ( where_to [ 0 ] ) ) + " " + \
-                str ( int ( where_to [ 2 ] ) - 5 ) + " " + \
+                str ( int ( where_to [ 2 ] ) - 500 ) + " " + \
                 str ( int ( where_to [ 1 ] ) )
         self.log.info ( "Preteleport {} ({}) from ({} {} {}).".format ( 
                 player.name_sane, prelogmsg, player.pos_x, player.pos_y, player.pos_z ) )
@@ -1473,24 +1487,6 @@ class server ( threading.Thread ):
                     print ( "Found entry with steamid {}: {}.".format ( steamid,
                                                                         self.players_info [ key ].name ) )
         self.framework.let_db_lock ( )
-
-        
-    def fix_invitees_using_playerid ( self ):
-        def get_player_by_playerid ( playerid ):
-            for player in self.get_online_players ( ):
-                if player.playerid == playerid:
-                    return player
-            return None
-    
-        for player in self.get_online_players ( ):
-            for invitee in player.home_invitees:
-                if invitee not in self.players_info.keys ( ):
-                    invited_player = get_player_by_playerid ( invitee )
-                    if invited_player:
-                        player.home_invitees.append ( invited_player.steamid )
-                        player.home_invitees.remove ( invitee )
-                    else:
-                        print ( "invited {} has no record!".format ( invitee ) )
 
     def remove_old_positions ( self ):
         now = time.time ( )
