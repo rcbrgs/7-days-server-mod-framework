@@ -17,8 +17,10 @@ class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.13'
+        self.__version__ = '0.4.15'
         self.changelog = {
+            '0.4.15' : "Fixed logic for claimstone update.",
+            '0.4.14' : "Fixes to get claimstones to update correctly.",
             '0.4.13' : "Using local copy of buffer to avoi dict change exceptions during claimstone update.",
             '0.4.12' : "Fixed error falsely reported on lock claimstones.",
             '0.4.11' : "Fixed si string on process si.",
@@ -56,7 +58,7 @@ class world_state ( threading.Thread ):
         self.inventory_wrong_spawns = [ ]
 
         now = time.time ( )
-        self.llp_timestamp = time.time ( ) + 540
+        self.llp_timestamp = time.time ( ) - 540
         self.le_timestamp = now
         
         # game time
@@ -104,19 +106,25 @@ class world_state ( threading.Thread ):
 
             self.decide_gt ( )
             self.decide_llp ( )
-            self.update_claimstones ( )
+            #self.update_claimstones ( )
 
     def stop ( self ):
         self.shutdown = True
             
     def buffer_claimstones ( self, match ):
+        """
+        Output parsed as being relative to claimstones ends here.
+        """
+        self.log.info ( "buffer_claimstones ( '{}' )".format ( match ) )
         if len ( match ) == 1:
+            self.log.info ( "total" )
             if self.claimstones_buffer_total != 0:
                 self.log.error ( "Next llp total before parsing old one!" )
             self.claimstones_buffer_total = int ( match [ 0 ] )
             self.unbuffer_claimstones ( )
             return
         if len ( match ) == 2:
+            self.log.info ( "player" )
             if self.claimstones_buffer_player != ( ):
                 self.log.error ( "Next player claimstones listed before parsing all of current." )
                 self.log.error ( "bufferplayer = {} match = {}".format ( str ( self.claimstones_buffer_player ),
@@ -125,6 +133,7 @@ class world_state ( threading.Thread ):
             self.claimstones_buffer_player = ( int ( match [ 0 ] ), int ( match [ 1 ] ) )
             return
         if len ( match ) == 3:
+            self.log.info ( "claim" )
             if self.claimstones_buffer_player == ( ):
                 self.log.error ( "Claimstone coords received for None player (match = {}).".format ( match ) )
                 return
@@ -145,6 +154,9 @@ class world_state ( threading.Thread ):
                 self.claimstones_buffer_player = ( )
 
     def unbuffer_claimstones ( self ):
+        """
+        Should only be called when a "total X claimstone" output is buffered.
+        """
         count = 0
         for steamid in self.claimstones_buffer.keys ( ):
             for claim in self.claimstones_buffer [ steamid ]:
@@ -157,7 +169,9 @@ class world_state ( threading.Thread ):
         deletable_stones  = [ ]
         places = self.framework.mods [ "place_protection" ] [ "reference" ].places
         for steamid in self.claimstones_buffer.keys ( ):
-            if steamid not in self.framework.server.players_info.keys ( ):
+            player = self.framework.server.get_player ( steamid )
+            if not player:
+                self.log.info ( "Unknown player {}".format ( steamid ) )
                 deletable_players.append ( steamid )
                 continue
             for claim in self.claimstones_buffer [ steamid ]:
@@ -174,26 +188,29 @@ class world_state ( threading.Thread ):
                 if stone [ 1 ] in self.claimstones_buffer [ stone [ 0 ] ]:
                     self.claimstones_buffer [ stone [ 0 ] ].remove ( stone [ 1 ] )
 
+        self.log.debug ( "buffer b4 update = '{}'".format ( self.claimstones_buffer ) )
         self.update_claimstones ( )
 
     def update_claimstones ( self ):
-        self.log.debug ( "Updating current claimstones data with buffer." )
-        claimstones = self.get_claimstones ( )
-        self.decide_llp ( )
+        self.log.info ( "Updating current claimstones data with buffer." )
+        claimstones = self.claimstones_buffer
+        self.log.info ( "buffer = '{}'".format ( claimstones ) )
 
         events = [ ]
         for steamid in claimstones.keys ( ):
-            self.log.info ( "{} in claimstone buffer".format ( 
-                    self.framework.server.get_player ( steamid ).name_sane ) )
-            if steamid not in list ( self.claimstones.keys ( ) ):
-                self.log.info ( "Player not yet in claimstone dict." )
+            self.log.debug ( "steamid = {}".format ( steamid ) )
+            player = self.framework.server.get_player ( steamid )
+            if not player:
+                self.log.info ( "Unknown player {}".format ( steamid ) )
+
+            if player.steamid not in list ( self.claimstones.keys ( ) ):
                 self.claimstones [ steamid ] = claimstones [ steamid ]
                 #events.append ( ( self.framework.game_events.player_set_claimstones,
                 #                  ( steamid, self.claimstones_buffer [ steamid ] ) ) )
             else:
-                self.log.info ( "Player in claimstone dict." )
+                self.log.debug ( "Player in claimstones dict." )
                 for claim in claimstones [ steamid ]:
-                    self.log.info ( "considering claim {}".format ( claim ) )
+                    self.log.debug ( "considering claim {}".format ( claim ) )
                     if claim not in self.claimstones [ steamid ]:
                         self.log.info ( "claim append" )
                         self.claimstones [ steamid ].append ( claim )
@@ -397,6 +414,7 @@ class world_state ( threading.Thread ):
 
     def decide_llp ( self ):
         if time.time ( ) - self.llp_timestamp > 600:
+            self.log.info ( "decided to llp" )
             self.framework.console.llp ( )
             self.llp_timestamp = time.time ( )
 

@@ -172,6 +172,7 @@ class queued_console ( threading.Thread ):
                                               'timestamp' : time.time ( ) }
 
     def llp_wrapper ( self ):
+        self.log.info ( "sending llp" )
         self.framework.console.send ( "llp" )
 
     def lp_wrapper ( self ):    

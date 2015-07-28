@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.15"
+        self.__version__ = "0.3.16"
         self.changelog = {
+            '0.3.16' : "Give 1 karma per 100 zeds. No cash per zeds. No karma per hour played.",
             '0.3.15' : "Taunt.",
             '0.3.14' : "Removed call to deprecated sethome function.",
             '0.3.13' : "More taunt.",
@@ -28,28 +29,7 @@ class game_events ( threading.Thread ):
             '0.3.2'  : "More taunts.",
             '0.3.1'  : "Added events for when player becomes citizen and senator.",
             '0.3.0'  : "Disabled map limitation.",
-            '0.2.19' : "Typo in one of the taunts.",
-            '0.2.18' : "Making hornet event a little bit more frequent.",
-            '0.2.17' : "Calling random.seed before every randint to get different values.",
-            '0.2.16' : "Added randomness to cash prize for zeds.",
-            '0.2.15' : "Updated message about prize for voting.",
-            '0.2.14' : "Taunt",
-            '0.2.13' : "Tweaked nest event, fixed coordinates of tree felled.",
-            '0.2.12' : "More taunts.",
-            '0.2.11' : "1% chance felling a tree will trigger a hornet mini horde.",
-            '0.2.10' : "Skeleton event for tree felling.",
-            '0.2.9'  : "More taunts. Added event for increase shop stock.",
-            '0.2.8'  : "Added processing for player creation event. More taunts",
-            '0.2.7'  : "Increased prize for votes.",
-            '0.2.6'  : "More taunts.",
-            '0.2.5'  : "Use __name__ logger. More player taunts upon death.",
-            '0.2.4'  : "Log player and gameserver info every game hour. +player detected. Fixed map beacon not being saved." ,
-            '0.2.3'  : "Added hook for player connection. Added daily vote message.",
-            '0.2.2'  : "Added hook for triggering on player position change.",
-            '0.2.1'  : "Refactored time accounting to be more efficient.",
-            '0.2.0'  : "Killing 100 zombies gives some cash to player.",
-            '0.1.1'  : "Karma gain now PMs player.",
-            '0.1.0'  : "Initial version." }
+            }
         
         self.framework = framework
         self.daemon = True
@@ -250,12 +230,14 @@ class game_events ( threading.Thread ):
             kwargs [ 'player' ] = player
             function ( **kwargs )
 
-        money_before = player.cash
-        random.seed ( time.time ( ) )
-        self.framework.server.give_cash ( player, random.randint ( 100, 150 ) )
-        self.framework.console.say ( "{} gained {} cash for killing 100 zombies!".format ( player.name_sane,
-                                                                                           player.cash -\
-                                                                                           money_before ) )
+        #money_before = player.cash
+        #random.seed ( time.time ( ) )
+        #self.framework.server.give_cash ( player, random.randint ( 100, 150 ) )
+        #self.framework.console.say ( "{} gained {} cash for killing 100 zombies!".format ( player.name_sane,
+        #                                                                                   player.cash -\
+        #                                                                                   money_before ) )
+        self.framework.server.give_karma ( player, 1 )
+        self.framework.console.pm ( player, "You gained 1 karma for killing 100 zombies!" )
 
     def player_left ( self, matches ):
         player = self.framework.server.get_player ( matches [ 7 ] )
@@ -270,8 +252,8 @@ class game_events ( threading.Thread ):
             kwargs [ 'player' ] = player
             function ( **kwargs )
 
-        self.framework.server.give_karma ( player, 1 )
-        self.framework.console.pm ( player, "You gained 1 karma for being online 1h!" )
+        #self.framework.server.give_karma ( player, 1 )
+        #self.framework.console.pm ( player, "You gained 1 karma for being online 1h!" )
 
     def player_position_changed ( self, player ):
         for callback in self.registered_callbacks [ 'player_position_changed' ]:

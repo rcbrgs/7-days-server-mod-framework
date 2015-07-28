@@ -11,8 +11,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.13'
+        self.__version__ = '0.2.14'
         self.changelog = {
+            '0.2.14' : "Refactored general error handler to use new exception wrapper.",
             '0.2.13' : "Added import framework to parser.",
             '0.2.12' : "Added exception handler around translate call.",
             '0.2.11' : "Converts steamid into player name to pass to server.console_command.",
@@ -518,8 +519,8 @@ class parser ( threading.Thread ):
                         try:
                             caller ( match.groups ( ) )
                         except Exception as e:
-                            self.log.error ( "Exception in {} ( match.groups ( ) ): {}".format ( str ( caller ),
-                                                                                                 e ) )
+                            self.log.error ( "Exception in {} ( match.groups ( ) ): {}".format ( 
+                                    str ( caller ), framework.output_exception ( e ) ) )
                         self.log.debug ( "{} called {} and finished.".format ( key, caller ) )
 
             if not any_match:
