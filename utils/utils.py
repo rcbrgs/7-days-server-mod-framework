@@ -1,7 +1,17 @@
 import framework
+import inspect
+import logging
 import math
+import time
 
 class utils ( object ):
+    def __init__ ( self ):
+        self.__version__ = '0.1.0'
+        self.changelog = {
+            '0.1.0' : "Initial changelog version." 
+            }
+        self.log = logging.getLogger ( __name__ )
+
     def calculate_bearings ( self, point_A, point_B ):
         origin_x = point_A [ 0 ]
         origin_y = point_A [ 1 ]
@@ -65,3 +75,28 @@ class utils ( object ):
             result += "S"
 
         return result
+
+    def wait_nonnull ( self, variable ):
+        callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name 
+        self.log.info ( "wait_nonnull callee = {}".format ( callee ) )
+        now = time.time ( )
+        while time.time ( ) - now < 60:
+            if not variable:
+                time.sleep ( 0.1 )
+            else:
+                return
+        self.log.error ( "wait_nonnull exiting due to timeout, callee = {}!".format ( callee ) )
+            
+    def wait_not_empty ( self, variable ):
+        callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name 
+        self.log.info ( "wait_not_empty callee = {}".format ( callee ) )
+        now = time.time ( )
+        while time.time ( ) - now < 60:
+            if variable == [ ]:
+                time.sleep ( 0.1 )
+            else:
+                self.log.info ( "wait_not_empty from callee = '{}' returning with variable = {}".format ( 
+                        callee, variable ) )
+                return
+        self.log.error ( "wait_not_empty exiting due to timeout, callee = {}, variable = '{}'.".format ( 
+                callee, variable ) )

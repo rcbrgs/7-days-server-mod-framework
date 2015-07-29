@@ -49,6 +49,7 @@ class world_state ( threading.Thread ):
                                   'timeout'   : 10,
                                   'timestamp' : None }
 
+        self.friendships = { }
         self.game_server = game_server_info ( )
 
         self.inventory = { }
@@ -115,16 +116,16 @@ class world_state ( threading.Thread ):
         """
         Output parsed as being relative to claimstones ends here.
         """
-        self.log.info ( "buffer_claimstones ( '{}' )".format ( match ) )
+        self.log.debug ( "buffer_claimstones ( '{}' )".format ( match ) )
         if len ( match ) == 1:
-            self.log.info ( "total" )
+            self.log.debug ( "total" )
             if self.claimstones_buffer_total != 0:
                 self.log.error ( "Next llp total before parsing old one!" )
             self.claimstones_buffer_total = int ( match [ 0 ] )
             self.unbuffer_claimstones ( )
             return
         if len ( match ) == 2:
-            self.log.info ( "player" )
+            self.log.debug ( "player" )
             if self.claimstones_buffer_player != ( ):
                 self.log.error ( "Next player claimstones listed before parsing all of current." )
                 self.log.error ( "bufferplayer = {} match = {}".format ( str ( self.claimstones_buffer_player ),
@@ -133,7 +134,7 @@ class world_state ( threading.Thread ):
             self.claimstones_buffer_player = ( int ( match [ 0 ] ), int ( match [ 1 ] ) )
             return
         if len ( match ) == 3:
-            self.log.info ( "claim" )
+            self.log.debug ( "claim" )
             if self.claimstones_buffer_player == ( ):
                 self.log.error ( "Claimstone coords received for None player (match = {}).".format ( match ) )
                 return
@@ -230,6 +231,19 @@ class world_state ( threading.Thread ):
 
         for event in events:
             event [ 0 ] ( *event [ 1 ] )
+
+    def update_friendships ( self ):
+        self.friendships = { }
+        records = [ ]
+        self.framework.database.select_record ( "friends", { '1' : "1" }, records )
+        self.framework.utils.wait_not_empty ( records )
+        for record in records:
+            steamid = record [ 'steamid' ]
+            friend  = record [ 'friend'  ]
+            try:
+                self.friendships [ steamid ].append ( friend )
+            except KeyError:
+                self.friendships [ steamid ] = [ friend ]
 
     def obtain_inventory ( self, player ):
         pass
@@ -400,7 +414,9 @@ class world_state ( threading.Thread ):
 
         self.game_server.gt = ( new_gt, now )
 
-        self.log.info ( "Game date: {} {:02d}:{:02d}.".format ( day, hour, minute ) )
+        if minute != previous_minute:
+            if minute % 15 == 0:
+                self.log.info ( "Game date: {} {:02d}:{:02d}.".format ( day, hour, minute ) )
 
         old_lag = self.gt_lag
         new_lag = time.time ( ) - self.latest_gt_call

@@ -8,8 +8,10 @@ import time
 class database ( threading.Thread ):
     def __init__ ( self, framework_instance ):
         super ( self.__class__, self ).__init__ ( )
-        self.__version__ = "0.2.5"
+        self.__version__ = "0.2.7"
         self.changelog = {
+            '0.2.7'  : "Fixed queued select_record.",
+            '0.2.6'  : "Wrapped select so it can be queued like other db calls.",
             '0.2.5'  : "Better logging",
             '0.2.4'  : "Added cursor.close to exceptions also.",
             '0.2.3'  : "Calling cursor.close and framework.output_exception when appropriate.",
@@ -238,13 +240,24 @@ class database ( threading.Thread ):
             self.connection.commit ( )
             cursor.close ( )
         except Exception as e:
-            self.log.error ( framework.output_exception ( e ) )
+            self.log.error ( "sql = '{}', {}".format ( sql, framework.output_exception ( e ) ) )
             cursor.close ( )
         
-    def select_record ( self, table, columns_values ):
+    def select_record ( self, table, columns_values, callback_variable ):
+        """
+        Enqueues request to select_record_processor.
+        """
+        if callback_variable != [ ]:
+            self.log.error ( "select_record called with callback_variable != [ ]" )
+        self.enqueue ( { 'function' : self.select_record_processor,
+                         'args' : ( table, columns_values ),
+                         'kwargs' : { 'callback_variable' : callback_variable } } )
+
+    def select_record_processor ( self, table, columns_values, callback_variable = [ ] ):
         """
         columns_values must be a dict with columns as keys.
         """
+        self.log.debug ( "select_record_processor callback_variable = {}".format ( callback_variable ) )
         for key in columns_values.keys ( ):
             try:
                 where_string += " and {} = '{}'".format ( key, columns_values [ key ] )
@@ -261,12 +274,19 @@ class database ( threading.Thread ):
             res = cursor.fetchall ( )
             cursor.close ( )
             self.log.debug ( "res = {}".format ( res ) )
-            return res
+            if len ( res ) > 0:
+                callback_variable += res
+            else:
+                callback_variable.append ( None )
+            self.log.debug ( "returning callback_variable = '{}'".format ( callback_variable ) )
+            return
         except Exception as e:
             self.log.error ( "select_record with sql = '{}' exception: {}".format ( 
                     sql, framework.output_exception ( e ) ) )
             cursor.close ( )
-            return None
+            callback_variable.append ( None )
+            self.log.debug ( "returning callback_variable = '{}'".format ( callback_variable ) )
+            return
 
     def update_record ( self, table, columns_values ):
         """

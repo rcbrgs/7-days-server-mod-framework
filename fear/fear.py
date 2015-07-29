@@ -10,8 +10,11 @@ class fear ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
         self.log = framework.log
-        self.__version__ = "0.1.18"
+        #self.log = logging.getLogger ( __name__ )
+        self.log_level = logging.INFO
+        self.__version__ = "0.1.19"
         self.changelog = {
+            '0.1.19' : "Refactored logging hook to get more dynamic info.",
             '0.1.18' : "Refactored call to select.",
             '0.1.17' : "Fixed courage not diminishing fear",
             '0.1.16' : "Made courage be multiplied by factor.",
@@ -60,6 +63,7 @@ class fear ( threading.Thread ):
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
                              
         while ( self.shutdown == False ):
+            self.log.setLevel ( self.log_level )
             time.sleep ( self.framework.preferences.loop_wait )
             if not self.enabled:
                 continue
@@ -81,13 +85,18 @@ class fear ( threading.Thread ):
                 if distance < float ( self.mod_preferences [ 'distance_minimum' ] ):
                     zone = 'courage'
                 # update accumulators
-                select = self.framework.database.select_record ( "fear", { "steamid" : player.steamid } )
+                select = [ ]
+                self.framework.database.select_record ( "fear", { "steamid" : player.steamid }, select )
+                self.framework.utils.wait_not_empty ( select )
+                self.log.debug ( "select = {}".format ( select ) )
                 current_info = None
                 if select:
                     if len ( select ) == 1:
                         current_info = select [ 0 ]
                 self.log.debug ( "current_info = {}".format ( current_info ) )
                 if not current_info:
+                    self.log.info ( "Player {} has not an entry in fear db.".format ( player.name_sane ) )
+                    #continue
                     info = {
                         "steamid"                : player.steamid,
                         "fear"                   : 0,
@@ -115,6 +124,9 @@ class fear ( threading.Thread ):
                                 new_fear += interval
                             if zone == "courage":
                                 new_fear -= interval * float ( self.mod_preferences [ 'factor' ] )
+                    else:
+                        self.log.info ( "{} not accumulting sentiment ({:.0f}s since state change).".format ( 
+                                player.name_sane, now - new_fear_timestamp ) )
                 elif zone == "fear":
                     self.log.info ( "setting new fear timestamp" )
                     new_fear_timestamp = now
@@ -177,6 +189,7 @@ class fear ( threading.Thread ):
                     "latest_state"           : zone,
                     "latest_state_timestamp" : now
                     }
+                self.log.info ( "database.update" )
                 self.framework.database.update_record ( "fear", new_info )
             
             # ENDMOD                             

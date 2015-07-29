@@ -8,8 +8,10 @@ class portal ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.1"
+        self.__version__ = "0.2.3"
         self.changelog = {
+            '0.2.3'  : "Fixed set friend logic.",
+            '0.2.2'  : "Refactored to use queued select.",
             '0.2.1'  : "Fixed logic for listing friends.",
             '0.2.0'  : "/set friend with no argument will output list of friends.",
             }
@@ -64,7 +66,10 @@ class portal ( threading.Thread ):
 
         destiny = message [ len ( "/go " ) : ]
         if destiny == '':
-            records = self.framework.database.select_record ( "portals", { 'steamid' : player.steamid } )
+            records = [ ]
+            self.framework.database.select_record ( "portals", { 'steamid' : player.steamid },
+                                                    records )
+            self.framework.utils.wait_not_empty ( records )
             for entry in records:
                 try:
                     possible_destinations += ", {}".format ( entry [ 'name' ] )
@@ -75,8 +80,11 @@ class portal ( threading.Thread ):
         self.log.info ( "No portal with identifier '{}'.".format ( destiny ) )
         destiny_player = self.framework.server.get_player ( destiny )
         if destiny_player:
-            friendship_records = self.framework.database.select_record ( "friends", { "steamid" : destiny_player.steamid,
-                                                                              "friend"  : player.steamid } )
+            friendship_records = [ ]
+            self.framework.database.select_record ( "friends", { "steamid" : destiny_player.steamid,
+                                                                 "friend"  : player.steamid }, 
+                                                    friendship_records )
+            self.framework.utils.wait_not_empty ( friendship_records )
             self.log.info ( "friendship_records = '{}'.".format ( friendship_records ) )
             friendship = None
             if friendship_records:
@@ -95,8 +103,11 @@ class portal ( threading.Thread ):
                         destiny_player.name_sane ) )
             return
 
-        portal_record = self.framework.database.select_record ( "portals", { 'steamid' : player.steamid,
-                                                                             'name' : destiny } )
+        portal_record = [ ]
+        self.framework.database.select_record ( "portals", { 'steamid' : player.steamid,
+                                                             'name' : destiny },
+                                                portal_record )
+        self.framework.utils.wait_not_empty ( portal_record )
         if not portal_record:
             self.framework.console.pm ( player, "You have no portal with name '{}'.".format ( destiny ) )
             return
@@ -124,9 +135,12 @@ class portal ( threading.Thread ):
             self.framework.console.pm ( player, "I do not know any player named '{}'.".format ( 
                     msg_contents [ len ( "/set friend " ) : ] ) )
             return
-        friendship = self.framework.database.select_record ( "friends", { 'steamid' : player.steamid,
-                                                                          'friend'  : invitee.steamid } )
-        if friendship:
+        friendship = [ ]
+        self.framework.database.select_record ( "friends", { 'steamid' : player.steamid,
+                                                             'friend'  : invitee.steamid },
+                                                friendship )
+        self.framework.utils.wait_not_empty ( friendship )
+        if friendship [ 0 ] != None:
             self.framework.database.delete_record ( "friends", { 'steamid' : player.steamid,
                                                                  'friend' : invitee.steamid } )
             self.framework.console.pm ( player, "{} is no longer one of your friends.".format ( invitee.name_sane ) )
@@ -150,8 +164,11 @@ class portal ( threading.Thread ):
         if name == "":
             self.framework.console.pm ( player, "You need to give a name to your portal!" )
             return
-        portal_record = self.framework.database.select_record ( "portals", { 'steamid' : player.steamid,
-                                                                             'name' : name } )
+        portal_record = [ ]
+        self.framework.database.select_record ( "portals", { 'steamid' : player.steamid,
+                                                             'name' : name },
+                                                portal_record )
+        self.framework.utils.wait_not_empty ( portal_record )
         if portal_record:
             self.framework.database.delete_record ( "portals", { 'steamid' : player.steamid,
                                                                  'name' : name } )
@@ -187,7 +204,10 @@ class portal ( threading.Thread ):
         player.karma -= 1
 
     def report_friends ( self, player ):
-        reported_friends = self.framework.database.select_record ( "friends", { 'steamid' : player.steamid } )
+        reported_friends = [ ]
+        self.framework.database.select_record ( "friends", { 'steamid' : player.steamid },
+                                                reported_friends )
+        self.framework.utils.wait_not_empty ( reported_friends )
         if not reported_friends:
             msg = "You have no friends :("
         else:
