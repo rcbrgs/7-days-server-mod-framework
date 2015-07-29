@@ -17,8 +17,9 @@ class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.15'
+        self.__version__ = '0.4.16'
         self.changelog = {
+            '0.4.16' : "Fied empty friendship table crash.",
             '0.4.15' : "Fixed logic for claimstone update.",
             '0.4.14' : "Fixes to get claimstones to update correctly.",
             '0.4.13' : "Using local copy of buffer to avoi dict change exceptions during claimstone update.",
@@ -238,6 +239,8 @@ class world_state ( threading.Thread ):
         self.framework.database.select_record ( "friends", { '1' : "1" }, records )
         self.framework.utils.wait_not_empty ( records )
         for record in records:
+            if not record:
+                continue
             steamid = record [ 'steamid' ]
             friend  = record [ 'friend'  ]
             try:
