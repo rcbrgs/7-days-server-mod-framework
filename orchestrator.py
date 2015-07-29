@@ -255,7 +255,7 @@ class orchestrator ( threading.Thread ):
             mod.stop ( )
             if mod.is_alive ( ):
                 self.log.info ( "mod %s still alive" % str ( mod ) )
-                #mod.join ( )
+                mod.join ( )
         self.log.info ( "All mods stopped." )
 
         for component in self.stop_on_shutdown:

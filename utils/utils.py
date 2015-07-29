@@ -6,8 +6,9 @@ import time
 
 class utils ( object ):
     def __init__ ( self ):
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.1.1'
         self.changelog = {
+            '0.1.1' : "Less verbosity on logging.",
             '0.1.0' : "Initial changelog version." 
             }
         self.log = logging.getLogger ( __name__ )
@@ -89,13 +90,13 @@ class utils ( object ):
             
     def wait_not_empty ( self, variable ):
         callee = inspect.stack ( ) [ 1 ] [ 0 ].f_code.co_name 
-        self.log.info ( "wait_not_empty callee = {}".format ( callee ) )
+        self.log.debug ( "wait_not_empty callee = {}".format ( callee ) )
         now = time.time ( )
         while time.time ( ) - now < 60:
             if variable == [ ]:
                 time.sleep ( 0.1 )
             else:
-                self.log.info ( "wait_not_empty from callee = '{}' returning with variable = {}".format ( 
+                self.log.debug ( "wait_not_empty from callee = '{}' returning with variable = {}".format ( 
                         callee, variable ) )
                 return
         self.log.error ( "wait_not_empty exiting due to timeout, callee = {}, variable = '{}'.".format ( 

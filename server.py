@@ -21,22 +21,10 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.5.12'
+        self.__version__ = '0.6.0'
         self.changelog = {
-            '0.5.12' : "Simplified parsing of console command.",
-            '0.5.11' : "Fixed player and admin command compatibility.",
-            '0.5.10' : "Fixed steamid being treated as strign.",
-            '0.5.9'  : "Removed fix invitees function that is useless now.",
-            '0.5.8'  : "Pedded preteles with -500 to avoid bedrock deaths.",
-            '0.5.7'  : "Added capture on server chat messages.",
-            '0.5.6'  : "Fixed syntax error message having a syntax error.",
-            '0.5.5'  : "Made some commands output into PMs.",
-            '0.5.4'  : "Refactored to use new console command.",
-            '0.5.3'  : "Fixed syntaxfor console command.",
-            '0.5.2'  : "Added wrapper to get console input through denied command from player.",
-            '0.5.1'  : "Do not return entities with 0 health from get_nearest_zombie.",
-            '0.5.0'  : "Added system to have per-mod help items.",
-                        }
+            '0.6.0' : "Removed command_curse from here."
+            }
         self.shutdown = False
         
         self.log.info ( "Server module initializing." )
@@ -49,38 +37,38 @@ class server ( threading.Thread ):
             'animalPig'         : { 'entityid' : 29, 'is_animal' : True,  'is_zombie' : False },
             'animalRabbit'      : { 'entityid' : 28, 'is_animal' : True,  'is_zombie' : False },
             'animalStag'        : { 'entityid' : 26, 'is_animal' : True,  'is_zombie' : False },
-            'burntzombie'       : { 'entityid' : 12, 'is_animal' : False, 'is_zombie' : True },
+            'burntzombie'       : { 'entityid' : 12, 'is_animal' : False, 'is_zombie' : True  },
             'car_Blue'          : { 'entityid' : 22, 'is_animal' : False, 'is_zombie' : False },
             'car_Orange'        : { 'entityid' : 23, 'is_animal' : False, 'is_zombie' : False },
             'car_Red'           : { 'entityid' : 24, 'is_animal' : False, 'is_zombie' : False },
             'car_White'         : { 'entityid' : 25, 'is_animal' : False, 'is_zombie' : False },
             'EntityPlayer'      : { 'entityid' : -1, 'is_animal' : False, 'is_zombie' : False },
             'EntitySupplyPlane' : { 'entityid' : -1, 'is_animal' : False, 'is_zombie' : False },
-            'fatzombie'         : { 'entityid' : 19, 'is_animal' : False, 'is_zombie' : True },
-            'fatzombiecop'      : { 'entityid' : 18, 'is_animal' : False, 'is_zombie' : True },
-            'hornet'            : { 'entityid' : 20, 'is_animal' : False, 'is_zombie' : True },
+            'fatzombie'         : { 'entityid' : 19, 'is_animal' : False, 'is_zombie' : True  },
+            'fatzombiecop'      : { 'entityid' : 18, 'is_animal' : False, 'is_zombie' : True  },
+            'hornet'            : { 'entityid' : 20, 'is_animal' : False, 'is_zombie' : True  },
             'minibike'          : { 'entityid' : 34, 'is_animal' : False, 'is_zombie' : False },
             'sc_General'        : { 'entityid' : 31, 'is_animal' : False, 'is_zombie' : False },
-            'snowzombie01'      : { 'entityid' : 8 , 'is_animal' : False, 'is_zombie' : True },
-            'snowzombie02'      : { 'entityid' : 9 , 'is_animal' : False, 'is_zombie' : True },
-            'snowzombie03'      : { 'entityid' : 10, 'is_animal' : False, 'is_zombie' : True },
-            'spiderzombie'      : { 'entityid' : 11, 'is_animal' : False, 'is_zombie' : True },
+            'snowzombie01'      : { 'entityid' : 8 , 'is_animal' : False, 'is_zombie' : True  },
+            'snowzombie02'      : { 'entityid' : 9 , 'is_animal' : False, 'is_zombie' : True  },
+            'snowzombie03'      : { 'entityid' : 10, 'is_animal' : False, 'is_zombie' : True  },
+            'spiderzombie'      : { 'entityid' : 11, 'is_animal' : False, 'is_zombie' : True  },
             'supplyPlane'       : { 'entityid' : 30, 'is_animal' : False, 'is_zombie' : False },
-            'zombie01'          : { 'entityid' : 6 , 'is_animal' : False, 'is_zombie' : True },
-            'zombie02'          : { 'entityid' : 17, 'is_animal' : False, 'is_zombie' : True },
-            'zombie04'          : { 'entityid' : 1 , 'is_animal' : False, 'is_zombie' : True },
-            'zombie05'          : { 'entityid' : 3 , 'is_animal' : False, 'is_zombie' : True },
-            'zombie06'          : { 'entityid' : 4 , 'is_animal' : False, 'is_zombie' : True },
-            'zombie07'          : { 'entityid' : 5 , 'is_animal' : False, 'is_zombie' : True },
-            'zombiecrawler'     : { 'entityid' : 7 , 'is_animal' : False, 'is_zombie' : True },
-            'zombiedog'         : { 'entityid' : 21, 'is_animal' : False, 'is_zombie' : True },
-            'zombieferal'       : { 'entityid' : 2 , 'is_animal' : False, 'is_zombie' : True },
-            'zombiegal01'       : { 'entityid' : 13, 'is_animal' : False, 'is_zombie' : True },
-            'zombiegal02'       : { 'entityid' : 14, 'is_animal' : False, 'is_zombie' : True },
-            'zombiegal03'       : { 'entityid' : 15, 'is_animal' : False, 'is_zombie' : True },
-            'zombiegal04'       : { 'entityid' : 16, 'is_animal' : False, 'is_zombie' : True },
-            'zombieUMAfemale'   : { 'entityid' : 32, 'is_animal' : False, 'is_zombie' : True },
-            'zombieUMAmale'     : { 'entityid' : 33, 'is_animal' : False, 'is_zombie' : True },
+            'zombie01'          : { 'entityid' : 6 , 'is_animal' : False, 'is_zombie' : True  },
+            'zombie02'          : { 'entityid' : 17, 'is_animal' : False, 'is_zombie' : True  },
+            'zombie04'          : { 'entityid' : 1 , 'is_animal' : False, 'is_zombie' : True  },
+            'zombie05'          : { 'entityid' : 3 , 'is_animal' : False, 'is_zombie' : True  },
+            'zombie06'          : { 'entityid' : 4 , 'is_animal' : False, 'is_zombie' : True  },
+            'zombie07'          : { 'entityid' : 5 , 'is_animal' : False, 'is_zombie' : True  },
+            'zombiecrawler'     : { 'entityid' : 7 , 'is_animal' : False, 'is_zombie' : True  },
+            'zombiedog'         : { 'entityid' : 21, 'is_animal' : False, 'is_zombie' : True  },
+            'zombieferal'       : { 'entityid' : 2 , 'is_animal' : False, 'is_zombie' : True  },
+            'zombiegal01'       : { 'entityid' : 13, 'is_animal' : False, 'is_zombie' : True  },
+            'zombiegal02'       : { 'entityid' : 14, 'is_animal' : False, 'is_zombie' : True  },
+            'zombiegal03'       : { 'entityid' : 15, 'is_animal' : False, 'is_zombie' : True  },
+            'zombiegal04'       : { 'entityid' : 16, 'is_animal' : False, 'is_zombie' : True  },
+            'zombieUMAfemale'   : { 'entityid' : 32, 'is_animal' : False, 'is_zombie' : True  },
+            'zombieUMAmale'     : { 'entityid' : 33, 'is_animal' : False, 'is_zombie' : True  },
             }
             
         # Other programs might have /keywords that we want to ignore. Put those here.
@@ -115,9 +103,7 @@ class server ( threading.Thread ):
         self.player_info_file = self.preferences.player_info_file
         self.geoip = pygeoip.GeoIP ( self.preferences.geoip_file, pygeoip.MEMORY_CACHE )
         
-        self.commands = { 'curse'       : ( self.curse_player,
-                                            " /curse player_name prints an unfriendly message." ),
-                          'me'          : ( self.command_me,
+        self.commands = { 'me'          : ( self.command_me,
                                             " /me will print your info." ),
                           'help'        : ( self.command_help,
                                             " /help shows the list of commands." ),
@@ -256,29 +242,6 @@ class server ( threading.Thread ):
         msg += "."
         self.framework.console.pm ( player, msg )
         self.log.debug ( "me: end" )
-
-    def curse_player ( self, msg_origin, msg_content ):
-        target = self.get_player ( msg_content [ 7 : ] )
-        if target != None:
-            curses = [ "%s can't hit a fat zombie with a blunderbuss.",
-                       "%s infected a cheerleader.",
-                       "%s, may your path be filled with invisible spikes!",
-                       "Can't wait for %s to zombify!",
-                       "%s spent 5 SMG clips to kill a zombie crawler.",
-                       "That zombie dog is almost as ugly as %s.",
-                       "Hard to tell if it's a rabbit or %s screaming.",
-                       "Your tea is the weakest, %s!",
-                       "I was told %s broke all the crates on the tool shop.",
-                       "Break a leg, %s!",
-                       "I hope %s loses a claim stone.",
-                       "'%s' is just another name for 'zombie dinner'.",
-                       "Zombies are looking for brains. Don't worry %s, you're safe!",
-                       "Hey %s go away I can't smell my rotten pig with you around.",
-                       "You really should find a job %s." ]
-            some_msg = curses [ random.randint ( 0, len ( curses ) - 1 ) ]
-            self.framework.console.say ( some_msg % str ( target.name_sane ) )
-        else:
-            self.framework.console.pm ( self.get_player ( msg_origin ), "I would never curse such a nice person!" )
 
     def display_entities ( self ):
         print ( "stal | entty_id | entity_type | lifetime  | remot | dead  | heal | pos" )

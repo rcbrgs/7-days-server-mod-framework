@@ -9,11 +9,13 @@ import time
 class fear ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
-        self.log = framework.log
-        #self.log = logging.getLogger ( __name__ )
+        self.log = logging.getLogger ( "framework.{}".format ( __name__ ) )
         self.log_level = logging.INFO
-        self.__version__ = "0.1.19"
+        self.__version__ = "0.1.22"
         self.changelog = {
+            '0.1.22' : "Refactored to have in-memory db, using sql as long term storage only.",
+            '0.1.21' : "Tweaked logging to understand sentiment flow.",
+            '0.1.20' : "Refactored logging to set level independently.",
             '0.1.19' : "Refactored logging hook to get more dynamic info.",
             '0.1.18' : "Refactored call to select.",
             '0.1.17' : "Fixed courage not diminishing fear",
@@ -42,15 +44,13 @@ class fear ( threading.Thread ):
         self.mod_preferences = self.framework.preferences.mods [ self.__class__.__name__ ]
         self.enabled = self.mod_preferences [ 'enabled' ]
 
-        # To have a new command for players to use, it must be placed in the dict below.
-        # The commented example adds the command "/suicide" and have the mod run the function "kill_player ( )".
-        # All player chat commands receive two strings as arguments. The first contains the player name (unsanitized) and the second contains the string typed by the player (also unsanitized).
         self.commands = {
-            # 'suicide' : ( self.kill_player, " /suicide will kill your character." )
-        }
+            }
         self.help_items = {
             "fear" : "Fear is a measure of how much you avoid zombies. As it increases, your chances of a zombie appearing by your side increase."
             }
+
+        self.db = { }
 
     def __del__ ( self ):
         self.stop ( )
@@ -75,6 +75,8 @@ class fear ( threading.Thread ):
             # for each player, get zombie distances, until sure which "zone" player is
             for player in online_players:
                 now = time.time ( )
+                self.syncronize_db ( player )
+                current_info = self.db [ player.steamid ]
                 distance, entity_id, entity_type = self.framework.server.get_nearest_zombie ( player )
                 if not distance:
                     distance = 100 * float ( self.mod_preferences [ 'distance_maximum' ] )
@@ -85,30 +87,6 @@ class fear ( threading.Thread ):
                 if distance < float ( self.mod_preferences [ 'distance_minimum' ] ):
                     zone = 'courage'
                 # update accumulators
-                select = [ ]
-                self.framework.database.select_record ( "fear", { "steamid" : player.steamid }, select )
-                self.framework.utils.wait_not_empty ( select )
-                self.log.debug ( "select = {}".format ( select ) )
-                current_info = None
-                if select:
-                    if len ( select ) == 1:
-                        current_info = select [ 0 ]
-                self.log.debug ( "current_info = {}".format ( current_info ) )
-                if not current_info:
-                    self.log.info ( "Player {} has not an entry in fear db.".format ( player.name_sane ) )
-                    #continue
-                    info = {
-                        "steamid"                : player.steamid,
-                        "fear"                   : 0,
-                        "latest_check_timestamp" : 0,
-                        "latest_fear_timestamp"  : 0,
-                        "latest_fear_warning"    : 0,
-                        "latest_state"           : zone,
-                        "latest_state_timestamp" : now
-                        }
-                    self.framework.database.insert_record ( "fear", info )
-                    continue
-                self.log.debug ( "current_info = {}.".format ( current_info ) )
                 new_fear = current_info [ 'fear' ]
                 new_fear_timestamp = current_info [ 'latest_fear_timestamp' ]
                 if not new_fear_timestamp:
@@ -117,15 +95,20 @@ class fear ( threading.Thread ):
                 if old_state == zone:
                     old_timestamp = float ( current_info [ 'latest_state_timestamp' ] )
                     if now - new_fear_timestamp > 60 * float ( self.mod_preferences [ 'factor' ] ):
-                        self.log.debug ( "accumulating {}".format ( zone ) )
+                        self.log.debug ( "{} accumulating {}.".format ( player.name_sane, zone ) )
                         interval = now - old_timestamp 
                         if interval < 10:
                             if zone == "fear":
                                 new_fear += interval
                             if zone == "courage":
                                 new_fear -= interval * float ( self.mod_preferences [ 'factor' ] )
+                            self.log.debug ( "{} fear changed from {:.1f} to {:.1f}.".format ( 
+                                    player.name_sane, current_info [ 'fear' ], new_fear ) )
+                        else:
+                            self.log.debug ( "{} sentiment interval too long ({:.1f}s), ignoring.".format ( 
+                                    player.name_sane, interval ) )
                     else:
-                        self.log.info ( "{} not accumulting sentiment ({:.0f}s since state change).".format ( 
+                        self.log.info ( "{} not accumulating sentiment ({:.0f}s since state change).".format ( 
                                 player.name_sane, now - new_fear_timestamp ) )
                 elif zone == "fear":
                     self.log.info ( "setting new fear timestamp" )
@@ -137,7 +120,7 @@ class fear ( threading.Thread ):
                     old_check = float ( current_info [ 'latest_check_timestamp' ] )
                 new_check = old_check
 
-                self.log.info ( "{} is {:.1f}m away from {} ({}, {:.1f}).".format ( 
+                self.log.debug ( "{} is {:.1f}m away from {} ({}, {:.1f}).".format ( 
                         player.name_sane, distance, entity_type, zone, new_fear ) )
 
                 # check for event triggers
@@ -189,15 +172,51 @@ class fear ( threading.Thread ):
                     "latest_state"           : zone,
                     "latest_state_timestamp" : now
                     }
-                self.log.info ( "database.update" )
-                self.framework.database.update_record ( "fear", new_info )
+                self.log.debug ( "{} new_info = {}".format ( player.name_sane, new_info ) )
+                self.db [ player.steamid ] = new_info
             
             # ENDMOD                             
-            
+
         self.log.debug ( "<%s>" % ( sys._getframe ( ).f_code.co_name ) )
 
     def stop ( self ):
         self.shutdown = True
+        while ( self.is_alive ( ) ):
+            time.sleep ( 1 )
+            self.log.warning ( "Sleeping until self is not alive anymore." )
+        self.syncronize_sql ( )
+
+    def list ( self ):
+        for steamid in self.db.keys ( ):
+            self.log.info ( "{} fear = {}.".format ( 
+                    self.framework.server.get_player ( steamid ).name_sane, self.db [ steamid ] [ 'fear' ] ) )
+
+    def syncronize_db ( self, player ):
+        if player.steamid in list ( self.db.keys ( ) ):
+            return
+        select = [ ]
+        self.framework.database.select_record ( "fear", { "steamid" : player.steamid }, select )
+        self.framework.utils.wait_not_empty ( select )
+        self.log.debug ( "select = {}".format ( select ) )
+        current_info = select [ 0 ]
+        if select == None:
+            self.log.debug ( "Player {} has not an entry in fear db.".format ( player.name_sane ) )
+            info = {
+                "steamid"                : player.steamid,
+                "fear"                   : 0,
+                "latest_check_timestamp" : 0,
+                "latest_fear_timestamp"  : 0,
+                "latest_fear_warning"    : 0,
+                "latest_state"           : "courage",
+                "latest_state_timestamp" : time.time ( )
+                }
+            self.framework.database.insert_record ( "fear", info )
+            current_info = info
+        self.db [ player.steamid ] = current_info
+
+    def syncronize_sql ( self ):
+        for steamid in self.db.keys ( ):
+            self.framework.database.update_record ( "fear", self.db [ steamid ] )
 
     def trigger_random_event ( self, player, fear ):
         random.seed ( time.time ( ) )
@@ -206,7 +225,7 @@ class fear ( threading.Thread ):
         if fear_factor > dice:
             self.log.info ( "trigger_random_event: fear_factor {} > dice {}.".format ( fear_factor, dice ) )
             self.framework.console.say ( "{} craps in own pants out of fear, attracting zombies!".format ( player.name_sane ) )
-            #self.framework.console.se ( player, 'animalRabbit', 2 )
-            self.framework.console.se ( player, 'zombiecrawler', 2 )
+            self.framework.console.se ( player, 'animalRabbit', 2 )
+            #self.framework.console.se ( player, 'zombiecrawler', 2 )
             return True
         return False

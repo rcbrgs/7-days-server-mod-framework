@@ -8,7 +8,8 @@ import time
 class template ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
-        self.log = framework.log
+        self.log = logging.getLogger ( "framework.{}".format ( __name__ ) )
+        self.log_level = logging.INFO
         self.__version__ = "0.1.0"
         self.changelog = {
             '0.1.0' : "Initial version." }
@@ -56,6 +57,7 @@ class template ( threading.Thread ):
 
         while ( self.shutdown == False ):
             time.sleep ( self.framework.preferences.loop_wait )
+            self.log.setLevel ( self.log_level )
             if not self.enabled:
                 continue
 
