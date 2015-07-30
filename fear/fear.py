@@ -109,7 +109,7 @@ class fear ( threading.Thread ):
                             self.log.debug ( "{} sentiment interval too long ({:.1f}s), ignoring.".format ( 
                                     player.name_sane, interval ) )
                     else:
-                        self.log.info ( "{} not accumulating sentiment ({:.0f}s since state change).".format ( 
+                        self.log.debug ( "{} not accumulating sentiment ({:.0f}s since state change).".format ( 
                                 player.name_sane, now - new_fear_timestamp ) )
                 elif zone == "fear":
                     self.log.info ( "setting new fear timestamp" )
