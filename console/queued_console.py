@@ -11,7 +11,7 @@ class queued_console ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel = ( logging.INFO )
-        self.__version__ = "0.1.3"
+        self.__version__ = "0.1.4"
         self.changelog = {
             '0.1.4' : "Fixed PM storm after sales / translations.",
             '0.1.3' : "Move pm control here.",
@@ -26,7 +26,7 @@ class queued_console ( threading.Thread ):
         self.queue = [ ]
         self.queue_lock = None
         self.shutdown = False
-        telnet_wait = 7
+        telnet_wait = 6
         self.log.info ( "loading client commands telnet" )
         self.telnet_client_commands = framework.telnet_client ( self.framework )
         self.telnet_client_commands.open_connection ( )
@@ -172,7 +172,7 @@ class queued_console ( threading.Thread ):
                                               'timestamp' : time.time ( ) }
 
     def llp_wrapper ( self ):
-        self.log.info ( "sending llp" )
+        self.log.debug ( "sending llp" )
         self.framework.console.send ( "llp" )
 
     def lp_wrapper ( self ):    

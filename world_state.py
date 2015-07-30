@@ -194,7 +194,7 @@ class world_state ( threading.Thread ):
         self.update_claimstones ( )
 
     def update_claimstones ( self ):
-        self.log.info ( "Updating current claimstones data with buffer." )
+        self.log.debug ( "Updating current claimstones data with buffer." )
         claimstones = self.claimstones_buffer
         self.log.debug ( "buffer = '{}'".format ( claimstones ) )
 

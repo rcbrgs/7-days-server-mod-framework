@@ -5,8 +5,9 @@ class preferences ( object ):
     def __init__ ( self, preferences_file_name ):
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.1'
+        self.__version__ = '0.2.2'
         self.changelog = {
+            '0.2.2' : "Improved auto parametrizer to set parameters as ints and floats when possible.",
             '0.2.1' : "Simplified telnet_port parsing.",
             '0.2.0' : "Added database variables.",
             }
@@ -98,6 +99,16 @@ class preferences ( object ):
 
             for item in self.preference_items:
                 if left_hand == item:
+                    try:
+                        setattr ( self, item, int ( splitted [ 1 ].strip ( ) ) )
+                        continue
+                    except ValueError:
+                        pass
+                    try:
+                        setattr ( self, item, float ( splitted [ 1 ].strip ( ) ) )
+                        continue
+                    except ValueError:
+                        pass
                     setattr ( self, item, splitted [ 1 ].strip ( ) )
                     continue
 
@@ -193,6 +204,6 @@ class preferences ( object ):
         self.log.info ( "rank_url = %s" % ( self.rank_url ) )
         self.log.info ( "rank_message = %s" % ( self.rank_message ) )
         self.log.info ( "teleport_lag_cushion = %d" % self.teleport_lag_cushion )
-        self.log.info ( "telnet_ip = %s" % ( self.telnet_ip ) )
+        #self.log.info ( "telnet_ip = %s" % ( self.telnet_ip ) )
         #print ( "telnet_password = %s" % ( self.telnet_password ) )
         self.log.info ( "telnet_port = %d" % ( self.telnet_port ) )
