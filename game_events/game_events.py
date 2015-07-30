@@ -10,8 +10,9 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.16"
+        self.__version__ = "0.3.17"
         self.changelog = {
+            '0.3.17' : "Give 1 karma every 5h so sakis can rationalize his self destructive behaviour.",
             '0.3.16' : "Give 1 karma per 100 zeds. No cash per zeds. No karma per hour played.",
             '0.3.15' : "Taunt.",
             '0.3.14' : "Removed call to deprecated sethome function.",
@@ -252,8 +253,9 @@ class game_events ( threading.Thread ):
             kwargs [ 'player' ] = player
             function ( **kwargs )
 
-        #self.framework.server.give_karma ( player, 1 )
-        #self.framework.console.pm ( player, "You gained 1 karma for being online 1h!" )
+        if round ( player.online_time / 3600 ) % 5 == 0:
+            self.framework.server.give_karma ( player, 1 )
+            self.framework.console.pm ( player, "You gained 1 karma for being online 5h! Go outside!!" )
 
     def player_position_changed ( self, player ):
         for callback in self.registered_callbacks [ 'player_position_changed' ]:

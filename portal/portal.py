@@ -150,6 +150,7 @@ class portal ( threading.Thread ):
                                                                  'friend' : invitee.steamid } )
             self.framework.console.pm ( player, "{} is now one of your friends.".format ( invitee.name_sane ) )
             self.framework.console.pm ( invitee, "You are now a friend of {}.".format ( player.name_sane ) )
+        self.framework.world_state.update_friendships ( )
 
     def command_set_portal ( self, msg_origin, msg_contents ):
         player = self.framework.server.get_player ( msg_origin )
@@ -216,7 +217,7 @@ class portal ( threading.Thread ):
                 try:
                     msg += ", {}".format ( friend.name_sane )
                 except UnboundLocalError:
-                    msg = "{}".format ( friend.name_sane )
+                    msg = "Your friends are: {}".format ( friend.name_sane )
             msg += "."
         self.framework.console.pm ( player, msg )
         

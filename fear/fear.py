@@ -11,8 +11,9 @@ class fear ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( "framework.{}".format ( __name__ ) )
         self.log_level = logging.INFO
-        self.__version__ = "0.1.22"
+        self.__version__ = "0.1.23"
         self.changelog = {
+            '0.1.23' : "Fixed syncronize_db for new players.",
             '0.1.22' : "Refactored to have in-memory db, using sql as long term storage only.",
             '0.1.21' : "Tweaked logging to understand sentiment flow.",
             '0.1.20' : "Refactored logging to set level independently.",
@@ -126,7 +127,7 @@ class fear ( threading.Thread ):
                 # check for event triggers
                 # spawn zed?
                 trigger = False
-                if now - old_check > 60:
+                if now - old_check > 120:
                     new_check = now
                     if new_fear > 540 + 60 * float ( self.mod_preferences [ 'factor' ] ):
                         # trigger a random event
@@ -199,7 +200,7 @@ class fear ( threading.Thread ):
         self.framework.utils.wait_not_empty ( select )
         self.log.debug ( "select = {}".format ( select ) )
         current_info = select [ 0 ]
-        if select == None:
+        if current_info == None:
             self.log.debug ( "Player {} has not an entry in fear db.".format ( player.name_sane ) )
             info = {
                 "steamid"                : player.steamid,
