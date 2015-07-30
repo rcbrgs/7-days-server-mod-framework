@@ -5,8 +5,9 @@ class preferences ( object ):
     def __init__ ( self, preferences_file_name ):
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.0'
+        self.__version__ = '0.2.1'
         self.changelog = {
+            '0.2.1' : "Simplified telnet_port parsing.",
             '0.2.0' : "Added database variables.",
             }
         
@@ -37,6 +38,7 @@ class preferences ( object ):
         self.preference_items = [ "mysql_user_name",
                                   "mysql_user_password",
                                   "mysql_db_name",
+                                  "telnet_port",
                                   ]
 
             
@@ -137,9 +139,9 @@ class preferences ( object ):
                 self.telnet_password = splitted [ 1 ].strip ( )
                 continue
             
-            if ( left_hand == "telnet_port" ):
-                self.telnet_port = int ( splitted [ 1 ] )
-                continue
+            #if ( left_hand == "telnet_port" ):
+            #    self.telnet_port = int ( splitted [ 1 ] )
+            #    continue
             
             if ( left_hand == "zombie_cleanup_threshold" ):
                 self.zombie_cleanup_threshold = float ( splitted [ 1 ].strip ( ) )
