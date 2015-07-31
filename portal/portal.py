@@ -8,8 +8,9 @@ class portal ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.3"
+        self.__version__ = "0.2.4"
         self.changelog = {
+            '0.2.4'  : "Portal db select updated to new db system.",
             '0.2.3'  : "Fixed set friend logic.",
             '0.2.2'  : "Refactored to use queued select.",
             '0.2.1'  : "Fixed logic for listing friends.",
@@ -170,6 +171,7 @@ class portal ( threading.Thread ):
                                                              'name' : name },
                                                 portal_record )
         self.framework.utils.wait_not_empty ( portal_record )
+        portal_record = portal_record [ 0 ]
         if portal_record:
             self.framework.database.delete_record ( "portals", { 'steamid' : player.steamid,
                                                                  'name' : name } )

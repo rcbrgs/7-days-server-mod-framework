@@ -97,7 +97,7 @@ class database ( threading.Thread ):
     # Connection methods.
 
     def check_mysql_connection ( self ):
-        if not self.connection:
+        if self.connection == None:
             return False
         return True
 
