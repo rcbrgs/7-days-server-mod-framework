@@ -8,8 +8,9 @@ import time
 class database ( threading.Thread ):
     def __init__ ( self, framework_instance ):
         super ( self.__class__, self ).__init__ ( )
-        self.__version__ = "0.2.7"
+        self.__version__ = "0.2.8"
         self.changelog = {
+            '0.2.8'  : "Added a check for connection when updating a record; if fails, reenqueue call.",
             '0.2.7'  : "Fixed queued select_record.",
             '0.2.6'  : "Wrapped select so it can be queued like other db calls.",
             '0.2.5'  : "Better logging",
@@ -321,6 +322,11 @@ class database ( threading.Thread ):
         sql = "update {} set {} where {}".format ( table, 
                                                    update_string,
                                                    where_string )
+        if not self.check_mysql_connection ( ):
+            self.log.warning ( "Requeueing update_record call because check_mysql_connection is False." )
+            self.update_record ( table, columns_values )
+            return
+
         try:
             cursor = self.connection.cursor ( )
             self.log.debug ( "sql = '{}'.".format ( sql ) )

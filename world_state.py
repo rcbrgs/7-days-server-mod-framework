@@ -433,7 +433,7 @@ class world_state ( threading.Thread ):
 
     def decide_llp ( self ):
         if time.time ( ) - self.llp_timestamp > 600:
-            self.log.info ( "decided to llp" )
+            self.log.debug ( "decided to llp" )
             self.framework.console.llp ( )
             self.llp_timestamp = time.time ( )
 
@@ -472,7 +472,7 @@ class world_state ( threading.Thread ):
         if now - self.latest_le_call < self.le_lag:
             self.log.debug ( "decide_le: ignore since le_lag is {:.2f}.".format ( self.le_lag ) )
             return
-        self.log.info ( "calling le" )
+        self.log.debug ( "calling le" )
         self.latest_le_call = time.time ( )
         le_message = self.framework.console.telnet_wrapper ( "le" )
         self.framework.console.telnet_client_le.write ( le_message )
