@@ -11,8 +11,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.14'
+        self.__version__ = '0.2.15'
         self.changelog = {
+            '0.2.15' : "Fixed matcher for wandering zombie looking for trouble.",
             '0.2.14' : "Refactored general error handler to use new exception wrapper.",
             '0.2.13' : "Added import framework to parser.",
             '0.2.12' : "Added exception handler around translate call.",
@@ -81,7 +82,7 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'AI wander stop'       : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie \'\[type=.*, name=.*, id=[\d]+\]\' has wandered long enough and is going to endstop now.$',
                                        'to_call'  : [ ] },
-            'AI wander trouble'    : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie \'\[type=.*, name=.*, id=[\d]\]\' reached pitstop and will wander around for awhile looking for trouble.$',
+            'AI wander trouble'    : { 'to_match' : self.match_prefix + r'INF AIDirector: wandering horde zombie \'\[type=.*, name=.*, id=[\d]+\]\' reached pitstop and will wander around for awhile looking for trouble.$',
                                        'to_call'  : [ ] },
             'allowing player'      : { 'to_match' : self.match_prefix + r'INF Allowing player with id [\d]+$',
                                        'to_call'  : [ ] },
