@@ -8,8 +8,10 @@ class portal ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.4"
+        self.__version__ = "0.2.6"
         self.changelog = {
+            '0.2.6'  : "Fixed syntax error in go portal to non existing portal",
+            '0.2.5'  : "Fixed syntax error when moving portal.",
             '0.2.4'  : "Portal db select updated to new db system.",
             '0.2.3'  : "Fixed set friend logic.",
             '0.2.2'  : "Refactored to use queued select.",
@@ -109,10 +111,10 @@ class portal ( threading.Thread ):
                                                              'name' : destiny },
                                                 portal_record )
         self.framework.utils.wait_not_empty ( portal_record )
+        portal_record = portal_record [ 0 ]
         if not portal_record:
             self.framework.console.pm ( player, "You have no portal with name '{}'.".format ( destiny ) )
             return
-        portal_record = portal_record [ 0 ]
         self.framework.server.preteleport ( player, ( portal_record [ 'position_x' ],
                                                       portal_record [ 'position_y' ],
                                                       portal_record [ 'position_z' ] ) )
@@ -175,7 +177,6 @@ class portal ( threading.Thread ):
         if portal_record:
             self.framework.database.delete_record ( "portals", { 'steamid' : player.steamid,
                                                                  'name' : name } )
-            portal_record = portal_record [ 0 ]
             if ( portal_record [ 'position_x' ] == pos [ 0 ] and
                  portal_record [ 'position_y' ] == pos [ 1 ] and
                  portal_record [ 'position_z' ] == pos [ 2 ] ):
