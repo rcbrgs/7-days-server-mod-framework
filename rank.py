@@ -34,7 +34,7 @@ class rank ( threading.Thread ):
         while not self.shutdown:
             now = time.time ( )
             if now - self.timestamp > 600:
-                self.log.info ( "Updating rank info." )
+                self.log.debu ( "Updating rank info." )
                 self.update_current_rank ( )
                 self.update_players_votes ( )
                 self.verify_votes_accounted ( )
@@ -60,7 +60,7 @@ class rank ( threading.Thread ):
                 self.log.info ( "Server rank changed from {} to {}.".format ( self.previous_rank,
                                                                               self.current_rank ) )
             self.previous_rank = self.current_rank
-        self.log.info ( "Current rank is {}.".format  ( rank ) )
+        self.log.debug ( "Current rank is {}.".format  ( rank ) )
         
     def update_players_votes ( self ):
         http = urllib3.PoolManager()
