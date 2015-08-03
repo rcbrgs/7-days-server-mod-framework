@@ -40,6 +40,7 @@ class preferences ( object ):
             "geoip_file",
             "log_file",
             "player_info_file",
+            "server_rules_file"
             ]
         for file_item in self.preference_files:
             setattr ( self, file_item, "" )
