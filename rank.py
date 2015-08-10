@@ -34,7 +34,7 @@ class rank ( threading.Thread ):
         while not self.shutdown:
             now = time.time ( )
             if now - self.timestamp > 600:
-                self.log.debu ( "Updating rank info." )
+                self.log.debug ( "Updating rank info." )
                 self.update_current_rank ( )
                 self.update_players_votes ( )
                 self.verify_votes_accounted ( )

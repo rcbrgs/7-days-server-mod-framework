@@ -21,8 +21,14 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.6.0'
+        self.log_level = logging.INFO
+        self.__version__ = '0.7.3'
         self.changelog = {
+            '0.7.3' : "Added dynamic logging level to debug issues.",
+            '0.7.2' : "Changed 'shutdown' to 'restart' because, you know, drama.",
+            '0.7.1' : "Fixed shutdown warning logic.",
+            '0.7.0' : "First implementation of shutdown sequence (every 24h).",
+            '0.6.1' : "Added update_server_time function.",
             '0.6.0' : "Removed command_curse from here."
             }
         self.shutdown = False
@@ -124,6 +130,11 @@ class server ( threading.Thread ):
         else:
             self.players_info = { }
 
+        self.server_uptime = 0.
+        self.shutdown_triggered = False
+        self.shutdown_warning = None
+        self.shutdown_warning_minute = None
+
     def __del__ ( self ):
         if not self.shutdown:
             self.log.error ( "__del__ being called before stop!" )
@@ -135,6 +146,7 @@ class server ( threading.Thread ):
             self.log.debug ( "Tick" )
             time.sleep ( self.framework.preferences.loop_wait )
 
+            self.log.setLevel ( self.log_level )
             self.dequeue_preteleport ( )
 
         if self.chat != None:
@@ -614,6 +626,7 @@ class server ( threading.Thread ):
 
     def parse_gmsg ( self, match ):
         player = self.get_player ( match [ 8 ] )
+            
         if not player:
             self.log.warning ( "No player '{}' exists.".format ( match [ 8 ] ) )
             return
@@ -1349,6 +1362,41 @@ class server ( threading.Thread ):
         self.log.info ( "Resetting pointer." )
         self.players_info = new_players_info
 
+    def update_server_time ( self, matches ):
+        self.log.debug ( "update_server_time ( {} )".format ( matches ) )
+        old_uptime = self.server_uptime
+        old_hours = math.floor ( old_uptime / 3600 )
+        self.server_uptime = float ( matches [ 6 ] )
+        new_hours = math.floor ( self.server_uptime / 3600 )
+        self.log.debug ( "self.server_uptime = {}".format ( self.server_uptime ) )
+
+        if old_hours != new_hours:
+            self.log.info ( "Server has been online for {} hours.".format ( new_hours ) )
+        if old_hours == 22 and new_hours == 23:
+            self.log.info ( "Server will be restarted in about 1 hour." )
+        if new_hours >= 24:
+            if not self.shutdown_warning:
+                self.shutdown_warning = time.time ( )
+                self.framework.console.say ( "Server is online for more than 24h: triggering restart sequence." )
+                return
+            warning_interval = time.time ( ) - self.shutdown_warning
+            countdown = 601 - warning_interval
+            if countdown > 60:
+                if math.ceil ( countdown / 60 ) != self.shutdown_warning_minute:
+                    self.shutdown_warning_minute = math.ceil ( countdown / 60 )
+                    self.framework.console.say ( "{} minutes until restart.".format ( 
+                            self.shutdown_warning_minute ) )
+                return
+            if countdown > 0:
+                self.framework.console.say ( "{} seconds until restart.".format ( round ( countdown ) ) )
+                return
+            if not self.shutdown_triggered:
+                self.shutdown_triggered = True
+                self.framework.console.send ( "kickall restart" )
+                self.framework.console.send ( "sa" )
+                time.sleep ( 5 )
+                self.framework.console.send ( "shutdown" )
+
     def wait_entities ( self ):
         for counter in range ( 100 ):
             if self.entities == { }:
@@ -1439,17 +1487,6 @@ class server ( threading.Thread ):
         pickle.dump ( pinfo, pickle_file, pickle.HIGHEST_PROTOCOL )
         
         self.framework.let_db_lock()
-
-    def fix_steamid_wrong_in_index ( self, steamid ):
-        self.framework.get_db_lock ( )
-        for key in self.players_info.keys ( ):
-            if self.players_info [ key ].steamid == steamid:
-                if ( key == steamid ):
-                    continue
-                else:
-                    print ( "Found entry with steamid {}: {}.".format ( steamid,
-                                                                        self.players_info [ key ].name ) )
-        self.framework.let_db_lock ( )
 
     def remove_old_positions ( self ):
         now = time.time ( )

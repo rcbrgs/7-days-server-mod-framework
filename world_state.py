@@ -17,8 +17,10 @@ class world_state ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.4.16'
+        self.__version__ = '0.4.18'
         self.changelog = {
+            '0.4.18' : "Added a check to avoid race condition with palces_protection",
+            '0.4.17' : "Increased claimstone list update frequency to 1/min",
             '0.4.16' : "Fied empty friendship table crash.",
             '0.4.15' : "Fixed logic for claimstone update.",
             '0.4.14' : "Fixes to get claimstones to update correctly.",
@@ -169,7 +171,9 @@ class world_state ( threading.Thread ):
 
         deletable_players = [ ]
         deletable_stones  = [ ]
-        places = self.framework.mods [ "place_protection" ] [ "reference" ].places
+        places = { }
+        if 'place_protection' in self.framework.mods.keys ( ):
+            places = self.framework.mods [ "place_protection" ] [ "reference" ].places
         for steamid in self.claimstones_buffer.keys ( ):
             player = self.framework.server.get_player ( steamid )
             if not player:
@@ -432,7 +436,7 @@ class world_state ( threading.Thread ):
             self.log.info ( "gt_lag = {:.2f}s".format ( self.gt_lag ) )
 
     def decide_llp ( self ):
-        if time.time ( ) - self.llp_timestamp > 600:
+        if time.time ( ) - self.llp_timestamp > 60:
             self.log.debug ( "decided to llp" )
             self.framework.console.llp ( )
             self.llp_timestamp = time.time ( )

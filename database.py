@@ -8,8 +8,10 @@ import time
 class database ( threading.Thread ):
     def __init__ ( self, framework_instance ):
         super ( self.__class__, self ).__init__ ( )
-        self.__version__ = "0.2.8"
+        self.__version__ = "0.2.10"
         self.changelog = {
+            '0.2.10' : "Refactored connection.commit into cursor.connection.commit.",
+            '0.2.9'  : "Commented out connection.commit on methods that do not alter table data.",
             '0.2.8'  : "Added a check for connection when updating a record; if fails, reenqueue call.",
             '0.2.7'  : "Fixed queued select_record.",
             '0.2.6'  : "Wrapped select so it can be queued like other db calls.",
@@ -125,7 +127,7 @@ class database ( threading.Thread ):
         try:
             cursor = self.connection.cursor ( )
             cursor.execute ( "show tables" )
-            self.connection.commit ( )
+            #self.connection.commit ( )
             result = cursor.fetchall ( )
             cursor.close ( )
         except Exception as e:
@@ -149,7 +151,7 @@ class database ( threading.Thread ):
         try:
             cursor = self.connection.cursor ( )
             cursor.execute ( "show tables" )
-            self.connection.commit ( )
+            #self.connection.commit ( )
             result = cursor.fetchall ( )
             cursor.close ( )
         except Exception as e:
@@ -165,7 +167,7 @@ class database ( threading.Thread ):
             try:
                 cursor = self.connection.cursor ( )
                 cursor.execute ( "create table {} {}".format ( table, self.expected_tables [ table ] ) )
-                self.connection.commit ( )
+                cursor.connection.commit ( )
                 cursor.close ( )
             except Exception as e:
                 self.log.error ( framework.output_exception ( e ) )
@@ -197,7 +199,7 @@ class database ( threading.Thread ):
             cursor = self.connection.cursor ( )
             self.log.debug ( "sql = '{}'.".format ( sql ) )
             cursor.execute ( sql )
-            self.connection.commit ( )
+            cursor.connection.commit ( )
             cursor.close ( )
         except Exception as e:
             self.log.error ( framework.output_exception ( e ) )
@@ -238,7 +240,7 @@ class database ( threading.Thread ):
             cursor = self.connection.cursor ( )
             self.log.debug ( "sql = '{}'.".format ( sql ) )
             cursor.execute ( sql )
-            self.connection.commit ( )
+            cursor.connection.commit ( )
             cursor.close ( )
         except Exception as e:
             self.log.error ( "sql = '{}', {}".format ( sql, framework.output_exception ( e ) ) )
@@ -271,7 +273,7 @@ class database ( threading.Thread ):
             cursor = self.connection.cursor ( )
             self.log.debug ( "sql = '{}'.".format ( sql ) )
             cursor.execute ( sql )
-            self.connection.commit ( )
+            #self.connection.commit ( )
             res = cursor.fetchall ( )
             cursor.close ( )
             self.log.debug ( "res = {}".format ( res ) )
@@ -331,7 +333,7 @@ class database ( threading.Thread ):
             cursor = self.connection.cursor ( )
             self.log.debug ( "sql = '{}'.".format ( sql ) )
             cursor.execute ( sql )
-            self.connection.commit ( )
+            cursor.connection.commit ( )
             cursor.close ( )
         except Exception as e:
             self.log.error ( framework.output_exception ( e ) )

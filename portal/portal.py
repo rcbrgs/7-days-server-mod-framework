@@ -64,7 +64,7 @@ class portal ( threading.Thread ):
             return
         if player.steamid in self.framework.mods [ 'prison' ] [ 'reference' ].detainees:
             self.framework.console.say ( "Denying request of prisoner %s to /go somewhere." % 
-                                         origin_player.name_sane )
+                                         player.name_sane )
             return
 
         destiny = message [ len ( "/go " ) : ]

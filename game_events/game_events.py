@@ -231,12 +231,6 @@ class game_events ( threading.Thread ):
             kwargs [ 'player' ] = player
             function ( **kwargs )
 
-        #money_before = player.cash
-        #random.seed ( time.time ( ) )
-        #self.framework.server.give_cash ( player, random.randint ( 100, 150 ) )
-        #self.framework.console.say ( "{} gained {} cash for killing 100 zombies!".format ( player.name_sane,
-        #                                                                                   player.cash -\
-        #                                                                                   money_before ) )
         self.framework.server.give_karma ( player, 1 )
         self.framework.console.pm ( player, "You gained 1 karma for killing 100 zombies!" )
 

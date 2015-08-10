@@ -11,32 +11,10 @@ class fear ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( "framework.{}".format ( __name__ ) )
         self.log_level = logging.INFO
-        self.__version__ = "0.1.23"
+        self.__version__ = "0.2.0"
         self.changelog = {
-            '0.1.23' : "Fixed syncronize_db for new players.",
-            '0.1.22' : "Refactored to have in-memory db, using sql as long term storage only.",
-            '0.1.21' : "Tweaked logging to understand sentiment flow.",
-            '0.1.20' : "Refactored logging to set level independently.",
-            '0.1.19' : "Refactored logging hook to get more dynamic info.",
-            '0.1.18' : "Refactored call to select.",
-            '0.1.17' : "Fixed courage not diminishing fear",
-            '0.1.16' : "Made courage be multiplied by factor.",
-            '0.1.15' : "Fixed exception when no entities around.",
-            '0.1.14' : "Tweaked timings to get more balanced effect.",
-            '0.1.13' : "Bump down fear upon triggered event.",
-            '0.1.12' : "Adjusted event to be more often and have more effect.",
-            '0.1.11' : "Added help_items.",
-            '0.1.10' : "Final touches on warnings.",
-            '0.1.9' : "Tweaked logs and warnings.",
-            '0.1.8' : "Fixed math.floor instead of floor.",
-            '0.1.7' : "Refactored to use non recursive get_nearest_zombie.",
-            '0.1.6' : "Added fear / courage messages.",
-            '0.1.5' : "Fixes to inertia.",
-            '0.1.4' : "Added inertia to fear accumulation.",
-            '0.1.3' : "Less logging.",
-            '0.1.2' : "Fixed logging not shown beacuse syntax used is for another type of mod.",
-            '0.1.1' : "Fear must be divided by factor before trigger comparison.",
-            '0.1.0' : "Initial version." }
+            '0.2.0' : "SQL db synchronizes every 1 hour.",
+            }
         
         self.framework = framework
         self.daemon = True
@@ -52,6 +30,7 @@ class fear ( threading.Thread ):
             }
 
         self.db = { }
+        self.sql_syncronization_timestamp = time.time ( )
 
     def __del__ ( self ):
         self.stop ( )
@@ -70,6 +49,11 @@ class fear ( threading.Thread ):
                 continue
 
             # STARTMOD
+            now = time.time ( )
+            if now - self.sql_syncronization_timestamp > 3600:
+                self.log.info ( "Syncronizing SQL database." )
+                self.syncronize_sql ( )
+                self.sql_syncronization_timestamp = now
 
             # get list of online players
             online_players = self.framework.server.get_online_players ( )

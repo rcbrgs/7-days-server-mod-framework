@@ -11,8 +11,9 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.15'
+        self.__version__ = '0.2.16'
         self.changelog = {
+            '0.2.16' : "Added a call to server.update_server_time when gt is exectuing msg is parsed.",
             '0.2.15' : "Fixed matcher for wandering zombie looking for trouble.",
             '0.2.14' : "Refactored general error handler to use new exception wrapper.",
             '0.2.13' : "Added import framework to parser.",
@@ -244,7 +245,7 @@ class parser ( threading.Thread ):
             'gt command executing' : { 'to_match' : self.match_string_date + \
                                        r' INF Executing command \'gt\' by Telnet from ' + \
                                        self.match_string_ip + ':([\d]+)',
-                                       'to_call'  : [ ] },
+                                       'to_call'  : [ self.framework.server.update_server_time ] },
             'gt command output'    : { 'to_match' : r'Day ([0-9]+), ([0-9]{2}):([0-9]{2})',
                                        'to_call'  : [ self.framework.world_state.process_gt ] },
             'header  0'            : { 'to_match' : r'^\*\*\* Connected with 7DTD server\.$',
@@ -570,7 +571,7 @@ class parser ( threading.Thread ):
 
     def advise_deprecation_chat ( self, match ):
         if match [ 7 ] [ : len ( "Server: /" ) ] == "Server: /":
-            self.log.info ( "Server chat command '{}' detected.".format ( match [ 7 ] [ len ( "Server: " ) : ] ) )
+            self.log.debug ( "Server chat command '{}' detected.".format ( match [ 7 ] [ len ( "Server: " ) : ] ) )
             self.log.info ( "CHAT {}".format ( match [ 7 ] ) )
             refactored_match = list ( match )
             refactored_match.append ( "Server" )
