@@ -359,7 +359,8 @@ class parser ( threading.Thread ):
                                        'to_call'  : [ ] },
             'player online'        : { 'to_match' : self.match_prefix + r'INF Player set to online' + \
                                        r': ([\d]+)$',
-                                       'to_call'  : [ self.framework.server.set_steamid_online ] },
+                                       #'to_call'  : [ self.framework.server.set_steamid_online ] },
+                                       'to_call'  : [ self.framework.game_events.player_connected ] },
             'player connected'     : { 'to_match' : self.match_prefix + r'INF Player connected, entityid=[\d]+, ' +\
                                        r'name=.*, steamid=[\d]+, ip=' + self.match_string_ip + r'$',
                                        'to_call'  : [ ] },

@@ -22,8 +22,9 @@ class server ( threading.Thread ):
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
         self.log_level = logging.INFO
-        self.__version__ = '0.7.3'
+        self.__version__ = '0.7.4'
         self.changelog = {
+            '0.7.4' : "Made welcome back pm failable and deprecated.",
             '0.7.3' : "Added dynamic logging level to debug issues.",
             '0.7.2' : "Changed 'shutdown' to 'restart' because, you know, drama.",
             '0.7.1' : "Fixed shutdown warning logic.",
@@ -908,12 +909,12 @@ class server ( threading.Thread ):
         self.framework.console.send ( msg )
 
     def set_steamid_online ( self, matches ):
-        self.log.info ( "set steamid online {}".format ( matches [ 7 ] ) )
+        self.log.warning ( " deprecated call to server.set_steamid_online {}".format ( matches [ 7 ] ) )
         if int ( matches [ 7 ] ) in self.players_info.keys ( ):
             player = self.players_info [ int ( matches [ 7 ] ) ]
             player.online = True
             self.log.info ( "Player {} set as online.".format ( player.name ) )
-            self.framework.console.pm ( player, "Welcome back {}!".format ( player.name ) )
+            self.framework.console.pm ( player, "Welcome back {}!".format ( player.name ), can_fail = True )
         
     def sos ( self, msg_origin, msg_contents ):
         origin = self.get_player ( msg_origin )

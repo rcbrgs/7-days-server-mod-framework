@@ -10,8 +10,10 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.17"
+        self.__version__ = "0.3.19"
         self.changelog = {
+            '0.3.19' : "Fixed out-of-bounds index on player_connected event.",
+            '0.3.18' : "Made wb pm failable.",
             '0.3.17' : "Give 1 karma every 5h so sakis can rationalize his self destructive behaviour.",
             '0.3.16' : "Give 1 karma per 100 zeds. No cash per zeds. No karma per hour played.",
             '0.3.15' : "Taunt.",
@@ -116,8 +118,8 @@ class game_events ( threading.Thread ):
         self.framework.console.say ( "[AAAAAA]ATTENTION[FFFFFF] everyone!!!! {} does not want to be called {}, anymore!".format ( player.name_sane, old_names ) )
         
     def player_connected ( self, player_connection_match_group ):
-        self.log.info ( "player_connected" )
-        player = self.framework.server.get_player ( player_connection_match_group [ 9 ] )
+        self.log.info ( "player_connected ( {} )".format ( player_connection_match_group ) )
+        player = self.framework.server.get_player ( int ( player_connection_match_group [ 7 ] ) )
         if not player:
             self.log.info ( "A player new to the mod connected." )
             return
@@ -127,7 +129,7 @@ class game_events ( threading.Thread ):
             kwargs [ 'player' ] = player
             function ( **kwargs )
 
-        self.framework.console.pm ( player, "Welcome back {}!".format ( player.name_sane ) )
+        self.framework.console.pm ( player, "Welcome back {}!".format ( player.name_sane ), can_fail = True )
         self.log.info ( "{} connected.".format ( player.name_sane ) )
 
     def player_created ( self, matches ):
