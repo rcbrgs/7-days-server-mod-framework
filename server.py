@@ -22,15 +22,9 @@ class server ( threading.Thread ):
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
         self.log_level = logging.INFO
-        self.__version__ = '0.7.4'
+        self.__version__ = '0.8.0'
         self.changelog = {
-            '0.7.4' : "Made welcome back pm failable and deprecated.",
-            '0.7.3' : "Added dynamic logging level to debug issues.",
-            '0.7.2' : "Changed 'shutdown' to 'restart' because, you know, drama.",
-            '0.7.1' : "Fixed shutdown warning logic.",
-            '0.7.0' : "First implementation of shutdown sequence (every 24h).",
-            '0.6.1' : "Added update_server_time function.",
-            '0.6.0' : "Removed command_curse from here."
+            '0.8.0' : "Added kill_rlp_and_ban function to streamline these actions.",
             }
         self.shutdown = False
         
@@ -624,6 +618,17 @@ class server ( threading.Thread ):
         refactored_match = list ( match )
         refactored_match [ 7 ] = "{}: {}".format ( match [ 8 ], match [ 7 ] )
         self.parse_gmsg ( tuple ( refactored_match ) )
+
+    def kill_unclaim_and_ban ( self, player ):
+        """
+        Will sequentially send commands to kill player, rlp its claims, and ban him for 1 year.
+        """
+        if player == None:
+            return
+        self.log.warning ( "Killing, rlp and banning player {}.".format ( player.name_sane ) )
+        self.framework.console.send ( "kill {}".format ( player.steamid ) )
+        self.framework.console.send ( "rlp {}".format ( player.steamid ) )
+        self.framework.console.send ( "ban add {} 1 year".format ( player.steamid ) )
 
     def parse_gmsg ( self, match ):
         player = self.get_player ( match [ 8 ] )
