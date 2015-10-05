@@ -10,6 +10,7 @@ from .orchestrator     import orchestrator
 from .parser           import ( parser )
 from .player_info      import player_info
 from .polis            import polis
+from .portal           import portal
 from .preferences      import preferences
 from .rank             import rank
 from .server                         import server
@@ -24,8 +25,9 @@ import sys
 import threading
 import time
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 changelog = {
+    '0.3.1' : "Made module portal more integrated.",
     '0.3.0' : "Added database module.",
     }
 

@@ -8,8 +8,10 @@ class rank ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = '0.1.7'
+        self.__version__ = '0.1.9'
         self.changelog = {
+            '0.1.9' : "Brighter color for thank-you-for-voting message.",
+            '0.1.8' : "Removed mention of cash and karma from vote check.",
             '0.1.7' : "Refactor to use preferences rank_url instead of hardcoded values.",
             '0.1.6' : "Refactor of bs4 call to get rid of warning.",
             '0.1.5' : "Wrapped rank update in an try clause so 404s wont crash the thread.",
@@ -97,7 +99,7 @@ class rank ( threading.Thread ):
                 self.log.debug ( "{} to receive {} karma for voting.".format ( player.name_sane,
                                                                               votes_to_account ) )
                 if votes_to_account > 0:
-                    self.framework.console.say ( "Thank you {} for voting for us! Have some cash and karma! You are [123456]amazing[FFFFFF]!".format (
+                    self.framework.console.say ( "Thank you {} for voting for us! You are [AADDAA]amazing[FFFFFF]!".format (
                         player.name_sane ) )
                     player.karma += votes_to_account
                     player.cash  += votes_to_account * 200

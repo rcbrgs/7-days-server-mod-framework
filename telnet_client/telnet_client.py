@@ -12,8 +12,9 @@ class telnet_client ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.13'
+        self.__version__ = '0.2.14'
         self.changelog = {
+            '0.2.14' : "Adapted to create parser handing it a reference to self.",
             '0.2.13' : "Added handler for ConnectionResetError on chomp.",
             '0.2.12' : "Added handler for EOFError on telnet.",
             '0.2.11' : "Added more detailed exc_info upon telnetlib exception to begin improving its treatment.",
@@ -42,7 +43,7 @@ class telnet_client ( threading.Thread ):
                                  ]
         self.matchers = { }
         self.shutdown = False
-        self.parsers = [ parser ( framework ) ]
+        self.parsers = [ parser ( framework, self ) ]
         self.parsers [ 0 ].start ( )
         self.parsers_pointer = 0
         self.telnet_ip       = self.framework.preferences.telnet_ip

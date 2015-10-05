@@ -7,9 +7,14 @@ import time
 class portal ( threading.Thread ):
     def __init__ ( self, framework):
         super ( self.__class__, self ).__init__ ( )
-        self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.2.6"
+        self.log = logging.getLogger ( "framework.{}".format ( __name__ ) )
+        #self.log = logging.getLogger ( __name__ )
+        self.__version__ = "0.3.3"
         self.changelog = {
+            '0.3.3'  : "Fixed logger.",
+            '0.3.2'  : "Fixed check on current portal amount.",
+            '0.3.1'  : "Fixed costs and limit being treated as strings.",
+            '0.3.0'  : "Added cash_cost, karma_cost, friends_enabled and limit parameters. Recoded to use these new parameters.",
             '0.2.6'  : "Fixed syntax error in go portal to non existing portal",
             '0.2.5'  : "Fixed syntax error when moving portal.",
             '0.2.4'  : "Portal db select updated to new db system.",
@@ -29,6 +34,11 @@ class portal ( threading.Thread ):
                                            " /set friend <player> marks (or removes) that player as your friend." ),
                           'set portal' : ( self.command_set_portal,
                                            " /set portal <name> will (un)mark your current spot as a portal. Costs 1 karma." ) }
+
+        self.cash_cost = float ( self.framework.preferences.mods [ self.__class__.__name__ ] [ 'cash_cost' ] )
+        self.friends_enabled = bool ( self.framework.preferences.mods [ self.__class__.__name__ ] [ 'friends_enabled' ] )
+        self.karma_cost = float (  self.framework.preferences.mods [ self.__class__.__name__ ] [ 'karma_cost' ] )
+        self.limit = int ( self.framework.preferences.mods [ self.__class__.__name__ ] [ 'limit' ] )
         
     def __del__ ( self ):
         self.stop ( )
@@ -59,9 +69,17 @@ class portal ( threading.Thread ):
         if not player:
             self.log.warning ( "Invalid player for command_go." )
             return
-        if player.karma < 1:
-            self.framework.console.pm ( player, "You need 1 karma to teleport!" )
+
+        # Check player has enough karma
+        if player.karma < self.karma_cost:
+            self.framework.console.pm ( player, "You need {} karma to teleport!".format ( self.karma_cost ) )
             return
+        
+        # Check player has enough cash
+        if player.cash < self.cash_cost:
+            self.framework.console.pm ( player, "You need {} cash to teleport!".format ( self.cash_cost ) )
+            return
+
         if player.steamid in self.framework.mods [ 'prison' ] [ 'reference' ].detainees:
             self.framework.console.say ( "Denying request of prisoner %s to /go somewhere." % 
                                          player.name_sane )
@@ -83,6 +101,9 @@ class portal ( threading.Thread ):
         self.log.info ( "No portal with identifier '{}'.".format ( destiny ) )
         destiny_player = self.framework.server.get_player ( destiny )
         if destiny_player:
+            if not self.friends_enabled:
+                self.framework.server.pm ( player, "The teleport-to-friend function is disabled!" )
+                return
             friendship_records = [ ]
             self.framework.database.select_record ( "friends", { "steamid" : destiny_player.steamid,
                                                                  "friend"  : player.steamid }, 
@@ -101,9 +122,9 @@ class portal ( threading.Thread ):
                 self.framework.server.preteleport ( player, ( destiny_player.pos_x, 
                                                               destiny_player.pos_y, 
                                                               destiny_player.pos_z ) )
-                self.framework.server.give_karma ( player, -1 )
-                self.framework.console.pm ( player, "You spent 1 karma to go to {:s}.".format (
-                        destiny_player.name_sane ) )
+                self.framework.server.give_karma ( player, self.karma_cost )
+                self.framework.console.pm ( player, "You spent {} karma to go to {:s}.".format (
+                        self.karma_cost, destiny_player.name_sane ) )
             return
 
         portal_record = [ ]
@@ -118,14 +139,20 @@ class portal ( threading.Thread ):
         self.framework.server.preteleport ( player, ( portal_record [ 'position_x' ],
                                                       portal_record [ 'position_y' ],
                                                       portal_record [ 'position_z' ] ) )
-        player.karma -= 1
-        self.framework.console.pm ( player, "You spent 1 karma to teleport to '{}'.".format ( destiny ) )
+        player.cash -= self.cash_cost
+        player.karma -= self.karma_cost
+        self.framework.console.pm ( player, "You spent {}$+{}k to teleport to '{}'.".format ( self.cash_cost, self.karma_cost, destiny ) )
 
     def command_set_friend ( self, msg_origin, msg_contents ):
         player = self.framework.server.get_player ( msg_origin )
         if not player:
             self.log.warning ( "Invalid player for command_set_friend." )
             return
+
+        if not self.friends_enabled:
+            self.framework.server.pm ( player, "Portal friendships are disabled!" )
+            return
+
         if player.karma < 1:
             self.framework.console.pm ( player, "You need 1 karma to invite!" )
             return
@@ -160,7 +187,10 @@ class portal ( threading.Thread ):
         if not player:
             self.log.warning ( "Invalid player for command set portal." )
             return
-        if player.karma < 1:
+        if player.cash < self.cash_cost:
+            self.framework.console.pm ( player, "You need 1 karma to set a portal!" )
+            return
+        if player.karma < self.karma_cost:
             self.framework.console.pm ( player, "You need 1 karma to set a portal!" )
             return
         pos = self.framework.utils.get_coordinates ( player ) 
@@ -180,9 +210,10 @@ class portal ( threading.Thread ):
             if ( portal_record [ 'position_x' ] == pos [ 0 ] and
                  portal_record [ 'position_y' ] == pos [ 1 ] and
                  portal_record [ 'position_z' ] == pos [ 2 ] ):
-                self.framework.console.pm ( player, "You spent 1 karma to remove portal '{}'.".format (
-                    name ) )
-                player.karma -= 1
+                self.framework.console.pm ( player, "You spent {}$+{}k to remove portal '{}'.".format (
+                    self.cash_cost, self.karma_cost, name ) )
+                player.cash -= self.cash_cost
+                player.karma -= self.karma_cost
                 return
             else:
                 self.framework.database.insert_record ( "portals", { 'steamid' : player.steamid,
@@ -192,10 +223,20 @@ class portal ( threading.Thread ):
                                                                      'position_z' : round ( pos [ 2 ] ) } )
                 self.framework.console.pm ( 
                     player, 
-                    "You spent 1 karma to move a portal named '{}' to your position.".format (
-                        name ) )
-                player.karma -= 1
+                    "You spent {}$+{}k to move a portal named '{}' to your position.".format (
+                        self.cash_cost, self.karma_cost, name ) )
+                player.cash -= self.cash_cost
+                player.karma -= self.karma_cost
                 return
+
+        num_portals_record = [ ]
+        self.framework.database.select_record ( "portals", { "steamid" : player.steamid }, num_portals_record )
+        self.framework.utils.wait_not_empty ( num_portals_record )
+        num_portals = len ( num_portals_record )
+        self.log.info ( "{} has {} portals on database ( num_portal_record = {} ).".format ( player.name_sane, num_portals, num_portals_record ) )
+        if num_portals >= self.limit:
+            self.framework.console.pm ( player, "Portal creation [DD5555]aborted[FFFFFF]. You have reached the limit for portals. Either move your portal (creating a new one with the same name as an existing one) or delete one ('recreating' the portal deletes it)." )
+            return
 
         self.framework.database.insert_record ( "portals", { 'steamid' : player.steamid,
                                                              'name' : name,
@@ -203,9 +244,10 @@ class portal ( threading.Thread ):
                                                              'position_y' : round ( pos [ 1 ] ),
                                                              'position_z' : round ( pos [ 2 ] ) } )
         self.framework.console.pm ( player, 
-                                    "You spent 1 karma to set a portal named '{}' at your position.".format (
-                name ) )
-        player.karma -= 1
+                                    "You spent {}$+{}k to set a portal named '{}' at your position.".format (
+                self.cash_cost, self.karma_cost, name ) )
+        player.cash -= self.cash_cost
+        player.karma -= self.karma_cost
 
     def report_friends ( self, player ):
         reported_friends = [ ]

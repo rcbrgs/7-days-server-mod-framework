@@ -10,8 +10,10 @@ class game_events ( threading.Thread ):
     def __init__ ( self, framework ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
-        self.__version__ = "0.3.19"
+        self.__version__ = "0.3.21"
         self.changelog = {
+            '0.3.21' : "Bug fixed: was calling self.preferences instead of self.framework.preferences.",
+            '0.3.20' : "Silenced some functions related to karma.",
             '0.3.19' : "Fixed out-of-bounds index on player_connected event.",
             '0.3.18' : "Made wb pm failable.",
             '0.3.17' : "Give 1 karma every 5h so sakis can rationalize his self destructive behaviour.",
@@ -100,11 +102,13 @@ class game_events ( threading.Thread ):
                 self.framework.mods [ 'shop' ] [ 'reference' ].best_sell ( )
 
     def player_can_propose ( self, player ):
-        self.framework.console.say ( "The community looks up to {} for guidance! {} can now propose referendums.".format ( player.name_sane, player.name_sane ) )
+        if self.framework.preferences.mods [ 'polis' ] [ 'enabled' ]:
+            self.framework.console.say ( "The community looks up to {} for guidance! {} can now propose referendums.".format ( player.name_sane, player.name_sane ) )
         
     def player_can_vote ( self, player ):
-        self.framework.console.say ( "The community recognizes {} as one of its voting citizens.".format (
-            player.name_sane ) )
+        if self.preferences.mods [ 'polis' ] [ 'enabled' ]:
+            self.framework.console.say ( "The community recognizes {} as one of its voting citizens.".format (
+                    player.name_sane ) )
         
     def player_changed_name ( self, player ):
         self.log.info ( "Player {} changed name from {}.".format ( player.name_sane,
@@ -234,7 +238,7 @@ class game_events ( threading.Thread ):
             function ( **kwargs )
 
         self.framework.server.give_karma ( player, 1 )
-        self.framework.console.pm ( player, "You gained 1 karma for killing 100 zombies!" )
+        #self.framework.console.pm ( player, "You gained 1 karma for killing 100 zombies!" )
 
     def player_left ( self, matches ):
         player = self.framework.server.get_player ( matches [ 7 ] )
@@ -251,7 +255,7 @@ class game_events ( threading.Thread ):
 
         if round ( player.online_time / 3600 ) % 5 == 0:
             self.framework.server.give_karma ( player, 1 )
-            self.framework.console.pm ( player, "You gained 1 karma for being online 5h! Go outside!!" )
+            #self.framework.console.pm ( player, "You gained 1 karma for being online 5h! Go outside!!" )
 
     def player_position_changed ( self, player ):
         for callback in self.registered_callbacks [ 'player_position_changed' ]:
@@ -262,6 +266,7 @@ class game_events ( threading.Thread ):
 
     def tree_felled ( self, matches ):
         self.log.info ( "Tree was felled at ( {}, {} ).".format ( matches [ 0 ], matches [ 2 ] ) )
+        pass
         now = time.time ( )
         self.tree_kills [ now ] = ( float ( matches [ 0 ] ), float ( matches [ 2 ] ) )
         deletables = [ ]

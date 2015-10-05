@@ -269,6 +269,7 @@ class database ( threading.Thread ):
                 continue
         sql = "select * from {} where {}".format ( table, 
                                                    where_string )
+        self.log.info ( "sql = {}".format ( sql ) )
         try:
             cursor = self.connection.cursor ( )
             self.log.debug ( "sql = '{}'.".format ( sql ) )

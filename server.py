@@ -22,8 +22,10 @@ class server ( threading.Thread ):
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
         self.log_level = logging.INFO
-        self.__version__ = '0.8.0'
+        self.__version__ = '0.8.2'
         self.changelog = {
+            '0.8.2' : "Added casts to force values into integers when printing.",
+            '0.8.1' : "Padded position to better list players on large maps.",
             '0.8.0' : "Added kill_rlp_and_ban function to streamline these actions.",
             }
         self.shutdown = False
@@ -487,9 +489,9 @@ class server ( threading.Thread ):
             player.online_time / 3600,
             player.players,
             len ( player.player_kills_explanations ),
-            player.karma,
-            player.cash,
-            player.zombies )
+            int ( player.karma ),
+            int ( player.cash ),
+            int ( player.zombies ) )
         return player_line
         
     def get_random_entity ( self ):
@@ -562,7 +564,7 @@ class server ( threading.Thread ):
             time.sleep ( 0.1 )
         for player in self.get_online_players ( ):
             pos = self.framework.utils.get_coordinates ( player )
-            pos_string = "({: >5.0f} {: >5.0f} {: >4.0f})".format ( pos [ 0 ], pos [ 1 ], pos [ 2 ] )
+            pos_string = "({: >6.0f} {: >6.0f} {: >4.0f})".format ( pos [ 0 ], pos [ 1 ], pos [ 2 ] )
             pos_mod = ""
             if len ( player.positions ) > 1:
                 diff_x = player.pos_x - player.positions [ -2 ] [ 0 ]
@@ -1401,7 +1403,7 @@ class server ( threading.Thread ):
                 self.framework.console.send ( "kickall restart" )
                 self.framework.console.send ( "sa" )
                 time.sleep ( 5 )
-                self.framework.console.send ( "shutdown" )
+                #self.framework.console.send ( "shutdown" )
 
     def wait_entities ( self ):
         for counter in range ( 100 ):

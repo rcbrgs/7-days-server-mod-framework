@@ -13,8 +13,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.6.0'
+        self.__version__ = '0.6.1'
         self.changelog = {
+            '0.6.1' : "Added system for in-trunk mods be loaded.",
             '0.6.0' : "Added database module.",
             }
 
@@ -138,6 +139,7 @@ class orchestrator ( threading.Thread ):
         self.telnet.start ( )
         self.stop_on_shutdown.append ( self.telnet )
         self.telnet.write ( "loglevel ALL true\n".encode ( 'utf-8') )
+        self.telnet.write ( "loglevel ERR false\n".encode ( 'utf-8') )
 
         self.game_events.start ( )
         self.stop_on_shutdown.append ( self.game_events )
@@ -209,8 +211,13 @@ class orchestrator ( threading.Thread ):
             mod_module = importlib.import_module ( full_module_name )
             mod_module = importlib.reload ( mod_module )
         except Exception as e:
-            self.log.error ( "Ignoring unloadable module: %s." % str ( e ) )
-            return
+            full_module_name = "framework." + module_name
+            try:
+                mod_module = importlib.import_module ( full_module_name )
+                mod_module = importlib.reload ( mod_module )
+            except Exception as e:
+                self.log.error ( "Ignoring unloadable module: %s." % str ( e ) )
+                return
         self.log.debug ( "mod_module = %s" % str ( mod_module ) )
         mod_class = getattr ( mod_module, module_name )
         mod_instance = mod_class ( self )

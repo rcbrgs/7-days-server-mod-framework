@@ -7,12 +7,14 @@ import time
 import threading
 
 class parser ( threading.Thread ):
-    def __init__ ( self, framework_instance ):
+    def __init__ ( self, framework_instance, telnet_instance ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.16'
+        self.__version__ = '0.2.18'
         self.changelog = {
+            '0.2.18' : "When IOException is detected, stop listening for ERR messages.",
+            '0.2.17' : "Adjusted parser to new lp output format: now level is reported correctly thorugh telnet.",
             '0.2.16' : "Added a call to server.update_server_time when gt is exectuing msg is parsed.",
             '0.2.15' : "Fixed matcher for wandering zombie looking for trouble.",
             '0.2.14' : "Refactored general error handler to use new exception wrapper.",
@@ -44,6 +46,7 @@ class parser ( threading.Thread ):
         self.queue_lock = None
         self.shutdown = False
         self.framework = framework_instance
+        self.telnet = telnet_instance
         self.telnet_output_matchers = {
             'add obs entity'       : { 'to_match' : self.match_prefix + r'INF Adding observed entity: ' +\
                                        r'[\d]+, ' + self.match_string_pos + r', [\d]+$',
@@ -286,7 +289,7 @@ class parser ( threading.Thread ):
             'inventory item'       : { 'to_match' : r'^Slot ([\d]+): ([\d]+) \* (.*)$',
                                        'to_call'  : [ self.framework.world_state.update_inventory ] },
             'IOException'          : { 'to_match' : self.match_prefix + r'ERR IOException in ReadLine: Read failure$',
-                                       'to_call'  : [ ] },
+                                       'to_call'  : [ self.loglevel_ERR_off ] },
             'item dropped'         : { 'to_match' : r'^Dropped item$',
                                        'to_call'  : [ ] },
             'kicking executing'    : { 'to_match' : self.match_prefix + r'INF Executing command \'kick' + \
@@ -327,10 +330,11 @@ class parser ( threading.Thread ):
                                        r' INF Executing command \'lp\' by Telnet from ' + \
                                        self.match_string_ip + ':([\d]+)',
                                        'to_call'  : [ ] },
+            # '1. id=260620, KruxX, pos=(3627.7, 80.2, -11445.8), rot=(2.7, 2614.6, 0.0), remote=True, health=100, deaths=1, zombies=1938, players=0, score=1933, level=44, steamid=76561198002998827, ip=109.225.124.83, ping=0'
             'lp output'            : { 'to_match' : r'^[\d]+\. id=([\d]+), (.*), pos=' + \
                                        self.match_string_pos + r', rot=' + self.match_string_pos + \
                                        r', remote=([\w]+), health=([\d]+), deaths=([\d]+), zombies=([\d]+), ' + \
-                                       r'players=([\d]+), score=([\d]+), level=(1), steamid=([\d]+), ip=' + \
+                                       r'players=([\d]+), score=([\d]+), level=([\d]+), steamid=([\d]+), ip=' + \
                                        self.match_string_ip + r', ping=([\d]+)',
                                        'to_call'  : [ self.command_lp_output_parser, self.framework.world_state.buffer_lp ] },
             'le/lp output footer'  : { 'to_match' : r'^Total of ([\d]+) in the game$',
@@ -687,6 +691,13 @@ class parser ( threading.Thread ):
                 break
         self.queue_lock = callee_class + "." + callee
         self.log.debug ( "{:s} got parser queue lock.".format ( callee ) )
+
+    def loglevel_ERR_off ( self, matches ):
+        """
+        This method's goal is to stop the transmission of ERR messages from the game server.
+        """
+        self.telnet.write ( "loglevel ERR off\n".encode ( "utf-8" ) )
+        self.log.warning ( "Set loglvel ERR off" )
 
     def output_guard_error ( self, matches ):
         """
