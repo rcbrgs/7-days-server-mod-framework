@@ -11,14 +11,10 @@ class queued_console ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel = ( logging.INFO )
-        self.__version__ = "0.1.4"
+        self.__version__ = "0.2.0"
         self.changelog = {
-            '0.1.4' : "Fixed PM storm after sales / translations.",
-            '0.1.3' : "Move pm control here.",
-            '0.1.2' : "More logging on stop().",
-            '0.1.1' : "Cleanup for new lp cycle.",
-            '0.1.0' : "Initial version." }
-        
+            '0.2.0' : "Added lkp queuable command.",
+            }        
         self.framework = orchestrator
         self.daemon = True
         self.pm_lag = 10
@@ -138,6 +134,19 @@ class queued_console ( threading.Thread ):
         self.queue.append ( command_call )
         self.let_queue_lock ( )
 
+    def lkp ( self ):
+        """
+        This method will request a list of the known players.
+        """
+        command_call = queueable_call ( )
+        command_call.function = self.lkp_wrapper
+        command_call.kill_timer = self.framework.preferences.loop_wait * 10
+        command_call.retirement_age = self.framework.preferences.loop_wait * 10
+        
+        self.get_queue_lock ( )
+        self.queue.append ( command_call )
+        self.let_queue_lock ( )
+
     def llp ( self ):
         self.llp_wrapper ( )
         
@@ -170,6 +179,13 @@ class queued_console ( threading.Thread ):
         self.send ( "gt" )
         self.framework.gt_info [ 'sent' ] = { 'condition' : True,
                                               'timestamp' : time.time ( ) }
+
+    def lkp_wrapper ( self ):
+        """
+        This method's goal is to send a lkp command to the console.
+        """
+        self.log.debug ( "sending lkp" )
+        self.framework.console.send ( "lkp" )
 
     def llp_wrapper ( self ):
         self.log.debug ( "sending llp" )

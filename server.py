@@ -21,12 +21,9 @@ class server ( threading.Thread ):
         super ( server, self ).__init__ ( )
         self.daemon = True
         self.log = logging.getLogger ( __name__ )
-        self.log_level = logging.INFO
-        self.__version__ = '0.8.2'
+        self.__version__ = '0.9.0'
         self.changelog = {
-            '0.8.2' : "Added casts to force values into integers when printing.",
-            '0.8.1' : "Padded position to better list players on large maps.",
-            '0.8.0' : "Added kill_rlp_and_ban function to streamline these actions.",
+            '0.9.0' : "Added parser for lkp output.",
             }
         self.shutdown = False
         
@@ -143,7 +140,6 @@ class server ( threading.Thread ):
             self.log.debug ( "Tick" )
             time.sleep ( self.framework.preferences.loop_wait )
 
-            self.log.setLevel ( self.log_level )
             self.dequeue_preteleport ( )
 
         if self.chat != None:
@@ -631,6 +627,42 @@ class server ( threading.Thread ):
         self.framework.console.send ( "kill {}".format ( player.steamid ) )
         self.framework.console.send ( "rlp {}".format ( player.steamid ) )
         self.framework.console.send ( "ban add {} 1 year".format ( player.steamid ) )
+
+    def lkp_output_parser ( self, lkp_matches : tuple ):
+        """
+        This method's goal is to receive data from a line of lkp output, and feed that info (along some default values) to the player database - if there is no player info about this player already there.
+
+        Parameters:
+
+        * lkp_matches : tuple
+            Containing the results of a re matcher. It should be a tuple with the following content (all strings):
+            ( name, playerid, steamid, online, ip, playtime minutes, seen year, seen month, seen day, seen hour, seen minute )
+        """
+        self.log.debug ( "lkp_matches = {}".format ( lkp_matches ) )
+        player = self.get_player ( int ( lkp_matches [ 2 ] ) )
+        if player:
+            self.log.debug ( "Player '{}' is known to mod, ignoring lkp output.".format ( player.name_sane ) )
+            return
+
+        self.log.info ( "Updating player db with lkp info for '{}'.".format ( lkp_matches [ 0 ] ) )
+        ip = lkp_matches [ 4 ]
+        if ip == "":
+            ip = "8.8.8.8"
+        self.player_info_update ( 
+            1,
+            lkp_matches [ 3 ],
+            int ( lkp_matches [ 1 ] ),
+            lkp_matches [ 0 ],
+            0,
+            0,
+            0,
+            0,
+            ip,
+            0,
+            0,
+            0,
+            0,
+            int ( lkp_matches [ 2 ] ) )
 
     def parse_gmsg ( self, match ):
         player = self.get_player ( match [ 8 ] )

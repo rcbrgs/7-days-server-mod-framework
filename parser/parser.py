@@ -11,33 +11,16 @@ class parser ( threading.Thread ):
         super ( ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.log.setLevel ( logging.INFO )
-        self.__version__ = '0.2.18'
+        self.__version__ = '0.3.0'
         self.changelog = {
-            '0.2.18' : "When IOException is detected, stop listening for ERR messages.",
-            '0.2.17' : "Adjusted parser to new lp output format: now level is reported correctly thorugh telnet.",
-            '0.2.16' : "Added a call to server.update_server_time when gt is exectuing msg is parsed.",
-            '0.2.15' : "Fixed matcher for wandering zombie looking for trouble.",
-            '0.2.14' : "Refactored general error handler to use new exception wrapper.",
-            '0.2.13' : "Added import framework to parser.",
-            '0.2.12' : "Added exception handler around translate call.",
-            '0.2.11' : "Converts steamid into player name to pass to server.console_command.",
-            '0.2.10' : "Matcher for EAC package lost.",
-            '0.2.9'  : "Logging server chat upon early detection.",
-            '0.2.8'  : "Detecting server chat messages sooner.",
-            '0.2.7'  : "Fixed false positives on server chat command detection.",
-            '0.2.6'  : "Matcher for steam kick over invalid login.",
-            '0.2.5'  : "More logging for guard matcher.",
-            '0.2.4'  : "Matcher of EAC log user dconn.",
-            '0.2.3'  : "Fixed translation call syntax on deprecation.",
-            '0.2.2'  : "Added call to translation after deprecation check.",
-            '0.2.1'  : "Fixed syntax error on callback for guard matcher of sell.",
-            '0.2.0'  : "Added command guard matcher and processing.",
+            '0.3.0' : "Added lkp output matcher."
             }
 
         self.daemon = True
         self.llp_current_player = None
         self.llp_total_recently_set = True
         self.match_string_date = r'([0-9]{4})-([0-9]{2})-([0-9]{2}).+([0-9]{2}):([0-9]{2}):([0-9]{2}) ([+-]*[0-9]+\.[0-9]+)' # 7 groups
+        self.match_string_date_simple = r'([\d]{4})-([\d]{2})-([\d]{2}) ([\d]{2}):([\d]{2})' # 5 groups
         self.match_string_ip = r'([\d]+\.[\d]+\.[\d]+\.[\d]+)' # 1 group
         self.match_string_pos = r'\(([-+]*[\d]*\.[\d]), ([-+]*[\d]*\.[\d]), ([-+]*[\d]*\.[\d])\)'
         self.match_prefix = r'^' + self.match_string_date + r' '
@@ -215,6 +198,8 @@ class parser ( threading.Thread ):
                                        r'[\d]+ [\w\d]+ [\d]+\' by Telnet from ' + self.match_string_ip + \
                                        r':[\d]+$',
                                        'to_call'  : [ ] },
+            'executing cmd lkp'    : { 'to_match' : self.match_prefix + r'INF Executing command \'lkp\' by Telnet from ' + self.match_string_ip + r':[\d]+$',
+                                       'to_call'  : [ ] },
             'executing cmd se'     : { 'to_match' : self.match_prefix + r'INF Executing command \'se ' + \
                                        r'[\d]+ [\d]+\' by Telnet from ' + self.match_string_ip + \
                                        r':[\d]+$',
@@ -317,6 +302,10 @@ class parser ( threading.Thread ):
                                        r'ck\), pos=' + self.match_string_pos + r', rot=' + self.match_string_pos + \
                                        r', lifetime=(.*), remote=([\w])+, dead=([\w]+),$',
                                        'to_call'  : [ ] },
+            'lkp output'           : { 'to_match' : r'[\d]+\. (.*), id=([\d]+), steamid=([\d]+), online=([\w]+), ip=(.*), playtime=([\d]+) m, seen=' + self.match_string_date_simple + '$',
+                                       'to_call'  : [ self.framework.server.lkp_output_parser ] },
+            'lkp total'            : { 'to_match' : r'Total of [\d]+ known$',
+                                       'to_call'  : [ ] },
             'llp executing'        : { 'to_match' : r'^' + self.match_string_date + r' INF Executing ' + \
                                        r'command \'llp\' by Telnet from ' + self.match_string_ip + r':[\d]+$',
                                        'to_call'  : [ ] },
@@ -330,7 +319,6 @@ class parser ( threading.Thread ):
                                        r' INF Executing command \'lp\' by Telnet from ' + \
                                        self.match_string_ip + ':([\d]+)',
                                        'to_call'  : [ ] },
-            # '1. id=260620, KruxX, pos=(3627.7, 80.2, -11445.8), rot=(2.7, 2614.6, 0.0), remote=True, health=100, deaths=1, zombies=1938, players=0, score=1933, level=44, steamid=76561198002998827, ip=109.225.124.83, ping=0'
             'lp output'            : { 'to_match' : r'^[\d]+\. id=([\d]+), (.*), pos=' + \
                                        self.match_string_pos + r', rot=' + self.match_string_pos + \
                                        r', remote=([\w]+), health=([\d]+), deaths=([\d]+), zombies=([\d]+), ' + \
