@@ -6,6 +6,7 @@ from .fear             import fear
 from .game_events      import game_events
 from .lock             import lock
 from .lp_data          import lp_data
+from .mods             import ( prison )
 from .orchestrator     import orchestrator
 from .parser           import ( parser )
 from .player_info      import player_info

@@ -1,3 +1,7 @@
+"""
+This module's scope is to mediate communication between modules, and to properly startup and shutdown.
+"""
+
 import framework
 import importlib
 import inspect
@@ -15,6 +19,7 @@ class orchestrator ( threading.Thread ):
         self.daemon = True
         self.__version__ = '0.6.1'
         self.changelog = {
+            '0.7.0' : "Added system for in-trunk mods in framework/mods to be loaded.",
             '0.6.1' : "Added system for in-trunk mods be loaded.",
             '0.6.0' : "Added database module.",
             }
@@ -216,8 +221,13 @@ class orchestrator ( threading.Thread ):
                 mod_module = importlib.import_module ( full_module_name )
                 mod_module = importlib.reload ( mod_module )
             except Exception as e:
-                self.log.error ( "Ignoring unloadable module: %s." % str ( e ) )
-                return
+                full_module_name = "framework.mods." + module_name
+                try:
+                    mod_module = importlib.import_module ( full_module_name )
+                    mod_module = importlib.reload ( mod_module )
+                except Exception as e:
+                    self.log.error ( "Ignoring unloadable module: %s." % str ( e ) )
+                    return
         self.log.debug ( "mod_module = %s" % str ( mod_module ) )
         mod_class = getattr ( mod_module, module_name )
         mod_instance = mod_class ( self )
