@@ -17,11 +17,9 @@ class orchestrator ( threading.Thread ):
         super ( self.__class__, self ).__init__ ( )
         self.log = logging.getLogger ( __name__ )
         self.daemon = True
-        self.__version__ = '0.6.1'
+        self.__version__ = '0.7.0'
         self.changelog = {
             '0.7.0' : "Added system for in-trunk mods in framework/mods to be loaded.",
-            '0.6.1' : "Added system for in-trunk mods be loaded.",
-            '0.6.0' : "Added database module.",
             }
 
         self.database = None
