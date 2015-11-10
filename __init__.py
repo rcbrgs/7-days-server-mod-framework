@@ -2,22 +2,27 @@ from .console          import ( queued_console )
 from .database         import database
 from .entity_info      import entity_info
 from .exceptions       import output_exception
-from .fear             import fear
 from .game_events      import game_events
 from .lock             import lock
 from .lp_data          import lp_data
-from .mods             import ( prison )
+from .mods             import ( chat_commands,
+                                fear,
+                                place_protection,
+                                polis, 
+                                portal,
+                                prison,
+                                sethome,
+                                shop,
+                                translator,
+                                void_fall_detector )
 from .orchestrator     import orchestrator
 from .parser           import ( parser )
 from .player_info      import player_info
-from .polis            import polis
-from .portal           import portal
 from .preferences      import preferences
 from .rank             import rank
 from .server                         import server
 from .telnet_client.telnet_client    import telnet_client
 from .utils                          import utils
-from .void_fall_detector             import void_fall_detector
 from .world_state                    import world_state
 
 import importlib
