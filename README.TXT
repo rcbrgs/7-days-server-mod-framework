@@ -1,3 +1,9 @@
+*** This project is deprecated ***
+
+It will be kept available for a while, and then removed, unless someone complains. The project "Seven Days To Py" supersedes this project, and will eventually contain all of its functionality.
+
+Below, the information from the old README.
+
 7 Days to Die Server Mod Framework
 ----------------------------------
 
